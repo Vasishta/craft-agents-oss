@@ -66,6 +66,28 @@ describe('page canvas route parsing', () => {
   // Saved page routes (new)
   // =============================================
 
+  it('parses docs home routes', () => {
+    expect(parseCompoundRoute('pages')).toEqual({
+      navigator: 'pageCanvas',
+      details: null,
+    })
+
+    expect(parseRouteToNavigationState('pages')).toEqual({
+      navigator: 'pageCanvas',
+      details: null,
+    })
+  })
+
+  it('builds docs home routes from compound and navigation state', () => {
+    const parsed = parseCompoundRoute('pages')!
+
+    expect(buildCompoundRoute(parsed)).toBe('pages')
+    expect(buildRouteFromNavigationState({
+      navigator: 'pageCanvas',
+      details: null,
+    })).toBe('pages')
+  })
+
   it('parses saved page routes', () => {
     const result = parseCompoundRoute('pages/page/abc-123')
 
@@ -127,9 +149,12 @@ describe('page canvas route parsing', () => {
     expect(result).toBeNull()
   })
 
-  it('returns null for pages/ with no sub-route', () => {
+  it('opens docs home for pages with no sub-route', () => {
     const result = parseCompoundRoute('pages')
-    expect(result).toBeNull()
+    expect(result).toEqual({
+      navigator: 'pageCanvas',
+      details: null,
+    })
   })
 
   // =============================================

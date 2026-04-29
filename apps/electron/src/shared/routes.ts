@@ -177,6 +177,9 @@ export const routes = {
     automationsAgentic: (automationId?: string) =>
       automationId ? `automations/agentic/automation/${automationId}` as const : 'automations/agentic' as const,
 
+    /** Docs home/library view */
+    pages: () => 'pages' as const,
+
     /** Page canvas view for a session message */
     pageCanvas: (params: { sessionId: string; messageId: string }) =>
       `pages/from-message/${encodeURIComponent(params.sessionId)}/${encodeURIComponent(params.messageId)}` as const,

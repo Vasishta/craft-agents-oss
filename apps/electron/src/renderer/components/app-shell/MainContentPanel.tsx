@@ -37,7 +37,7 @@ import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelecti
 import { sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
 import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
-import { SourceInfoPage, ChatPage, PageCanvas } from '@/pages'
+import { SourceInfoPage, ChatPage, DocsHome, PageCanvas } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
@@ -243,6 +243,13 @@ export function MainContentPanel({
 
   // PageCanvas/canvas panel - renders a live markdown page from a session message or a saved page
   if (isPageCanvasNavigation(navState)) {
+    if (!navState.details) {
+      return wrapWithStoplight(
+        <Panel variant="grow" className={className}>
+          <DocsHome workspaceId={activeWorkspaceId || ''} />
+        </Panel>
+      )
+    }
     if (navState.details.type === 'savedPage') {
       return wrapWithStoplight(
         <Panel variant="grow" className={className}>

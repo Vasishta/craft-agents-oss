@@ -48,6 +48,7 @@ describe('isCompoundRoute: all prefix families', () => {
 
   // --- 'p' prefix ---
   it.each([
+    'pages',
     'pages/from-message/s1/m1',
     'pages/page/abc-123',
   ])('recognises "%s"', (route) => {
@@ -85,7 +86,6 @@ describe('isCompoundRoute: all prefix families', () => {
     'session-id-plain',
     'random-string',
     '',
-    'pages',
     'pages/',
   ])('rejects "%s"', (route) => {
     expect(isCompoundRoute(route)).toBe(false)

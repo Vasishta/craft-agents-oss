@@ -806,6 +806,7 @@ export interface AutomationsNavigationState {
 export interface PageCanvasNavigationState {
   navigator: 'pageCanvas'
   details:
+    | null
     | { type: 'pageCanvas'; sessionId: string; messageId: string }
     | { type: 'savedPage'; pageId: string }
   rightSidebar?: RightSidebarPanel
@@ -875,6 +876,9 @@ export const getNavigationStateKey = (state: NavigationState): string => {
     return `settings:${state.subpage}`
   }
   if (state.navigator === 'pageCanvas') {
+    if (!state.details) {
+      return 'pageCanvas'
+    }
     if (state.details.type === 'savedPage') {
       return `pageCanvas:page:${state.details.pageId}`
     }
@@ -952,6 +956,7 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
       }
     }
   }
+  if (key === 'pageCanvas') return { navigator: 'pageCanvas', details: null }
 
   // Handle sessions
   const parseSessionsKey = (filterKey: string, sessionId?: string): NavigationState | null => {

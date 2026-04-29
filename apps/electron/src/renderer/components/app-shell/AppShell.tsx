@@ -1719,11 +1719,8 @@ function AppShellContent({
   }, [])
 
   const handlePagesClick = useCallback(() => {
-    // Navigate to the most recent page if any exist
-    if (pages.length > 0) {
-      navigate(routes.view.savedPage(pages[0].id))
-    }
-  }, [navigate, pages])
+    navigate(routes.view.pages())
+  }, [navigate])
 
   // Handler for settings view
   const handleSettingsClick = useCallback((subpage: SettingsSubpage = 'app') => {
@@ -2449,7 +2446,7 @@ function AppShellContent({
                         id: `nav:page:${p.id}`,
                         title: p.title || 'Untitled Doc',
                         icon: FileText,
-                        variant: (isPageCanvasNavigation(navState) && navState.details.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
+                        variant: (isPageCanvasNavigation(navState) && navState.details?.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
                         onClick: () => navigate(routes.view.savedPage(p.id)),
                       })),
                     },

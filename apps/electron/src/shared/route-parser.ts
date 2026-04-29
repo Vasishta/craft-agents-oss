@@ -82,7 +82,7 @@ function isSafePageRouteId(pageId: string): boolean {
  */
 const COMPOUND_ROUTE_PREFIX_SET = new Set([
   'allSessions', 'flagged', 'archived', 'state', 'label', 'view',
-  'sources', 'skills', 'automations', 'settings'
+  'sources', 'skills', 'automations', 'settings', 'pages'
 ])
 
 /**
@@ -91,7 +91,7 @@ const COMPOUND_ROUTE_PREFIX_SET = new Set([
 const COMPOUND_ROUTE_PREFIX_MAP: Record<string, true> = {
   allSessions: true, flagged: true, archived: true,
   state: true, label: true, view: true,
-  sources: true, skills: true, automations: true, settings: true
+  sources: true, skills: true, automations: true, settings: true, pages: true
 }
 
 /**
@@ -124,7 +124,7 @@ export function isCompoundRoute(route: string): boolean {
              route === 'state' ||
              route.startsWith('state/')
     case 112: // 'p' - pages
-      return route.startsWith('pages/from-message/') || route.startsWith('pages/page/')
+      return route === 'pages' || route.startsWith('pages/from-message/') || route.startsWith('pages/page/')
     case 102: // 'f' - flagged
       return route === 'flagged' || route.startsWith('flagged/')
     case 118: // 'v' - view
@@ -166,6 +166,14 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
     return {
       navigator: 'settings',
       details: { type: subpage, id: subpage },
+    }
+  }
+
+  // Docs home/library route: pages
+  if (first === 'pages' && segments.length === 1) {
+    return {
+      navigator: 'pageCanvas',
+      details: null,
     }
   }
 
@@ -376,6 +384,7 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
   }
 
   if (parsed.navigator === 'pageCanvas') {
+    if (!parsed.details) return 'pages'
     if (parsed.details?.type === 'savedPage') {
       return `pages/page/${encodeURIComponent(parsed.details.id)}`
     }
@@ -510,6 +519,9 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
 
   // PageCanvas
   if (compound.navigator === 'pageCanvas') {
+    if (!compound.details) {
+      return { type: 'view', name: 'pages', params: {} }
+    }
     if (compound.details?.type === 'savedPage') {
       return {
         type: 'view',
@@ -643,6 +655,9 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
 
   // PageCanvas
   if (compound.navigator === 'pageCanvas') {
+    if (!compound.details) {
+      return { navigator: 'pageCanvas', details: null }
+    }
     if (compound.details?.type === 'savedPage') {
       return {
         navigator: 'pageCanvas',
@@ -765,6 +780,8 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
       return { navigator: 'skills', details: null }
     case 'automations':
       return { navigator: 'automations', details: null }
+    case 'pages':
+      return { navigator: 'pageCanvas', details: null }
     case 'automation-info':
       if (parsed.id) {
         return {
@@ -879,6 +896,12 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
   }
 
   if (state.navigator === 'pageCanvas') {
+    if (!state.details) {
+      return {
+        navigator: 'pageCanvas',
+        details: null,
+      }
+    }
     if (state.details.type === 'savedPage') {
       return {
         navigator: 'pageCanvas',
