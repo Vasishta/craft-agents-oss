@@ -11,6 +11,7 @@ import {
   XCircle,
   Circle,
   MessageCircleDashed,
+  FilePlus2,
   FileText,
   ArrowUpRight,
   Ban,
@@ -22,6 +23,7 @@ import {
   Pencil,
   FilePenLine,
   GitBranch,
+  PanelRightOpen,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Markdown } from '../markdown'
@@ -318,6 +320,10 @@ export interface TurnCardProps {
   onOpenUrl?: (url: string) => void
   /** Callback to open response in Monaco editor */
   onPopOut?: (text: string) => void
+  /** Callback to open response in the page canvas */
+  onOpenCanvas?: (messageId: string) => void
+  /** Callback to append this response to the active/recent Page */
+  onAddToPage?: (messageId: string) => void
   /** Callback to open turn details in a new window */
   onOpenDetails?: () => void
   /** Callback to open individual activity details in Monaco */
@@ -1389,6 +1395,10 @@ export interface ResponseCardProps {
   onOpenUrl?: (url: string) => void
   /** Callback to open response in Monaco editor */
   onPopOut?: () => void
+  /** Callback to open response in the page canvas */
+  onOpenCanvas?: () => void
+  /** Callback to append this response to the active/recent Page */
+  onAddToPage?: () => void
   /** Card variant - 'response' for AI messages, 'plan' for plan messages */
   variant?: 'response' | 'plan'
   /** Parent session ID (used to reset local annotation/island UI state on session switches) */
@@ -1647,6 +1657,8 @@ export function ResponseCard({
   onOpenFile,
   onOpenUrl,
   onPopOut,
+  onOpenCanvas,
+  onAddToPage,
   variant = 'response',
   sessionId,
   messageId,
@@ -2482,7 +2494,7 @@ export function ResponseCard({
               "pl-4 pr-2.5 py-2 border-t border-border/30 flex items-center justify-between bg-muted/20",
               SIZE_CONFIG.fontSize
             )}>
-              {/* Left side - Copy, View as Markdown, Annotation hint */}
+              {/* Left side - Copy, Canvas, View as Markdown, Annotation hint */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleCopy}
@@ -2504,6 +2516,32 @@ export function ResponseCard({
                     </>
                   )}
                 </button>
+                {onOpenCanvas && (
+                  <button
+                    onClick={onOpenCanvas}
+                    className={cn(
+                      "turn-action-btn flex items-center gap-1.5 transition-colors select-none",
+                      "text-muted-foreground hover:text-foreground",
+                      "focus:outline-none focus-visible:underline"
+                    )}
+                  >
+                    <PanelRightOpen className={SIZE_CONFIG.iconSize} />
+                    <span>Canvas</span>
+                  </button>
+                )}
+                {onAddToPage && (
+                  <button
+                    onClick={onAddToPage}
+                    className={cn(
+                      "turn-action-btn flex items-center gap-1.5 transition-colors select-none",
+                      "text-muted-foreground hover:text-foreground",
+                      "focus:outline-none focus-visible:underline"
+                    )}
+                  >
+                    <FilePlus2 className={SIZE_CONFIG.iconSize} />
+                    <span>Add to Page</span>
+                  </button>
+                )}
                 {onPopOut && (
                   <button
                     onClick={onPopOut}
@@ -2722,6 +2760,8 @@ export const TurnCard = React.memo(function TurnCard({
   onOpenFile,
   onOpenUrl,
   onPopOut,
+  onOpenCanvas,
+  onAddToPage,
   onOpenDetails,
   onOpenActivityDetails,
   onOpenMultiFileDiff,
@@ -3090,6 +3130,8 @@ export const TurnCard = React.memo(function TurnCard({
             onOpenFile={onOpenFile}
             onOpenUrl={onOpenUrl}
             onPopOut={onPopOut ? () => onPopOut(planActivity.content || '') : undefined}
+            onOpenCanvas={onOpenCanvas && planActivity.messageId ? () => onOpenCanvas(planActivity.messageId!) : undefined}
+            onAddToPage={onAddToPage && planActivity.messageId ? () => onAddToPage(planActivity.messageId!) : undefined}
             variant="plan"
             messageId={planActivity.messageId}
             annotations={planActivity.annotations}
@@ -3129,6 +3171,8 @@ export const TurnCard = React.memo(function TurnCard({
                 onOpenFile={onOpenFile}
                 onOpenUrl={onOpenUrl}
                 onPopOut={onPopOut ? () => onPopOut(response.text) : undefined}
+                onOpenCanvas={onOpenCanvas && response.messageId ? () => onOpenCanvas(response.messageId!) : undefined}
+                onAddToPage={onAddToPage && response.messageId ? () => onAddToPage(response.messageId!) : undefined}
                 variant={response.isPlan ? 'plan' : 'response'}
                 messageId={response.messageId}
                 annotations={response.annotations}
@@ -3161,6 +3205,8 @@ export const TurnCard = React.memo(function TurnCard({
             onOpenFile={onOpenFile}
             onOpenUrl={onOpenUrl}
             onPopOut={onPopOut ? () => onPopOut(response.text) : undefined}
+            onOpenCanvas={onOpenCanvas && response.messageId ? () => onOpenCanvas(response.messageId!) : undefined}
+            onAddToPage={onAddToPage && response.messageId ? () => onAddToPage(response.messageId!) : undefined}
             variant={response.isPlan ? 'plan' : 'response'}
             messageId={response.messageId}
             annotations={response.annotations}

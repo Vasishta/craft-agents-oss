@@ -375,6 +375,15 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.labels.DELETE,
   RPC_CHANNELS.labels.CHANGED,
 
+  // pages — workspace document storage
+  RPC_CHANNELS.pages.LIST,
+  RPC_CHANNELS.pages.GET,
+  RPC_CHANNELS.pages.CREATE,
+  RPC_CHANNELS.pages.UPDATE,
+  RPC_CHANNELS.pages.UPDATE_CONTENT,
+  RPC_CHANNELS.pages.DELETE,
+  RPC_CHANNELS.pages.CHANGED,
+
   // views — workspace UI views
   RPC_CHANNELS.views.LIST,
   RPC_CHANNELS.views.SAVE,

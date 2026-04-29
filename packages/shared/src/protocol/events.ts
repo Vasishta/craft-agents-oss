@@ -70,4 +70,7 @@ export interface BroadcastEventMap {
   // Messaging gateway broadcasts
   [RPC_CHANNELS.messaging.BINDING_CHANGED]: [workspaceId: string]
   [RPC_CHANNELS.messaging.PLATFORM_STATUS]: [workspaceId: string, platform: string, connected: boolean]
+
+  // Page events (workspace-scoped)
+  [RPC_CHANNELS.pages.CHANGED]: [workspaceId: string, data: { pageId: string; changeType: 'created' | 'updated' | 'deleted'; timestamp: number }]
 }

@@ -27,6 +27,7 @@ import {
   Calendar,
   Layers,
   ListTodo,
+  FileText,
   Clock,
   Radio,
   Bot,
@@ -88,6 +89,7 @@ import type { Session, Workspace, FileAttachment, PermissionRequest, LoadedSourc
 import { sessionMetaMapAtom, sendToWorkspaceAtom, type SessionMeta } from "@/atoms/sessions"
 import { sourcesAtom } from "@/atoms/sources"
 import { skillsAtom } from "@/atoms/skills"
+import { usePageList } from "@/hooks/usePages"
 import { panelStackAtom, panelCountAtom, focusedPanelIdAtom, focusedSessionIdAtom, focusNextPanelAtom, focusPrevPanelAtom, parseSessionIdFromRoute } from "@/atoms/panel-stack"
 import { type SessionStatusId, type SessionStatus, statusConfigsToSessionStatuses } from "@/config/session-status-config"
 import { useStatuses } from "@/hooks/useStatuses"
@@ -111,6 +113,7 @@ import {
   isSettingsNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
+  isPageCanvasNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
@@ -585,6 +588,7 @@ function AppShellContent({
   // UNIFIED NAVIGATION STATE - single source of truth from NavigationContext
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
+  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState)
 
   const store = useStore()
   const panelStack = useAtomValue(panelStackAtom)
@@ -1280,6 +1284,7 @@ function AppShellContent({
   // This prevents closures from retaining full message arrays
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const setSessionMetaMap = useSetAtom(sessionMetaMapAtom)
+  const { pages } = usePageList(activeWorkspaceId ?? null)
 
   const hasPendingPrompt = React.useCallback((sessionId: string) => {
     return (pendingPermissions.get(sessionId)?.length ?? 0) > 0
@@ -1713,6 +1718,13 @@ function AppShellContent({
     navigate(routes.view.automationsAgentic())
   }, [])
 
+  const handlePagesClick = useCallback(() => {
+    // Navigate to the most recent page if any exist
+    if (pages.length > 0) {
+      navigate(routes.view.savedPage(pages[0].id))
+    }
+  }, [navigate, pages])
+
   // Handler for settings view
   const handleSettingsClick = useCallback((subpage: SettingsSubpage = 'app') => {
     navigate(routes.view.settings(subpage))
@@ -1956,12 +1968,18 @@ function AppShellContent({
     // 3. Sources, Skills, Settings
     result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
+    result.push({ id: 'nav:pages', type: 'nav', action: handlePagesClick })
+    if (isExpanded('nav:pages')) {
+      for (const p of pages.slice(0, 10)) {
+        result.push({ id: `nav:page:${p.id}`, type: 'nav', action: () => navigate(routes.view.savedPage(p.id)) })
+      }
+    }
     result.push({ id: 'nav:automations', type: 'nav', action: handleAutomationsClick })
     result.push({ id: 'nav:settings', type: 'nav', action: () => handleSettingsClick('app') })
     result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
 
     return result
-  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
+  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handlePagesClick, pages, isExpanded, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2073,6 +2091,9 @@ function AppShellContent({
     // Sources navigator
     if (isSourcesNavigation(navState)) {
       return t("sidebar.sources")
+    }
+    if (isPageCanvasNavigation(navState)) {
+      return t("sidebar.pages")
     }
 
     // Skills navigator
@@ -2413,6 +2434,24 @@ function AppShellContent({
                         type: 'skills',
                         onAddSkill: openAddSkill,
                       },
+                    },
+                    {
+                      id: "nav:pages",
+                      title: t("sidebar.pages"),
+                      label: String(pages.length),
+                      icon: FileText,
+                      variant: isPageCanvasNavigation(navState) ? "default" : "ghost",
+                      onClick: handlePagesClick,
+                      expandable: pages.length > 0,
+                      expanded: isExpanded('nav:pages'),
+                      onToggle: () => toggleExpanded('nav:pages'),
+                      items: pages.slice(0, 10).map(p => ({
+                        id: `nav:page:${p.id}`,
+                        title: p.title || 'Untitled Page',
+                        icon: FileText,
+                        variant: (isPageCanvasNavigation(navState) && navState.details.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
+                        onClick: () => navigate(routes.view.savedPage(p.id)),
+                      })),
                     },
                     {
                       id: "nav:automations",
@@ -3224,7 +3263,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth)}
+          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}
@@ -3265,7 +3304,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode) */}
-        {!effectiveSidebarAndNavigatorHidden && (
+        {shouldShowNavigator && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}

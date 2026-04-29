@@ -2,18 +2,45 @@
  * Panel Stack State
  *
  * Single-lane panel model for side-by-side content panels.
+ * Optimized with LRU caching for route type resolution.
  */
 
 import { atom } from 'jotai'
-import { parseRouteToNavigationState } from '../../shared/route-parser'
+import { parseRouteToNavigationState, maybeDecodeURIComponent } from '../../shared/route-parser'
 import type { ViewRoute } from '../../shared/routes'
+
+// =============================================================================
+// LRU Cache for Route Type Resolution
+// =============================================================================
+
+const ROUTE_TYPE_CACHE = new Map<string, PanelType>()
+const MAX_CACHE_SIZE = 100
+
+function getCachedPanelType(route: ViewRoute): PanelType | undefined {
+  return ROUTE_TYPE_CACHE.get(route)
+}
+
+function setCachedPanelType(route: ViewRoute, type: PanelType): void {
+  // Simple LRU: delete first entry if at capacity
+  if (ROUTE_TYPE_CACHE.size >= MAX_CACHE_SIZE) {
+    const firstKey = ROUTE_TYPE_CACHE.keys().next().value
+    if (firstKey !== undefined) {
+      ROUTE_TYPE_CACHE.delete(firstKey)
+    }
+  }
+  ROUTE_TYPE_CACHE.set(route, type)
+}
+
+function clearRouteTypeCache(): void {
+  ROUTE_TYPE_CACHE.clear()
+}
 
 let nextPanelId = 0
 function generatePanelId(): string {
   return `panel-${++nextPanelId}-${Date.now()}`
 }
 
-export type PanelType = 'session' | 'source' | 'settings' | 'skills' | 'other'
+export type PanelType = 'session' | 'source' | 'settings' | 'skills' | 'pageCanvas' | 'other'
 export type PanelLaneId = 'main'
 export type OpenIntent = 'implicit' | 'explicit'
 
@@ -29,7 +56,7 @@ export const PANEL_LANE_POLICIES: Record<PanelLaneId, PanelLanePolicy> = {
   main: {
     id: 'main',
     order: 0,
-    allowedTypes: ['session', 'source', 'settings', 'skills', 'other'],
+    allowedTypes: ['session', 'source', 'settings', 'skills', 'pageCanvas', 'other'],
     locked: false,
     singleton: false,
   },
@@ -63,21 +90,39 @@ export const focusedPanelRouteAtom = atom((get) => {
 })
 
 export function getPanelTypeFromRoute(route: ViewRoute): PanelType {
-  const navState = parseRouteToNavigationState(route)
-  if (!navState) return 'other'
+  // Fast path: O(1) cache lookup
+  const cached = getCachedPanelType(route)
+  if (cached) return cached
 
-  switch (navState.navigator) {
-    case 'sessions':
-      return 'session'
-    case 'sources':
-      return 'source'
-    case 'settings':
-      return 'settings'
-    case 'skills':
-      return 'skills'
-    default:
-      return 'other'
+  const navState = parseRouteToNavigationState(route)
+  let result: PanelType
+
+  if (!navState) {
+    result = 'other'
+  } else {
+    switch (navState.navigator) {
+      case 'sessions':
+        result = 'session'
+        break
+      case 'sources':
+        result = 'source'
+        break
+      case 'settings':
+        result = 'settings'
+        break
+      case 'skills':
+        result = 'skills'
+        break
+      case 'pageCanvas':
+        result = 'pageCanvas'
+        break
+      default:
+        result = 'other'
+    }
   }
+
+  setCachedPanelType(route, result)
+  return result
 }
 
 export function getDefaultLaneForType(_type: PanelType): PanelLaneId {
@@ -107,10 +152,36 @@ function normalizeProportions(stack: PanelStackEntry[]): PanelStackEntry[] {
 
 export function parseSessionIdFromRoute(route: ViewRoute): string | null {
   const segments = route.split('/')
+  const first = segments[0]
+  const second = segments[1]
+
+  // Handle new format: pages/from-message/{sessionId}/{messageId}
+  if (first === 'pages' && second === 'from-message') {
+    const sessionId = segments[2]
+    if (sessionId) {
+      return maybeDecodeURIComponent(sessionId)
+    }
+    return null
+  }
+
+  // Handle legacy format: artifact/session/{sessionId}/message/{messageId}
+  if (first === 'artifact' && second === 'session') {
+    const sessionId = segments[2]
+    if (sessionId) {
+      return maybeDecodeURIComponent(sessionId)
+    }
+    return null
+  }
+
+  // Handle standard format: */session/{sessionId}
   const idx = segments.indexOf('session')
   if (idx >= 0 && idx + 1 < segments.length) {
-    return segments[idx + 1]
+    const sessionId = segments[idx + 1]
+    if (sessionId) {
+      return maybeDecodeURIComponent(sessionId)
+    }
   }
+
   return null
 }
 

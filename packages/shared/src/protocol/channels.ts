@@ -275,6 +275,15 @@ export const RPC_CHANNELS = {
     DELETE: 'labels:delete',
     CHANGED: 'labels:changed',
   },
+  pages: {
+    LIST: 'pages:list',
+    GET: 'pages:get',
+    CREATE: 'pages:create',
+    UPDATE: 'pages:update',
+    UPDATE_CONTENT: 'pages:updateContent',
+    DELETE: 'pages:delete',
+    CHANGED: 'pages:changed',
+  },
   views: {
     LIST: 'views:list',
     SAVE: 'views:save',

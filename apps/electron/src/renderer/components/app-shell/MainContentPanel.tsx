@@ -31,12 +31,13 @@ import {
   isSettingsNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
+  isPageCanvasNavigation,
 } from '@/contexts/NavigationContext'
 import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelectionCount } from '@/hooks/useSession'
 import { sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
 import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
-import { SourceInfoPage, ChatPage } from '@/pages'
+import { SourceInfoPage, ChatPage, PageCanvas } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
@@ -236,6 +237,31 @@ export function MainContentPanel({
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
         <SettingsPageComponent />
+      </Panel>
+    )
+  }
+
+  // PageCanvas/canvas panel - renders a live markdown page from a session message or a saved page
+  if (isPageCanvasNavigation(navState)) {
+    if (navState.details.type === 'savedPage') {
+      return wrapWithStoplight(
+        <Panel variant="grow" className={className}>
+          <PageCanvas
+            mode="page"
+            workspaceId={activeWorkspaceId || ''}
+            pageId={navState.details.pageId}
+          />
+        </Panel>
+      )
+    }
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        <PageCanvas
+          mode="message"
+          workspaceId={activeWorkspaceId || ''}
+          sessionId={navState.details.sessionId}
+          messageId={navState.details.messageId}
+        />
       </Panel>
     )
   }

@@ -582,3 +582,19 @@ export interface DeepLinkNavigation {
   action?: string
   actionParams?: Record<string, string>
 }
+
+// ---------------------------------------------------------------------------
+// Page change event (server → renderer)
+// ---------------------------------------------------------------------------
+
+export interface PageChangedEvent {
+  pageId: string
+  changeType: 'created' | 'updated' | 'deleted'
+  timestamp: number
+}
+
+// ---------------------------------------------------------------------------
+// Page types (re-exported from canonical pages module)
+// ---------------------------------------------------------------------------
+
+export type { PageDocument, PageListEntry } from '../pages/types'

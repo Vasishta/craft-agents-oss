@@ -72,3 +72,13 @@ credentials.enc
 # act (local GitHub Actions runner)
 .secrets
 .actrc
+
+# Workspace runtime generated files
+.claude-plugin/
+config.json
+events.jsonl
+labels/
+sessions/
+statuses/
+views.json
+pages/

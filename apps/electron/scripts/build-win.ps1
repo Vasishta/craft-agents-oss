@@ -9,6 +9,23 @@ $RootDir = Split-Path -Parent (Split-Path -Parent $ElectronDir)
 
 # Configuration
 $BunVersion = "bun-v1.3.9"  # Pinned version for reproducible builds
+$UvVersion = "0.10.6"        # Pinned version for reproducible local packages
+
+function Get-Sha256Lower {
+    param([Parameter(Mandatory=$true)][string]$Path)
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            return ([System.BitConverter]::ToString($sha256.ComputeHash($stream))).Replace("-", "").ToLower()
+        } finally {
+            $sha256.Dispose()
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
 
 Write-Host "=== Building Craft Agents Windows Installer using electron-builder ===" -ForegroundColor Cyan
 
@@ -121,7 +138,7 @@ try {
     # Verify checksum
     Write-Host "Verifying checksum..."
     $ExpectedHash = (Get-Content "$TempDir\SHASUMS256.txt" | Select-String "$BunDownload.zip").ToString().Split(" ")[0]
-    $ActualHash = (Get-FileHash "$TempDir\$BunDownload.zip" -Algorithm SHA256).Hash.ToLower()
+    $ActualHash = Get-Sha256Lower "$TempDir\$BunDownload.zip"
 
     if ($ActualHash -ne $ExpectedHash) {
         throw "Checksum verification failed! Expected: $ExpectedHash, Got: $ActualHash"
@@ -154,7 +171,51 @@ try {
     Remove-Item -Recurse -Force $TempDir -ErrorAction SilentlyContinue
 }
 
-# 4. Copy SDK from root node_modules (monorepo hoisting)
+# 4. Download uv binary for Windows document tools
+Write-Host "Downloading uv $UvVersion for Windows x64..."
+$UvTargetDir = "$ElectronDir\resources\bin\win32-x64"
+$UvTargetPath = "$UvTargetDir\uv.exe"
+New-Item -ItemType Directory -Force -Path $UvTargetDir | Out-Null
+
+$UvDownload = "uv-x86_64-pc-windows-msvc.zip"
+$UvTempDir = Join-Path $env:TEMP "uv-download-$(Get-Random)"
+New-Item -ItemType Directory -Force -Path $UvTempDir | Out-Null
+
+try {
+    $UvZipUrl = "https://github.com/astral-sh/uv/releases/download/$UvVersion/$UvDownload"
+    $UvChecksumUrl = "$UvZipUrl.sha256"
+
+    Write-Host "Downloading from $UvZipUrl..."
+    Invoke-WebRequest -Uri $UvZipUrl -OutFile "$UvTempDir\$UvDownload"
+    Invoke-WebRequest -Uri $UvChecksumUrl -OutFile "$UvTempDir\$UvDownload.sha256"
+
+    Write-Host "Verifying uv checksum..."
+    $UvChecksumContent = Get-Content "$UvTempDir\$UvDownload.sha256" -Raw
+    $UvExpectedHash = [regex]::Match($UvChecksumContent, "[a-fA-F0-9]{64}").Value.ToLower()
+    if (-not $UvExpectedHash) {
+        throw "Unable to parse uv checksum from $UvChecksumUrl"
+    }
+    $UvActualHash = Get-Sha256Lower "$UvTempDir\$UvDownload"
+    if ($UvActualHash -ne $UvExpectedHash) {
+        throw "uv checksum verification failed! Expected: $UvExpectedHash, Got: $UvActualHash"
+    }
+    Write-Host "uv checksum verified successfully" -ForegroundColor Green
+
+    Write-Host "Extracting uv..."
+    Expand-Archive -Path "$UvTempDir\$UvDownload" -DestinationPath $UvTempDir -Force
+    $UvExe = Get-ChildItem -Path $UvTempDir -Recurse -Filter "uv.exe" | Select-Object -First 1
+    if (-not $UvExe) {
+        throw "uv.exe not found in extracted archive"
+    }
+
+    Copy-Item -Force $UvExe.FullName $UvTargetPath
+    Unblock-File -Path $UvTargetPath -ErrorAction SilentlyContinue
+    Write-Host "uv installed to: $UvTargetPath" -ForegroundColor Green
+} finally {
+    Remove-Item -Recurse -Force $UvTempDir -ErrorAction SilentlyContinue
+}
+
+# 5. Copy SDK from root node_modules (monorepo hoisting)
 $SdkSource = "$RootDir\node_modules\@anthropic-ai\claude-agent-sdk"
 if (-not (Test-Path $SdkSource)) {
     Write-Host "ERROR: SDK not found at $SdkSource" -ForegroundColor Red
@@ -165,7 +226,7 @@ Write-Host "Copying SDK..."
 New-Item -ItemType Directory -Force -Path "$ElectronDir\node_modules\@anthropic-ai" | Out-Null
 Copy-Item -Recurse -Force $SdkSource "$ElectronDir\node_modules\@anthropic-ai\"
 
-# 5. Copy interceptor
+# 6. Copy interceptor
 $InterceptorSource = "$RootDir\packages\shared\src\unified-network-interceptor.ts"
 if (-not (Test-Path $InterceptorSource)) {
     Write-Host "ERROR: Interceptor not found at $InterceptorSource" -ForegroundColor Red
@@ -182,88 +243,67 @@ foreach ($dep in @("interceptor-common.ts", "feature-flags.ts", "interceptor-req
     }
 }
 
-# 6. Build Electron app
+# 7. Build Electron app
 Write-Host "Building Electron app..."
-
-# Build main process with OAuth credentials
-Write-Host "  Building main process..."
-$MainArgs = @(
-    "apps/electron/src/main/index.ts",
-    "--bundle",
-    "--platform=node",
-    "--format=cjs",
-    "--outfile=apps/electron/dist/main.cjs",
-    "--external:electron"
-)
-# Add OAuth defines if env vars are set
-if ($env:GOOGLE_OAUTH_CLIENT_ID) {
-    $MainArgs += "--define:process.env.GOOGLE_OAUTH_CLIENT_ID=`"'$env:GOOGLE_OAUTH_CLIENT_ID'`""
-}
-if ($env:GOOGLE_OAUTH_CLIENT_SECRET) {
-    $MainArgs += "--define:process.env.GOOGLE_OAUTH_CLIENT_SECRET=`"'$env:GOOGLE_OAUTH_CLIENT_SECRET'`""
-}
-if ($env:SLACK_OAUTH_CLIENT_ID) {
-    $MainArgs += "--define:process.env.SLACK_OAUTH_CLIENT_ID=`"'$env:SLACK_OAUTH_CLIENT_ID'`""
-}
-if ($env:SLACK_OAUTH_CLIENT_SECRET) {
-    $MainArgs += "--define:process.env.SLACK_OAUTH_CLIENT_SECRET=`"'$env:SLACK_OAUTH_CLIENT_SECRET'`""
-}
-if ($env:MICROSOFT_OAUTH_CLIENT_ID) {
-    $MainArgs += "--define:process.env.MICROSOFT_OAUTH_CLIENT_ID=`"'$env:MICROSOFT_OAUTH_CLIENT_ID'`""
-}
 Push-Location $RootDir
 try {
-    & npx esbuild @MainArgs
-    if ($LASTEXITCODE -ne 0) { throw "Main process build failed" }
+    bun run electron:build
+    if ($LASTEXITCODE -ne 0) { throw "Electron app build failed" }
 } finally {
     Pop-Location
 }
 
-# Build preload
-Write-Host "  Building preload..."
-Push-Location $RootDir
-try {
-    bun run electron:build:preload
-    if ($LASTEXITCODE -ne 0) { throw "Preload build failed" }
-} finally {
-    Pop-Location
+# 8. Copy built helper servers into Electron resources
+Write-Host "Copying built helper servers..."
+
+$SessionServerSource = "$RootDir\packages\session-mcp-server\dist\index.js"
+$SessionServerDest = "$ElectronDir\resources\session-mcp-server\index.js"
+if (-not (Test-Path $SessionServerSource)) {
+    throw "Session MCP server output not found at $SessionServerSource"
 }
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $SessionServerDest) | Out-Null
+Copy-Item -Force $SessionServerSource $SessionServerDest
+Write-Host "  Session MCP server copied" -ForegroundColor Green
 
-# Build renderer (frontend)
-Write-Host "  Building renderer (frontend)..."
-Push-Location $RootDir
-try {
-    # Clean previous renderer build
-    $RendererDir = "$ElectronDir\dist\renderer"
-    if (Test-Path $RendererDir) { Remove-Item -Recurse -Force $RendererDir }
+$PiServerSource = "$RootDir\packages\pi-agent-server\dist\index.js"
+$PiServerDestDir = "$ElectronDir\resources\pi-agent-server"
+$PiServerDest = "$PiServerDestDir\index.js"
+if (Test-Path $PiServerSource) {
+    New-Item -ItemType Directory -Force -Path $PiServerDestDir | Out-Null
+    Copy-Item -Force $PiServerSource $PiServerDest
 
-    # Run vite build
-    npx vite build --config apps/electron/vite.config.ts
-    if ($LASTEXITCODE -ne 0) { throw "Renderer build failed" }
+    $KoffiSource = "$RootDir\node_modules\koffi"
+    $KoffiDest = "$PiServerDestDir\node_modules\koffi"
+    if (Test-Path $KoffiSource) {
+        if (Test-Path $KoffiDest) {
+            Remove-Item -Recurse -Force $KoffiDest
+        }
+        New-Item -ItemType Directory -Force -Path $KoffiDest | Out-Null
 
-    # Verify renderer was built
-    if (-not (Test-Path "$RendererDir\index.html")) {
-        throw "Renderer build verification failed: index.html not found"
+        foreach ($entry in @("package.json", "index.js", "indirect.js", "index.d.ts", "lib")) {
+            $src = "$KoffiSource\$entry"
+            if (Test-Path $src) {
+                Copy-Item -Recurse -Force $src "$KoffiDest\"
+            }
+        }
+
+        $KoffiNativeSource = "$KoffiSource\build\koffi\win32_x64"
+        if (Test-Path $KoffiNativeSource) {
+            New-Item -ItemType Directory -Force -Path "$KoffiDest\build\koffi" | Out-Null
+            Copy-Item -Recurse -Force $KoffiNativeSource "$KoffiDest\build\koffi\"
+        } else {
+            Write-Host "  WARNING: koffi win32_x64 native module not found; Pi server may not start" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "  WARNING: koffi package not found; Pi server may not start" -ForegroundColor Yellow
     }
-    Write-Host "  Renderer build verified: $RendererDir" -ForegroundColor Green
-} finally {
-    Pop-Location
+
+    Write-Host "  Pi agent server copied" -ForegroundColor Green
+} else {
+    Write-Host "  WARNING: Pi agent server output not found; Pi SDK sessions will not work" -ForegroundColor Yellow
 }
 
-# Copy all resources and bundled assets using the shared script.
-# Single source of truth — matches Mac/Linux build (bun run build:copy).
-# Copies: resources (icons, DMG bg), docs, tool-icons, themes, permissions, config-defaults.
-Write-Host "  Copying resources and bundled assets..."
-Push-Location $ElectronDir
-try {
-    bun scripts/copy-assets.ts
-    if ($LASTEXITCODE -ne 0) { throw "Asset copy failed" }
-    Write-Host "  Assets copied" -ForegroundColor Green
-} finally {
-    Pop-Location
-}
-
-# 7. Package with electron-builder
+# 9. Package with electron-builder
 Write-Host "Packaging app with electron-builder..."
 
 # Debug: Show bun.exe file info
@@ -287,7 +327,7 @@ if (Test-Path $BunExe) {
     }
 
     # Check file hash
-    $hash = (Get-FileHash $BunExe -Algorithm SHA256).Hash
+    $hash = Get-Sha256Lower $BunExe
     Write-Host "SHA256: $hash"
 } else {
     Write-Host "ERROR: bun.exe not found at $BunExe" -ForegroundColor Red
@@ -391,7 +431,7 @@ if (-not $builderSuccess) {
     throw "electron-builder failed after $maxBuilderRetries attempts"
 }
 
-# 8. Verify the installer was built
+# 10. Verify the installer was built
 $InstallerPath = Get-ChildItem -Path "$ElectronDir\release" -Filter "*.exe" | Select-Object -First 1
 
 if (-not $InstallerPath) {

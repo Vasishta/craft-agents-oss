@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useTranslation } from "react-i18next"
 import { useEffect, useState, useMemo, useCallback } from "react"
+import { useAtomValue } from "jotai"
 import {
   AlertTriangle,
   CheckCircle2,
@@ -69,11 +70,13 @@ import { useBackgroundTasks } from "@/hooks/useBackgroundTasks"
 import { useTurnCardExpansion } from "@/hooks/useTurnCardExpansion"
 import { useNavigation } from "@/contexts/NavigationContext"
 import { useAppShellContext } from "@/context/AppShellContext"
-import { navigate, routes } from "@/lib/navigate"
+import { routes } from "@/lib/navigate"
 import { CHAT_LAYOUT } from "@/config/layout"
 import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } from "@/lib/file-changes"
 import { resolveBranchNewPanelOption } from "./branching"
 import { handleErrorMessageAction } from "./error-message-actions"
+import { activePageIdAtom } from "@/atoms/pages"
+import { usePageList } from "@/hooks/usePages"
 
 // ============================================================================
 // CSS Custom Highlight API helper
@@ -86,6 +89,32 @@ function getCSSHighlights(): Map<string, Highlight> | undefined {
   } catch {
     return undefined
   }
+}
+
+function findPreviousUserMessage(messages: Message[], messageId: string): Message | undefined {
+  const messageIndex = messages.findIndex(message => message.id === messageId)
+  if (messageIndex <= 0) return undefined
+
+  for (let i = messageIndex - 1; i >= 0; i -= 1) {
+    const candidate = messages[i]
+    if (candidate?.role === 'user') return candidate
+  }
+
+  return undefined
+}
+
+function buildPageAppendBlock(prompt: string | undefined, response: string): string {
+  const lines = ['---', '']
+  if (prompt?.trim()) {
+    lines.push(`**Prompt** ${prompt.trim()}`, '')
+  }
+  lines.push(response.trim())
+  return lines.join('\n').trim()
+}
+
+function appendMarkdownBlock(existingContent: string, block: string): string {
+  const existing = existingContent.trimEnd()
+  return existing ? `${existing}\n\n${block}\n` : `${block}\n`
 }
 
 // ============================================================================
@@ -521,6 +550,8 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
   // Navigation for session branching
   const { navigate } = useNavigation()
+  const activePageId = useAtomValue(activePageIdAtom)
+  const { pages } = usePageList(session?.workspaceId ?? null)
 
   // Get isDark from useTheme hook for overlay theme
   // This accounts for scenic themes (like Haze) that force dark mode
@@ -1377,6 +1408,47 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     return map
   }, [allTurns])
 
+  const handleAddMessageToPage = useCallback(async (messageId: string) => {
+    if (!session) return
+
+    const targetPage = (activePageId ? pages.find(page => page.id === activePageId) : undefined) ?? pages[0]
+    if (!targetPage) {
+      toast.error('Create a Page first')
+      return
+    }
+
+    const message = session.messages.find(item => item.id === messageId)
+    const response = message?.content?.trim()
+    if (!response) {
+      toast.error('No response content to add')
+      return
+    }
+
+    try {
+      const page = await window.electronAPI.getPage(session.workspaceId, targetPage.id)
+      if (!page) {
+        toast.error('Page not found')
+        return
+      }
+
+      const prompt = findPreviousUserMessage(session.messages, messageId)?.content
+      const block = buildPageAppendBlock(prompt, response)
+      const nextContent = appendMarkdownBlock(page.content, block)
+      const updatedPage = await window.electronAPI.updatePageContent(session.workspaceId, targetPage.id, nextContent)
+      const title = updatedPage?.title || page.title || 'Page'
+
+      toast.success(`Added to ${title}`)
+
+      if (!activePageId) {
+        navigate(routes.view.savedPage(targetPage.id), { newPanel: true })
+      }
+    } catch (error) {
+      toast.error('Failed to add to Page', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }, [activePageId, navigate, pages, session])
+
   const scrollToFollowUpTurn = useCallback((item: {
     messageId: string
     annotationId: string
@@ -1763,6 +1835,13 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                             forceCodeView: true,
                           })
                         }}
+                        onOpenCanvas={(messageId) => {
+                          navigate(routes.view.pageCanvas({
+                            sessionId: session.id,
+                            messageId,
+                          }), { newPanel: true })
+                        }}
+                        onAddToPage={handleAddMessageToPage}
                         onOpenDetails={() => {
                           // Open turn details in markdown overlay
                           const markdown = formatTurnAsMarkdown(turn)

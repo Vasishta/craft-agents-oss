@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings'
+export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -54,22 +54,83 @@ export interface ParsedCompoundRoute {
 }
 
 // =============================================================================
+// String Utilities
+// =============================================================================
+
+/**
+ * Optimized decodeURIComponent that skips processing for ASCII-safe strings.
+ * 99% of session/message IDs are ASCII-safe, so this avoids expensive decoding.
+ */
+export function maybeDecodeURIComponent(str: string): string {
+  // Fast path: if no % signs, no decoding needed
+  // This covers 99% of IDs which are UUIDs or simple slugs
+  if (str.indexOf('%') === -1) return str
+  return decodeURIComponent(str)
+}
+
+// =============================================================================
 // Compound Route Parsing
 // =============================================================================
 
 /**
  * Known prefixes that indicate a compound route
+ * Using Set for O(1) lookups
  */
-const COMPOUND_ROUTE_PREFIXES = [
-  'allSessions', 'flagged', 'archived', 'state', 'label', 'view', 'sources', 'skills', 'automations', 'settings'
-]
+const COMPOUND_ROUTE_PREFIX_SET = new Set([
+  'allSessions', 'flagged', 'archived', 'state', 'label', 'view',
+  'sources', 'skills', 'automations', 'settings'
+])
+
+/**
+ * Fast lookup map for exact route matches
+ */
+const COMPOUND_ROUTE_PREFIX_MAP: Record<string, true> = {
+  allSessions: true, flagged: true, archived: true,
+  state: true, label: true, view: true,
+  sources: true, skills: true, automations: true, settings: true
+}
 
 /**
  * Check if a route is a compound route (new format)
+ * Uses zero-allocation prefix checks instead of split()
  */
 export function isCompoundRoute(route: string): boolean {
-  const firstSegment = route.split('/')[0]
-  return COMPOUND_ROUTE_PREFIXES.includes(firstSegment)
+  // Fast path: check prefixes without allocation
+  const firstChar = route.charCodeAt(0)
+
+  // Check 'a' (97) - artifact (legacy), allSessions, archived, automations
+  if (firstChar === 97) { // 'a'
+    return route.startsWith('artifact/session/') ||
+           route === 'archived' ||
+           route.startsWith('archived/') ||
+           route === 'allSessions' ||
+           route.startsWith('allSessions/') ||
+           route === 'automations' ||
+           route.startsWith('automations/')
+  }
+
+  switch (firstChar) {
+    case 115: // 's' - sources, settings, skills, state
+      return route === 'sources' ||
+             route.startsWith('sources/') ||
+             route === 'settings' ||
+             route.startsWith('settings/') ||
+             route === 'skills' ||
+             route.startsWith('skills/') ||
+             route === 'state' ||
+             route.startsWith('state/')
+    case 112: // 'p' - pages
+      return route.startsWith('pages/from-message/') || route.startsWith('pages/page/')
+    case 102: // 'f' - flagged
+      return route === 'flagged' || route.startsWith('flagged/')
+    case 118: // 'v' - view
+      return route === 'view' || route.startsWith('view/')
+    case 108: // 'l' - label
+      return route === 'label' || route.startsWith('label/')
+  }
+
+  // Fallback for other prefixes
+  return COMPOUND_ROUTE_PREFIX_MAP[route] === true
 }
 
 /**
@@ -102,6 +163,56 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
       navigator: 'settings',
       details: { type: subpage, id: subpage },
     }
+  }
+
+  // PageCanvas/canvas detail route: pages/from-message/{sessionId}/{messageId}
+  if (first === 'pages' && segments[1] === 'from-message') {
+    const sessionId = segments[2]
+    const messageId = segments[3]
+    if (sessionId && messageId) {
+      return {
+        navigator: 'pageCanvas',
+        details: {
+          type: 'pageCanvas',
+          id: `${maybeDecodeURIComponent(sessionId)}:${maybeDecodeURIComponent(messageId)}`,
+        },
+      }
+    }
+
+    return null
+  }
+
+  // Saved page route: pages/page/{pageId}
+  if (first === 'pages' && segments[1] === 'page') {
+    const pageId = segments[2]
+    if (pageId) {
+      return {
+        navigator: 'pageCanvas',
+        details: {
+          type: 'savedPage',
+          id: maybeDecodeURIComponent(pageId),
+        },
+      }
+    }
+
+    return null
+  }
+
+  // Legacy artifact route format (for backwards compatibility): artifact/session/{sessionId}/message/{messageId}
+  if (first === 'artifact' && segments[1] === 'session' && segments[3] === 'message') {
+    const sessionId = segments[2]
+    const messageId = segments[4]
+    if (sessionId && messageId) {
+      return {
+        navigator: 'pageCanvas',
+        details: {
+          type: 'pageCanvas',
+          id: `${maybeDecodeURIComponent(sessionId)}:${maybeDecodeURIComponent(messageId)}`,
+        },
+      }
+    }
+
+    return null
   }
 
   // Sources navigator - supports type filters (api, mcp, local)
@@ -219,12 +330,12 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
     case 'label':
       if (!segments[1]) return null
       // Label IDs are URL-decoded (simple slugs, no special characters expected)
-      sessionFilter = { kind: 'label', labelId: decodeURIComponent(segments[1]) }
+      sessionFilter = { kind: 'label', labelId: maybeDecodeURIComponent(segments[1]) }
       detailsStartIndex = 2
       break
     case 'view':
       if (!segments[1]) return null
-      sessionFilter = { kind: 'view', viewId: decodeURIComponent(segments[1]) }
+      sessionFilter = { kind: 'view', viewId: maybeDecodeURIComponent(segments[1]) }
       detailsStartIndex = 2
       break
     default:
@@ -258,6 +369,15 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
   if (parsed.navigator === 'settings') {
     const detailsType = parsed.details?.type || 'app'
     return `settings/${detailsType}`
+  }
+
+  if (parsed.navigator === 'pageCanvas') {
+    if (parsed.details?.type === 'savedPage') {
+      return `pages/page/${encodeURIComponent(parsed.details.id)}`
+    }
+    const [sessionId, messageId] = (parsed.details?.id ?? '').split(':')
+    if (!sessionId || !messageId) return 'allSessions'
+    return `pages/from-message/${encodeURIComponent(sessionId)}/${encodeURIComponent(messageId)}`
   }
 
   if (parsed.navigator === 'sources') {
@@ -384,6 +504,25 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
     return { type: 'view', name: subpage, params: {} }
   }
 
+  // PageCanvas
+  if (compound.navigator === 'pageCanvas') {
+    if (compound.details?.type === 'savedPage') {
+      return {
+        type: 'view',
+        name: 'savedPage',
+        id: compound.details.id,
+        params: {},
+      }
+    }
+    const [sessionId, messageId] = (compound.details?.id ?? '').split(':')
+    return {
+      type: 'view',
+      name: 'pageCanvas',
+      id: messageId,
+      params: { sessionId },
+    }
+  }
+
   // Sources
   if (compound.navigator === 'sources') {
     if (!compound.details) {
@@ -496,6 +635,21 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
   if (compound.navigator === 'settings') {
     const subpage = (compound.details?.type || 'app') as SettingsSubpage
     return { navigator: 'settings', subpage }
+  }
+
+  // PageCanvas
+  if (compound.navigator === 'pageCanvas') {
+    if (compound.details?.type === 'savedPage') {
+      return {
+        navigator: 'pageCanvas',
+        details: { type: 'savedPage', pageId: compound.details.id },
+      }
+    }
+    const [sessionId, messageId] = (compound.details?.id ?? '').split(':')
+    return {
+      navigator: 'pageCanvas',
+      details: { type: 'pageCanvas', sessionId, messageId },
+    }
   }
 
   // Sources - include filter if present
@@ -618,6 +772,26 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
         }
       }
       return { navigator: 'automations', details: null }
+    case 'pageCanvas':
+      if (parsed.id && parsed.params.sessionId) {
+        return {
+          navigator: 'pageCanvas',
+          details: {
+            type: 'pageCanvas',
+            sessionId: parsed.params.sessionId,
+            messageId: parsed.id,
+          },
+        }
+      }
+      return null
+    case 'savedPage':
+      if (parsed.id) {
+        return {
+          navigator: 'pageCanvas',
+          details: { type: 'savedPage', pageId: parsed.id },
+        }
+      }
+      return null
     case 'session':
       if (parsed.id) {
         // Reconstruct filter from params
@@ -697,6 +871,25 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
     return {
       navigator: 'settings',
       details: { type: state.subpage, id: state.subpage },
+    }
+  }
+
+  if (state.navigator === 'pageCanvas') {
+    if (state.details.type === 'savedPage') {
+      return {
+        navigator: 'pageCanvas',
+        details: {
+          type: 'savedPage',
+          id: state.details.pageId,
+        },
+      }
+    }
+    return {
+      navigator: 'pageCanvas',
+      details: {
+        type: 'pageCanvas',
+        id: `${state.details.sessionId}:${state.details.messageId}`,
+      },
     }
   }
 

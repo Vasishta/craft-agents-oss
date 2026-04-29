@@ -497,6 +497,15 @@ export interface ElectronAPI {
   onLlmConnectionsChanged(callback: () => void): () => void
 
   // Views (workspace-scoped, stored in views.json)
+  // Pages (workspace-scoped)
+  listPages(workspaceId: string): Promise<import("@craft-agent/shared/protocol").PageListEntry[]>
+  getPage(workspaceId: string, pageId: string): Promise<import("@craft-agent/shared/protocol").PageDocument | null>
+  createPage(workspaceId: string, input: { title?: string; content?: string; sourceSessionId?: string; sourceMessageId?: string; notebookId?: string }): Promise<import("@craft-agent/shared/protocol").PageDocument | null>
+  updatePage(workspaceId: string, pageId: string, updates: { title?: string; outputIds?: string[] }): Promise<import("@craft-agent/shared/protocol").PageDocument | null>
+  updatePageContent(workspaceId: string, pageId: string, content: string): Promise<import("@craft-agent/shared/protocol").PageDocument | null>
+  deletePage(workspaceId: string, pageId: string): Promise<void>
+  onPagesChanged(callback: (workspaceId: string, data: { pageId: string; changeType: "created" | "updated" | "deleted"; timestamp: number }) => void): () => void
+
   listViews(workspaceId: string): Promise<import('@craft-agent/shared/views').ViewConfig[]>
   saveViews(workspaceId: string, views: import('@craft-agent/shared/views').ViewConfig[]): Promise<void>
 
@@ -788,6 +797,21 @@ export interface AutomationsNavigationState {
 }
 
 /**
+ * PageCanvas/canvas navigation state.
+ *
+ * Page canvases are rendered from session messages, so they can update live while
+ * an assistant response is streaming.  Saved pages are standalone workspace pages
+ * that are persisted independently of any message.
+ */
+export interface PageCanvasNavigationState {
+  navigator: 'pageCanvas'
+  details:
+    | { type: 'pageCanvas'; sessionId: string; messageId: string }
+    | { type: 'savedPage'; pageId: string }
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
  * Unified navigation state
  */
 export type NavigationState =
@@ -796,6 +820,7 @@ export type NavigationState =
   | SettingsNavigationState
   | SkillsNavigationState
   | AutomationsNavigationState
+  | PageCanvasNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -816,6 +841,10 @@ export const isSkillsNavigation = (
 export const isAutomationsNavigation = (
   state: NavigationState
 ): state is AutomationsNavigationState => state.navigator === 'automations'
+
+export const isPageCanvasNavigation = (
+  state: NavigationState
+): state is PageCanvasNavigationState => state.navigator === 'pageCanvas'
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
   navigator: 'sessions',
@@ -844,6 +873,12 @@ export const getNavigationStateKey = (state: NavigationState): string => {
   }
   if (state.navigator === 'settings') {
     return `settings:${state.subpage}`
+  }
+  if (state.navigator === 'pageCanvas') {
+    if (state.details.type === 'savedPage') {
+      return `pageCanvas:page:${state.details.pageId}`
+    }
+    return `pageCanvas:${state.details.sessionId}:${state.details.messageId}`
   }
   // Chats
   const f = state.filter
@@ -895,6 +930,26 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
     const subpage = key.slice(9)
     if (isValidSettingsSubpage(subpage)) {
       return { navigator: 'settings', subpage }
+    }
+  }
+
+  // Handle page canvases
+  if (key.startsWith('pageCanvas:')) {
+    const parts = key.split(':')
+    // Saved page: pageCanvas:page:{pageId}
+    if (parts[1] === 'page' && parts[2]) {
+      return {
+        navigator: 'pageCanvas',
+        details: { type: 'savedPage', pageId: parts[2] },
+      }
+    }
+    // Message-based: pageCanvas:{sessionId}:{messageId}
+    const [, sessionId, messageId] = parts
+    if (sessionId && messageId) {
+      return {
+        navigator: 'pageCanvas',
+        details: { type: 'pageCanvas', sessionId, messageId },
+      }
     }
   }
 

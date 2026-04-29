@@ -177,6 +177,14 @@ export const routes = {
     automationsAgentic: (automationId?: string) =>
       automationId ? `automations/agentic/automation/${automationId}` as const : 'automations/agentic' as const,
 
+    /** Page canvas view for a session message */
+    pageCanvas: (params: { sessionId: string; messageId: string }) =>
+      `pages/from-message/${encodeURIComponent(params.sessionId)}/${encodeURIComponent(params.messageId)}` as const,
+
+    /** Page canvas view for a saved (standalone) page */
+    savedPage: (pageId: string) =>
+      `pages/page/${encodeURIComponent(pageId)}` as const,
+
     /** Settings view (settings navigator) - uses SettingsSubpage from registry */
     settings: (subpage?: SettingsSubpage) =>
       subpage
