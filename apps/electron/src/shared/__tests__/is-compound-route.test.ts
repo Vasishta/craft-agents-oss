@@ -34,6 +34,7 @@ describe('isCompoundRoute: all prefix families', () => {
     'sources/mcp',
     'sources/local',
     'sources/source/github',
+    'search',
     'settings',
     'settings/app',
     'settings/shortcuts',

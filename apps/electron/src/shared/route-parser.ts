@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas'
+export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas' | 'search'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -82,7 +82,7 @@ function isSafePageRouteId(pageId: string): boolean {
  */
 const COMPOUND_ROUTE_PREFIX_SET = new Set([
   'allSessions', 'flagged', 'archived', 'state', 'label', 'view',
-  'sources', 'skills', 'automations', 'settings', 'pages'
+  'sources', 'skills', 'automations', 'settings', 'pages', 'search'
 ])
 
 /**
@@ -90,7 +90,7 @@ const COMPOUND_ROUTE_PREFIX_SET = new Set([
  */
 const COMPOUND_ROUTE_PREFIX_MAP: Record<string, true> = {
   allSessions: true, flagged: true, archived: true,
-  state: true, label: true, view: true,
+  state: true, label: true, view: true, search: true,
   sources: true, skills: true, automations: true, settings: true, pages: true
 }
 
@@ -117,6 +117,7 @@ export function isCompoundRoute(route: string): boolean {
     case 115: // 's' - sources, settings, skills, state
       return route === 'sources' ||
              route.startsWith('sources/') ||
+             route === 'search' ||
              route === 'settings' ||
              route.startsWith('settings/') ||
              route === 'skills' ||
@@ -158,6 +159,14 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
   if (segments.length === 0) return null
 
   const first = segments[0]
+
+  // Search navigator
+  if (first === 'search' && segments.length === 1) {
+    return {
+      navigator: 'search',
+      details: null,
+    }
+  }
 
   // Settings navigator
   if (first === 'settings') {
@@ -393,6 +402,10 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
     return `pages/from-message/${encodeURIComponent(sessionId)}/${encodeURIComponent(messageId)}`
   }
 
+  if (parsed.navigator === 'search') {
+    return 'search'
+  }
+
   if (parsed.navigator === 'sources') {
     // Build base from filter (sources, sources/api, sources/mcp, sources/local)
     let base = 'sources'
@@ -539,6 +552,10 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
     }
   }
 
+  if (compound.navigator === 'search') {
+    return { type: 'view', name: 'search', params: {} }
+  }
+
   // Sources
   if (compound.navigator === 'sources') {
     if (!compound.details) {
@@ -671,6 +688,10 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
     }
   }
 
+  if (compound.navigator === 'search') {
+    return { navigator: 'search', details: null }
+  }
+
   // Sources - include filter if present
   if (compound.navigator === 'sources') {
     if (!compound.details) {
@@ -782,6 +803,8 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
       return { navigator: 'automations', details: null }
     case 'pages':
       return { navigator: 'pageCanvas', details: null }
+    case 'search':
+      return { navigator: 'search', details: null }
     case 'automation-info':
       if (parsed.id) {
         return {
@@ -917,6 +940,13 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
         type: 'pageCanvas',
         id: `${state.details.sessionId}:${state.details.messageId}`,
       },
+    }
+  }
+
+  if (state.navigator === 'search') {
+    return {
+      navigator: 'search',
+      details: null,
     }
   }
 

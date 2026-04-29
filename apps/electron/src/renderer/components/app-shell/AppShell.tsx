@@ -114,6 +114,7 @@ import {
   isSkillsNavigation,
   isAutomationsNavigation,
   isPageCanvasNavigation,
+  isSearchNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
@@ -588,7 +589,7 @@ function AppShellContent({
   // UNIFIED NAVIGATION STATE - single source of truth from NavigationContext
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
-  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState)
+  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState)
 
   const store = useStore()
   const panelStack = useAtomValue(panelStackAtom)
@@ -1722,6 +1723,10 @@ function AppShellContent({
     navigate(routes.view.pages())
   }, [navigate])
 
+  const handleSearchClick = useCallback(() => {
+    navigate(routes.view.search())
+  }, [navigate])
+
   // Handler for settings view
   const handleSettingsClick = useCallback((subpage: SettingsSubpage = 'app') => {
     navigate(routes.view.settings(subpage))
@@ -2363,6 +2368,13 @@ function AppShellContent({
                     // --- Separator ---
                     { id: "separator:chats-sources", type: "separator" },
                     // --- Sources & Skills Section ---
+                    {
+                      id: "nav:search",
+                      title: t("sidebar.search"),
+                      icon: Search,
+                      variant: isSearchNavigation(navState) ? "default" : "ghost",
+                      onClick: handleSearchClick,
+                    },
                     {
                       id: "nav:sources",
                       title: t("sidebar.sources"),
@@ -3260,7 +3272,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
+          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}

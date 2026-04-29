@@ -32,12 +32,13 @@ import {
   isSkillsNavigation,
   isAutomationsNavigation,
   isPageCanvasNavigation,
+  isSearchNavigation,
 } from '@/contexts/NavigationContext'
 import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelectionCount } from '@/hooks/useSession'
 import { sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
 import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
-import { SourceInfoPage, ChatPage, DocsHome, PageCanvas } from '@/pages'
+import { SourceInfoPage, ChatPage, DocsHome, PageCanvas, SearchPage } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
@@ -269,6 +270,15 @@ export function MainContentPanel({
           sessionId={navState.details.sessionId}
           messageId={navState.details.messageId}
         />
+      </Panel>
+    )
+  }
+
+  // Search navigator - global workspace search across docs and chats
+  if (isSearchNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        <SearchPage workspaceId={activeWorkspaceId || ''} />
       </Panel>
     )
   }
