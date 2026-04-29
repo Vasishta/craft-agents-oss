@@ -2539,7 +2539,7 @@ export function ResponseCard({
                     )}
                   >
                     <FilePlus2 className={SIZE_CONFIG.iconSize} />
-                    <span>Add to Page</span>
+                    <span>Add to Doc</span>
                   </button>
                 )}
                 {onPopOut && (

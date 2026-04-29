@@ -1413,7 +1413,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
     const targetPage = (activePageId ? pages.find(page => page.id === activePageId) : undefined) ?? pages[0]
     if (!targetPage) {
-      toast.error('Create a Page first')
+      toast.error('Create a Doc first')
       return
     }
 
@@ -1427,7 +1427,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     try {
       const page = await window.electronAPI.getPage(session.workspaceId, targetPage.id)
       if (!page) {
-        toast.error('Page not found')
+        toast.error('Doc not found')
         return
       }
 
@@ -1435,7 +1435,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
       const block = buildPageAppendBlock(prompt, response)
       const nextContent = appendMarkdownBlock(page.content, block)
       const updatedPage = await window.electronAPI.updatePageContent(session.workspaceId, targetPage.id, nextContent)
-      const title = updatedPage?.title || page.title || 'Page'
+      const title = updatedPage?.title || page.title || 'Doc'
 
       toast.success(`Added to ${title}`)
 
@@ -1443,7 +1443,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
         navigate(routes.view.savedPage(targetPage.id), { newPanel: true })
       }
     } catch (error) {
-      toast.error('Failed to add to Page', {
+      toast.error('Failed to add to Doc', {
         description: error instanceof Error ? error.message : 'Unknown error',
       })
     }

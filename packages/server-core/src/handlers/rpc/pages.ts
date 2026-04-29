@@ -94,7 +94,7 @@ export function registerPagesHandlers(server: RpcServer, deps: HandlerDeps): voi
     try {
       const page = readPageDocument(workspace.rootPath, pageId, workspaceId)
       if (!page) {
-        throw new Error('Page not found')
+        throw new Error('Doc not found')
       }
       return page
     } catch (error) {
@@ -116,7 +116,7 @@ export function registerPagesHandlers(server: RpcServer, deps: HandlerDeps): voi
       const result = createPageDocument(workspace.rootPath, workspaceId, input)
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to create page')
+        throw new Error(result.error || 'Failed to create doc')
       }
 
       if (result.page) {
@@ -144,7 +144,7 @@ export function registerPagesHandlers(server: RpcServer, deps: HandlerDeps): voi
       const result = updatePageDocument(workspace.rootPath, pageId, input)
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to update page')
+        throw new Error(result.error || 'Failed to update doc')
       }
 
       broadcastPageChanged(server, workspaceId, pageId, 'updated')
@@ -170,7 +170,7 @@ export function registerPagesHandlers(server: RpcServer, deps: HandlerDeps): voi
       const result = updatePageContent(workspace.rootPath, pageId, content)
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to update page content')
+        throw new Error(result.error || 'Failed to update doc content')
       }
 
       // Debounce broadcasts for content updates?
@@ -197,7 +197,7 @@ export function registerPagesHandlers(server: RpcServer, deps: HandlerDeps): voi
       const result = deletePageDocument(workspace.rootPath, pageId)
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to delete page')
+        throw new Error(result.error || 'Failed to delete doc')
       }
 
       broadcastPageChanged(server, workspaceId, pageId, 'deleted')

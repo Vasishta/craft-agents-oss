@@ -1,0 +1,30 @@
+export type {
+  PageDocument,
+  PageIndex,
+  CreatePageInput,
+  UpdatePageInput,
+  PageListEntry,
+  CreatePageResult,
+  UpdatePageResult,
+  DeletePageResult,
+} from './types'
+
+export {
+  getPageMarkdownPath,
+  getPageIndexPath,
+  getPagesDirectoryPath,
+  ensurePagesDirectory,
+  extractTitleFromContent,
+  loadPageIndex,
+  savePageIndex,
+  rebuildPageIndex,
+  createPageDocument,
+  readPageDocument,
+  updatePageDocument,
+  updatePageContent,
+  listPageDocuments,
+  listPageEntries,
+  deletePageDocument,
+  pageDocumentExists,
+  getPageCount,
+} from './storage'

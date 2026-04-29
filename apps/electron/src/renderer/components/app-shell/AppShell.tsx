@@ -2447,7 +2447,7 @@ function AppShellContent({
                       onToggle: () => toggleExpanded('nav:pages'),
                       items: pages.slice(0, 10).map(p => ({
                         id: `nav:page:${p.id}`,
-                        title: p.title || 'Untitled Page',
+                        title: p.title || 'Untitled Doc',
                         icon: FileText,
                         variant: (isPageCanvasNavigation(navState) && navState.details.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
                         onClick: () => navigate(routes.view.savedPage(p.id)),

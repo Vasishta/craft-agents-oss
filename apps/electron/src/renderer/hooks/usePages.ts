@@ -132,9 +132,9 @@ export function useDeletePage(workspaceId: string) {
     async (pageId: string) => {
       const success = await deletePage(workspaceId, pageId)
       if (success) {
-        toast.success('Page deleted')
+        toast.success('Doc deleted')
       } else {
-        toast.error('Failed to delete page')
+        toast.error('Failed to delete doc')
       }
       return success
     },
@@ -237,9 +237,9 @@ export function useCreatePageFromMessage(workspaceId: string) {
       try {
         const page = await createFromMessage(sessionId, messageId, content, title)
         if (page) {
-          toast.success('Page created')
+          toast.success('Doc created')
         } else {
-          toast.error('Failed to create page')
+          toast.error('Failed to create doc')
         }
         return page
       } finally {
