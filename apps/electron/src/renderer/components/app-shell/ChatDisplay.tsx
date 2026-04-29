@@ -1449,6 +1449,44 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     }
   }, [activePageId, navigate, pages, session])
 
+  const handleSaveMessageAsOutput = useCallback(async (messageId: string) => {
+    if (!session) return
+
+    const message = session.messages.find(item => item.id === messageId)
+    const response = message?.content?.trim()
+    if (!response) {
+      toast.error('No response content to save')
+      return
+    }
+
+    const prompt = findPreviousUserMessage(session.messages, messageId)?.content?.trim()
+    const promptTitle = prompt ? prompt.replace(/\s+/g, ' ').slice(0, 80) : undefined
+    const title = session.name
+      ? `${session.name} output`
+      : promptTitle || response.replace(/\s+/g, ' ').slice(0, 80) || 'Saved Output'
+
+    try {
+      const output = await window.electronAPI.createOutput(session.workspaceId, {
+        title,
+        content: response,
+        kind: 'assistant_response',
+        contentType: 'markdown',
+        sourceSessionId: session.id,
+        sourceMessageId: messageId,
+      })
+      if (!output) {
+        toast.error('Failed to save output')
+        return
+      }
+      toast.success('Saved as output')
+      navigate(routes.view.savedOutput(output.id), { newPanel: true })
+    } catch (error) {
+      toast.error('Failed to save output', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }, [navigate, session])
+
   const scrollToFollowUpTurn = useCallback((item: {
     messageId: string
     annotationId: string
@@ -1842,6 +1880,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                           }), { newPanel: true })
                         }}
                         onAddToPage={handleAddMessageToPage}
+                        onSaveAsOutput={handleSaveMessageAsOutput}
                         onOpenDetails={() => {
                           // Open turn details in markdown overlay
                           const markdown = formatTurnAsMarkdown(turn)

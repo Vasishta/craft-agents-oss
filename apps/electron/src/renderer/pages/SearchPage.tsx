@@ -1,15 +1,16 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
-import { FileText, MessageSquareText, Search } from 'lucide-react'
+import { Box, FileText, MessageSquareText, Search } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { sessionMetaMapAtom, type SessionMeta } from '@/atoms/sessions'
+import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
 import { navigate, routes } from '@/lib/navigate'
 import { stripMarkdown } from '@/utils/text'
-import type { PageListEntry } from '../../shared/types'
+import type { OutputIndexEntry, PageListEntry } from '../../shared/types'
 
 interface SearchPageProps {
   workspaceId: string
@@ -23,6 +24,12 @@ interface DocResult {
 
 interface ChatResult {
   session: SessionMeta
+  snippet: string
+  titleMatched: boolean
+}
+
+interface OutputResult {
+  output: OutputIndexEntry
   snippet: string
   titleMatched: boolean
 }
@@ -151,12 +158,16 @@ function ResultGroup({
 export default function SearchPage({ workspaceId }: SearchPageProps) {
   const { leadingAction, rightSidebarButton } = useAppShellContext()
   const { pages } = usePageList(workspaceId)
+  const { outputs } = useOutputList(workspaceId)
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const [query, setQuery] = React.useState('')
   const [debouncedQuery, setDebouncedQuery] = React.useState('')
   const [docContents, setDocContents] = React.useState<Record<string, string>>({})
   const docContentsRef = React.useRef<Record<string, string>>({})
+  const [outputContents, setOutputContents] = React.useState<Record<string, string>>({})
+  const outputContentsRef = React.useRef<Record<string, string>>({})
   const [isLoadingDocContents, setIsLoadingDocContents] = React.useState(false)
+  const [isLoadingOutputContents, setIsLoadingOutputContents] = React.useState(false)
 
   const workspaceSessions = React.useMemo(
     () => Array.from(sessionMetaMap.values()).filter(session =>
@@ -174,6 +185,10 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
   }, [docContents])
 
   React.useEffect(() => {
+    outputContentsRef.current = outputContents
+  }, [outputContents])
+
+  React.useEffect(() => {
     const timer = window.setTimeout(() => {
       setDebouncedQuery(trimmedQuery)
     }, 250)
@@ -184,7 +199,9 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
   React.useEffect(() => {
     if (!workspaceId) {
       setDocContents({})
+      setOutputContents({})
       setIsLoadingDocContents(false)
+      setIsLoadingOutputContents(false)
       return
     }
 
@@ -223,6 +240,48 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
     }
   }, [workspaceId, pages, trimmedDebouncedQuery])
 
+  React.useEffect(() => {
+    if (!workspaceId) {
+      setOutputContents({})
+      setIsLoadingOutputContents(false)
+      return
+    }
+
+    if (!trimmedDebouncedQuery || outputs.length === 0) {
+      setIsLoadingOutputContents(false)
+      return
+    }
+
+    let stale = false
+    const outputsToLoad = outputs.filter(output => outputContentsRef.current[output.id] === undefined)
+    if (outputsToLoad.length === 0) {
+      setIsLoadingOutputContents(false)
+      return
+    }
+
+    setIsLoadingOutputContents(true)
+
+    runWithConcurrency(outputsToLoad, 6, async (output) => {
+      let content = ''
+      try {
+        const fullOutput = await window.electronAPI.getOutput(workspaceId, output.id)
+        content = fullOutput?.content ?? ''
+      } catch {
+        content = ''
+      }
+
+      if (!stale) {
+        setOutputContents(current => ({ ...current, [output.id]: content }))
+      }
+    }).finally(() => {
+      if (!stale) setIsLoadingOutputContents(false)
+    })
+
+    return () => {
+      stale = true
+    }
+  }, [workspaceId, outputs, trimmedDebouncedQuery])
+
   const docResults = React.useMemo(() => {
     if (!lowerQuery) return []
 
@@ -243,6 +302,27 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
 
     return sortResults(results, result => result.page.updatedAt)
   }, [pages, docContents, lowerQuery, trimmedQuery])
+
+  const outputResults = React.useMemo(() => {
+    if (!lowerQuery) return []
+
+    const results: OutputResult[] = []
+    for (const output of outputs) {
+      const title = output.title || 'Untitled Output'
+      const content = outputContents[output.id] ?? output.preview ?? ''
+      const titleMatched = title.toLowerCase().includes(lowerQuery)
+      const contentMatched = content ? normalizeText(content).toLowerCase().includes(lowerQuery) : false
+      if (!titleMatched && !contentMatched) continue
+
+      results.push({
+        output,
+        snippet: content ? makeSnippet(content, trimmedQuery, 'Empty output') : 'Title match',
+        titleMatched,
+      })
+    }
+
+    return sortResults(results, result => result.output.updatedAt)
+  }, [outputs, outputContents, lowerQuery, trimmedQuery])
 
   const chatResults = React.useMemo(() => {
     if (!lowerQuery) return []
@@ -266,8 +346,9 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
   }, [workspaceSessions, lowerQuery, trimmedQuery])
 
   const hasQuery = trimmedQuery.length > 0
-  const hasResults = docResults.length > 0 || chatResults.length > 0
-  const showLoadingOnly = hasQuery && isLoadingDocContents && !hasResults
+  const hasResults = docResults.length > 0 || outputResults.length > 0 || chatResults.length > 0
+  const isLoadingBodies = isLoadingDocContents || isLoadingOutputContents
+  const showLoadingOnly = hasQuery && isLoadingBodies && !hasResults
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -284,8 +365,8 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search docs and chat previews"
-              aria-label="Search docs and chat previews"
+              placeholder="Search docs, outputs, and chat previews"
+              aria-label="Search docs, outputs, and chat previews"
               autoFocus
               className="h-10 pl-9"
             />
@@ -301,15 +382,15 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                 <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
                   <Search className="h-5 w-5" />
                 </div>
-                <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Search docs and chat previews</h1>
+                <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Search docs, outputs, and chat previews</h1>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Searches doc titles and contents, plus chat titles and previews.
+                  Searches doc and output titles and contents, plus chat titles and previews.
                 </p>
               </div>
             </section>
           ) : showLoadingOnly ? (
             <section className="flex min-h-[calc(100vh-220px)] items-center justify-center">
-              <p className="text-sm text-muted-foreground">Searching doc bodies...</p>
+              <p className="text-sm text-muted-foreground">Searching doc and output bodies...</p>
             </section>
           ) : !hasResults ? (
             <section className="flex min-h-[calc(100vh-220px)] items-center justify-center">
@@ -317,8 +398,8 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
             </section>
           ) : (
             <div className="mt-6 flex flex-col gap-8">
-              {isLoadingDocContents && (
-                <p className="text-sm text-muted-foreground">Searching doc bodies...</p>
+              {isLoadingBodies && (
+                <p className="text-sm text-muted-foreground">Searching doc and output bodies...</p>
               )}
               <ResultGroup title="Docs" count={docResults.length}>
                 {docResults.length === 0 ? (
@@ -332,6 +413,23 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                       snippet={snippet}
                       timestamp={formatUpdatedTime(page.updatedAt)}
                       onClick={() => navigate(routes.view.savedPage(page.id))}
+                    />
+                  ))
+                )}
+              </ResultGroup>
+
+              <ResultGroup title="Outputs" count={outputResults.length}>
+                {outputResults.length === 0 ? (
+                  <p className="rounded-[8px] border border-border/55 px-4 py-3 text-sm text-muted-foreground">No matching outputs</p>
+                ) : (
+                  outputResults.map(({ output, snippet }) => (
+                    <ResultRow
+                      key={output.id}
+                      icon={<Box className="h-4 w-4" />}
+                      title={output.title || 'Untitled Output'}
+                      snippet={snippet}
+                      timestamp={formatUpdatedTime(output.updatedAt)}
+                      onClick={() => navigate(routes.view.savedOutput(output.id))}
                     />
                   ))
                 )}

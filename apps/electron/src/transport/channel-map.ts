@@ -252,6 +252,14 @@ export const CHANNEL_MAP = {
   deletePage: invoke(RPC_CHANNELS.pages.DELETE),
   onPagesChanged: listener(RPC_CHANNELS.pages.CHANGED),
 
+  // Outputs
+  listOutputs: invoke(RPC_CHANNELS.outputs.LIST),
+  getOutput: invoke(RPC_CHANNELS.outputs.GET),
+  createOutput: invoke(RPC_CHANNELS.outputs.CREATE),
+  updateOutput: invoke(RPC_CHANNELS.outputs.UPDATE),
+  deleteOutput: invoke(RPC_CHANNELS.outputs.DELETE),
+  promoteOutputToDoc: invoke(RPC_CHANNELS.outputs.PROMOTE_TO_DOC),
+  onOutputsChanged: listener(RPC_CHANNELS.outputs.CHANGED),
 
   // LLM connections change listener
   onLlmConnectionsChanged: listener(RPC_CHANNELS.llmConnections.CHANGED),

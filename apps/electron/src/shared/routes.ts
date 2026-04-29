@@ -186,6 +186,13 @@ export const routes = {
     /** Workspace search across docs and chats */
     search: () => 'search' as const,
 
+    /** Outputs list/detail view */
+    outputs: () => 'outputs' as const,
+
+    /** Saved output detail view */
+    savedOutput: (outputId: string) =>
+      `outputs/output/${encodeURIComponent(outputId)}` as const,
+
     /** Page canvas view for a session message */
     pageCanvas: (params: { sessionId: string; messageId: string }) =>
       `pages/from-message/${encodeURIComponent(params.sessionId)}/${encodeURIComponent(params.messageId)}` as const,

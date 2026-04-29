@@ -56,6 +56,14 @@ describe('isCompoundRoute: all prefix families', () => {
     expect(isCompoundRoute(route)).toBe(true)
   })
 
+  // --- 'o' prefix ---
+  it.each([
+    'outputs',
+    'outputs/output/output_abc-123',
+  ])('recognises "%s"', (route) => {
+    expect(isCompoundRoute(route)).toBe(true)
+  })
+
   // --- 'f' prefix ---
   it.each([
     'flagged',

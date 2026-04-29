@@ -24,6 +24,7 @@ import {
   FilePenLine,
   GitBranch,
   PanelRightOpen,
+  Box,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Markdown } from '../markdown'
@@ -324,6 +325,8 @@ export interface TurnCardProps {
   onOpenCanvas?: (messageId: string) => void
   /** Callback to append this response to the active/recent Page */
   onAddToPage?: (messageId: string) => void
+  /** Callback to save this response as a workspace Output */
+  onSaveAsOutput?: (messageId: string) => void
   /** Callback to open turn details in a new window */
   onOpenDetails?: () => void
   /** Callback to open individual activity details in Monaco */
@@ -1399,6 +1402,8 @@ export interface ResponseCardProps {
   onOpenCanvas?: () => void
   /** Callback to append this response to the active/recent Page */
   onAddToPage?: () => void
+  /** Callback to save this response as a workspace Output */
+  onSaveAsOutput?: () => void
   /** Card variant - 'response' for AI messages, 'plan' for plan messages */
   variant?: 'response' | 'plan'
   /** Parent session ID (used to reset local annotation/island UI state on session switches) */
@@ -1659,6 +1664,7 @@ export function ResponseCard({
   onPopOut,
   onOpenCanvas,
   onAddToPage,
+  onSaveAsOutput,
   variant = 'response',
   sessionId,
   messageId,
@@ -2542,6 +2548,19 @@ export function ResponseCard({
                     <span>Add to Doc</span>
                   </button>
                 )}
+                {onSaveAsOutput && (
+                  <button
+                    onClick={onSaveAsOutput}
+                    className={cn(
+                      "turn-action-btn flex items-center gap-1.5 transition-colors select-none",
+                      "text-muted-foreground hover:text-foreground",
+                      "focus:outline-none focus-visible:underline"
+                    )}
+                  >
+                    <Box className={SIZE_CONFIG.iconSize} />
+                    <span>Save Output</span>
+                  </button>
+                )}
                 {onPopOut && (
                   <button
                     onClick={onPopOut}
@@ -2762,6 +2781,7 @@ export const TurnCard = React.memo(function TurnCard({
   onPopOut,
   onOpenCanvas,
   onAddToPage,
+  onSaveAsOutput,
   onOpenDetails,
   onOpenActivityDetails,
   onOpenMultiFileDiff,
@@ -3132,6 +3152,7 @@ export const TurnCard = React.memo(function TurnCard({
             onPopOut={onPopOut ? () => onPopOut(planActivity.content || '') : undefined}
             onOpenCanvas={onOpenCanvas && planActivity.messageId ? () => onOpenCanvas(planActivity.messageId!) : undefined}
             onAddToPage={onAddToPage && planActivity.messageId ? () => onAddToPage(planActivity.messageId!) : undefined}
+            onSaveAsOutput={onSaveAsOutput && planActivity.messageId ? () => onSaveAsOutput(planActivity.messageId!) : undefined}
             variant="plan"
             messageId={planActivity.messageId}
             annotations={planActivity.annotations}
@@ -3173,6 +3194,7 @@ export const TurnCard = React.memo(function TurnCard({
                 onPopOut={onPopOut ? () => onPopOut(response.text) : undefined}
                 onOpenCanvas={onOpenCanvas && response.messageId ? () => onOpenCanvas(response.messageId!) : undefined}
                 onAddToPage={onAddToPage && response.messageId ? () => onAddToPage(response.messageId!) : undefined}
+                onSaveAsOutput={onSaveAsOutput && response.messageId ? () => onSaveAsOutput(response.messageId!) : undefined}
                 variant={response.isPlan ? 'plan' : 'response'}
                 messageId={response.messageId}
                 annotations={response.annotations}
@@ -3207,6 +3229,7 @@ export const TurnCard = React.memo(function TurnCard({
             onPopOut={onPopOut ? () => onPopOut(response.text) : undefined}
             onOpenCanvas={onOpenCanvas && response.messageId ? () => onOpenCanvas(response.messageId!) : undefined}
             onAddToPage={onAddToPage && response.messageId ? () => onAddToPage(response.messageId!) : undefined}
+            onSaveAsOutput={onSaveAsOutput && response.messageId ? () => onSaveAsOutput(response.messageId!) : undefined}
             variant={response.isPlan ? 'plan' : 'response'}
             messageId={response.messageId}
             annotations={response.annotations}

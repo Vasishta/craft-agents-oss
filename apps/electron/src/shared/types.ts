@@ -506,6 +506,15 @@ export interface ElectronAPI {
   deletePage(workspaceId: string, pageId: string): Promise<void>
   onPagesChanged(callback: (workspaceId: string, data: { pageId: string; changeType: "created" | "updated" | "deleted"; timestamp: number }) => void): () => void
 
+  // Outputs (workspace-scoped)
+  listOutputs(workspaceId: string): Promise<import("@craft-agent/shared/protocol").OutputIndexEntry[]>
+  getOutput(workspaceId: string, outputId: string): Promise<import("@craft-agent/shared/protocol").OutputDocument | null>
+  createOutput(workspaceId: string, input: import("@craft-agent/shared/protocol").CreateOutputInput): Promise<import("@craft-agent/shared/protocol").OutputDocument | null>
+  updateOutput(workspaceId: string, outputId: string, updates: import("@craft-agent/shared/protocol").UpdateOutputInput): Promise<import("@craft-agent/shared/protocol").OutputDocument | null>
+  deleteOutput(workspaceId: string, outputId: string): Promise<void>
+  promoteOutputToDoc(workspaceId: string, outputId: string): Promise<import("@craft-agent/shared/protocol").PageDocument | null>
+  onOutputsChanged(callback: (workspaceId: string, data: { outputId: string; changeType: "created" | "updated" | "deleted" | "promoted"; timestamp: number }) => void): () => void
+
   listViews(workspaceId: string): Promise<import('@craft-agent/shared/views').ViewConfig[]>
   saveViews(workspaceId: string, views: import('@craft-agent/shared/views').ViewConfig[]): Promise<void>
 
@@ -822,6 +831,15 @@ export interface SearchNavigationState {
 }
 
 /**
+ * Outputs navigation state.
+ */
+export interface OutputsNavigationState {
+  navigator: 'outputs'
+  details: null | { type: 'output'; outputId: string }
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
  * Workspace home/start navigation state.
  */
 export interface HomeNavigationState {
@@ -841,6 +859,7 @@ export type NavigationState =
   | AutomationsNavigationState
   | PageCanvasNavigationState
   | SearchNavigationState
+  | OutputsNavigationState
   | HomeNavigationState
 
 export const isSessionsNavigation = (
@@ -870,6 +889,10 @@ export const isPageCanvasNavigation = (
 export const isSearchNavigation = (
   state: NavigationState
 ): state is SearchNavigationState => state.navigator === 'search'
+
+export const isOutputsNavigation = (
+  state: NavigationState
+): state is OutputsNavigationState => state.navigator === 'outputs'
 
 export const isHomeNavigation = (
   state: NavigationState
@@ -913,6 +936,12 @@ export const getNavigationStateKey = (state: NavigationState): string => {
   }
   if (state.navigator === 'search') {
     return 'search'
+  }
+  if (state.navigator === 'outputs') {
+    if (state.details?.type === 'output') {
+      return `outputs/output/${state.details.outputId}`
+    }
+    return 'outputs'
   }
   if (state.navigator === 'home') {
     return 'home'
@@ -993,6 +1022,16 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
 
   // Handle search
   if (key === 'search') return { navigator: 'search', details: null }
+
+  // Handle outputs
+  if (key === 'outputs') return { navigator: 'outputs', details: null }
+  if (key.startsWith('outputs/output/')) {
+    const outputId = key.slice(15)
+    if (outputId) {
+      return { navigator: 'outputs', details: { type: 'output', outputId } }
+    }
+    return { navigator: 'outputs', details: null }
+  }
 
   // Handle home
   if (key === 'home') return { navigator: 'home', details: null }
