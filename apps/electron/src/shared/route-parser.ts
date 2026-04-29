@@ -82,7 +82,7 @@ function isSafePageRouteId(pageId: string): boolean {
  */
 const COMPOUND_ROUTE_PREFIX_SET = new Set([
   'allSessions', 'flagged', 'archived', 'state', 'label', 'view',
-  'sources', 'skills', 'automations', 'settings', 'pages', 'search', 'home'
+  'sources', 'skills', 'automations', 'settings', 'pages', 'search'
 ])
 
 /**
@@ -91,7 +91,6 @@ const COMPOUND_ROUTE_PREFIX_SET = new Set([
 const COMPOUND_ROUTE_PREFIX_MAP: Record<string, true> = {
   allSessions: true, flagged: true, archived: true,
   state: true, label: true, view: true, search: true,
-  home: true,
   sources: true, skills: true, automations: true, settings: true, pages: true
 }
 
@@ -133,8 +132,6 @@ export function isCompoundRoute(route: string): boolean {
       return route === 'view' || route.startsWith('view/')
     case 108: // 'l' - label
       return route === 'label' || route.startsWith('label/')
-    case 104: // 'h' - home
-      return route === 'home'
   }
 
   // Fallback for other prefixes
@@ -493,6 +490,10 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
  */
 export function parseRoute(route: string): ParsedRoute | null {
   try {
+    if (route === 'home') {
+      return { type: 'view', name: 'home', params: {} }
+    }
+
     // Check if this is a compound route (preferred format)
     if (isCompoundRoute(route)) {
       const compound = parseCompoundRoute(route)
@@ -646,6 +647,12 @@ export function parseRouteToNavigationState(
   route: string,
   sidebarParam?: string
 ): NavigationState | null {
+  if (route === 'home') {
+    const rightSidebar = parseRightSidebarParam(sidebarParam)
+    const state: NavigationState = { navigator: 'home', details: null }
+    return rightSidebar ? { ...state, rightSidebar } : state
+  }
+
   // Parse compound routes
   if (isCompoundRoute(route)) {
     const compound = parseCompoundRoute(route)

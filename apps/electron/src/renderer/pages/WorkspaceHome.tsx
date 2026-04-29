@@ -141,6 +141,29 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
     [sources]
   )
 
+  if (!workspaceId) {
+    return (
+      <div className="flex h-full flex-col bg-background">
+        <PanelHeader
+          title="Workspace"
+          leadingAction={leadingAction}
+          rightSidebarButton={rightSidebarButton}
+        />
+
+        <ScrollArea className="min-h-0 flex-1">
+          <main className="mx-auto flex min-h-[calc(100vh-120px)] w-full max-w-[980px] items-center justify-center px-5 py-7 sm:px-8">
+            <section className="max-w-[360px] text-center">
+              <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Open or create a workspace to begin.</h1>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Workspace Home will show chats, docs, search, and available context once a workspace is active.
+              </p>
+            </section>
+          </main>
+        </ScrollArea>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col bg-background">
       <PanelHeader
@@ -209,7 +232,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                 ))}
               </RecentSection>
 
-              <RecentSection title="Recent files & context" empty="No files or context yet">
+              <RecentSection title="Available context" empty="No files or context yet">
                 {recentSources.map((source) => (
                   <RecentRow
                     key={source.config.slug}

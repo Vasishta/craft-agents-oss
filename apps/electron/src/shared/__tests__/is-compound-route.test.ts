@@ -82,15 +82,11 @@ describe('isCompoundRoute: all prefix families', () => {
     expect(isCompoundRoute(route)).toBe(true)
   })
 
-  // --- 'h' prefix ---
-  it('recognises "home"', () => {
-    expect(isCompoundRoute('home')).toBe(true)
-  })
-
   // --- Non-compound routes ---
   it.each([
     'session-id-plain',
     'random-string',
+    'home',
     '',
     'pages/',
   ])('rejects "%s"', (route) => {

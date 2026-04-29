@@ -74,6 +74,25 @@ function sortResults<T extends { titleMatched: boolean }>(
   })
 }
 
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>
+): Promise<void> {
+  let nextIndex = 0
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex
+      nextIndex += 1
+      const item = items[currentIndex]
+      if (item === undefined) continue
+      await worker(item)
+    }
+  })
+
+  await Promise.all(workers)
+}
+
 function ResultRow({
   icon,
   title,
@@ -134,7 +153,9 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
   const { pages } = usePageList(workspaceId)
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const [query, setQuery] = React.useState('')
+  const [debouncedQuery, setDebouncedQuery] = React.useState('')
   const [docContents, setDocContents] = React.useState<Record<string, string>>({})
+  const docContentsRef = React.useRef<Record<string, string>>({})
   const [isLoadingDocContents, setIsLoadingDocContents] = React.useState(false)
 
   const workspaceSessions = React.useMemo(
@@ -144,27 +165,55 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
     [sessionMetaMap, workspaceId]
   )
 
+  const trimmedQuery = query.trim()
+  const lowerQuery = trimmedQuery.toLowerCase()
+  const trimmedDebouncedQuery = debouncedQuery.trim()
+
   React.useEffect(() => {
-    if (!workspaceId || pages.length === 0) {
+    docContentsRef.current = docContents
+  }, [docContents])
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedQuery(trimmedQuery)
+    }, 250)
+
+    return () => window.clearTimeout(timer)
+  }, [trimmedQuery])
+
+  React.useEffect(() => {
+    if (!workspaceId) {
       setDocContents({})
       setIsLoadingDocContents(false)
       return
     }
 
+    if (!trimmedDebouncedQuery || pages.length === 0) {
+      setIsLoadingDocContents(false)
+      return
+    }
+
     let stale = false
+    const pagesToLoad = pages.filter(page => docContentsRef.current[page.id] === undefined)
+    if (pagesToLoad.length === 0) {
+      setIsLoadingDocContents(false)
+      return
+    }
+
     setIsLoadingDocContents(true)
 
-    Promise.all(
-      pages.map(async (page) => {
-        try {
-          const fullPage = await window.electronAPI.getPage(workspaceId, page.id)
-          return [page.id, fullPage?.content ?? ''] as const
-        } catch {
-          return [page.id, ''] as const
-        }
-      })
-    ).then((entries) => {
-      if (!stale) setDocContents(Object.fromEntries(entries))
+    runWithConcurrency(pagesToLoad, 6, async (page) => {
+      let content = ''
+      try {
+        const fullPage = await window.electronAPI.getPage(workspaceId, page.id)
+        content = fullPage?.content ?? ''
+      } catch {
+        content = ''
+      }
+
+      if (!stale) {
+        setDocContents(current => ({ ...current, [page.id]: content }))
+      }
     }).finally(() => {
       if (!stale) setIsLoadingDocContents(false)
     })
@@ -172,10 +221,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
     return () => {
       stale = true
     }
-  }, [workspaceId, pages])
-
-  const trimmedQuery = query.trim()
-  const lowerQuery = trimmedQuery.toLowerCase()
+  }, [workspaceId, pages, trimmedDebouncedQuery])
 
   const docResults = React.useMemo(() => {
     if (!lowerQuery) return []
@@ -185,12 +231,12 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
       const title = page.title || 'Untitled Doc'
       const content = docContents[page.id] ?? ''
       const titleMatched = title.toLowerCase().includes(lowerQuery)
-      const contentMatched = normalizeText(content).toLowerCase().includes(lowerQuery)
+      const contentMatched = content ? normalizeText(content).toLowerCase().includes(lowerQuery) : false
       if (!titleMatched && !contentMatched) continue
 
       results.push({
         page,
-        snippet: makeSnippet(content, trimmedQuery, 'Empty doc'),
+        snippet: content ? makeSnippet(content, trimmedQuery, 'Empty doc') : 'Title match',
         titleMatched,
       })
     }
@@ -221,7 +267,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
 
   const hasQuery = trimmedQuery.length > 0
   const hasResults = docResults.length > 0 || chatResults.length > 0
-  const showLoading = hasQuery && isLoadingDocContents
+  const showLoadingOnly = hasQuery && isLoadingDocContents && !hasResults
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -261,9 +307,9 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                 </p>
               </div>
             </section>
-          ) : showLoading ? (
+          ) : showLoadingOnly ? (
             <section className="flex min-h-[calc(100vh-220px)] items-center justify-center">
-              <p className="text-sm text-muted-foreground">Searching docs and chat previews...</p>
+              <p className="text-sm text-muted-foreground">Searching doc bodies...</p>
             </section>
           ) : !hasResults ? (
             <section className="flex min-h-[calc(100vh-220px)] items-center justify-center">
@@ -271,6 +317,9 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
             </section>
           ) : (
             <div className="mt-6 flex flex-col gap-8">
+              {isLoadingDocContents && (
+                <p className="text-sm text-muted-foreground">Searching doc bodies...</p>
+              )}
               <ResultGroup title="Docs" count={docResults.length}>
                 {docResults.length === 0 ? (
                   <p className="rounded-[8px] border border-border/55 px-4 py-3 text-sm text-muted-foreground">No matching docs</p>
