@@ -180,6 +180,9 @@ export const routes = {
     /** Docs home/library view */
     pages: () => 'pages' as const,
 
+    /** Workspace search across docs and chats */
+    search: () => 'search' as const,
+
     /** Page canvas view for a session message */
     pageCanvas: (params: { sessionId: string; messageId: string }) =>
       `pages/from-message/${encodeURIComponent(params.sessionId)}/${encodeURIComponent(params.messageId)}` as const,

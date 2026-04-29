@@ -7,6 +7,7 @@
 export { default as ChatPage } from './ChatPage'
 export { default as DocsHome } from './DocsHome'
 export { default as PageCanvas } from './PageCanvas'
+export { default as SearchPage } from './SearchPage'
 export { default as SourceInfoPage } from './SourceInfoPage'
 // Settings pages
 export {
