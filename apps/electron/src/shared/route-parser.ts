@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas' | 'search'
+export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas' | 'search' | 'home'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -82,7 +82,7 @@ function isSafePageRouteId(pageId: string): boolean {
  */
 const COMPOUND_ROUTE_PREFIX_SET = new Set([
   'allSessions', 'flagged', 'archived', 'state', 'label', 'view',
-  'sources', 'skills', 'automations', 'settings', 'pages', 'search'
+  'sources', 'skills', 'automations', 'settings', 'pages', 'search', 'home'
 ])
 
 /**
@@ -91,6 +91,7 @@ const COMPOUND_ROUTE_PREFIX_SET = new Set([
 const COMPOUND_ROUTE_PREFIX_MAP: Record<string, true> = {
   allSessions: true, flagged: true, archived: true,
   state: true, label: true, view: true, search: true,
+  home: true,
   sources: true, skills: true, automations: true, settings: true, pages: true
 }
 
@@ -132,6 +133,8 @@ export function isCompoundRoute(route: string): boolean {
       return route === 'view' || route.startsWith('view/')
     case 108: // 'l' - label
       return route === 'label' || route.startsWith('label/')
+    case 104: // 'h' - home
+      return route === 'home'
   }
 
   // Fallback for other prefixes
@@ -159,6 +162,14 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
   if (segments.length === 0) return null
 
   const first = segments[0]
+
+  // Workspace home/start surface
+  if (first === 'home' && segments.length === 1) {
+    return {
+      navigator: 'home',
+      details: null,
+    }
+  }
 
   // Search navigator
   if (first === 'search' && segments.length === 1) {
@@ -406,6 +417,10 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
     return 'search'
   }
 
+  if (parsed.navigator === 'home') {
+    return 'home'
+  }
+
   if (parsed.navigator === 'sources') {
     // Build base from filter (sources, sources/api, sources/mcp, sources/local)
     let base = 'sources'
@@ -556,6 +571,10 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
     return { type: 'view', name: 'search', params: {} }
   }
 
+  if (compound.navigator === 'home') {
+    return { type: 'view', name: 'home', params: {} }
+  }
+
   // Sources
   if (compound.navigator === 'sources') {
     if (!compound.details) {
@@ -692,6 +711,10 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
     return { navigator: 'search', details: null }
   }
 
+  if (compound.navigator === 'home') {
+    return { navigator: 'home', details: null }
+  }
+
   // Sources - include filter if present
   if (compound.navigator === 'sources') {
     if (!compound.details) {
@@ -805,6 +828,8 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
       return { navigator: 'pageCanvas', details: null }
     case 'search':
       return { navigator: 'search', details: null }
+    case 'home':
+      return { navigator: 'home', details: null }
     case 'automation-info':
       if (parsed.id) {
         return {
@@ -946,6 +971,13 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
   if (state.navigator === 'search') {
     return {
       navigator: 'search',
+      details: null,
+    }
+  }
+
+  if (state.navigator === 'home') {
+    return {
+      navigator: 'home',
       details: null,
     }
   }

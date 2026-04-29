@@ -28,6 +28,7 @@ import {
   Layers,
   ListTodo,
   FileText,
+  House,
   Clock,
   Radio,
   Bot,
@@ -115,6 +116,7 @@ import {
   isAutomationsNavigation,
   isPageCanvasNavigation,
   isSearchNavigation,
+  isHomeNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
@@ -589,7 +591,7 @@ function AppShellContent({
   // UNIFIED NAVIGATION STATE - single source of truth from NavigationContext
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
-  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState)
+  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isHomeNavigation(navState)
 
   const store = useStore()
   const panelStack = useAtomValue(panelStackAtom)
@@ -1649,6 +1651,10 @@ function AppShellContent({
     navigate(routes.view.allSessions())
   }, [])
 
+  const handleHomeClick = useCallback(() => {
+    navigate(routes.view.home())
+  }, [navigate])
+
   const handleFlaggedClick = useCallback(() => {
     navigate(routes.view.flagged())
   }, [])
@@ -1946,7 +1952,15 @@ function AppShellContent({
   const unifiedSidebarItems = React.useMemo((): SidebarItem[] => {
     const result: SidebarItem[] = []
 
-    // 1. Sessions section: All Sessions (expandable) with status items, Flagged, Archived as children
+    // 1. Primary workspace section: Home, Search, Docs, All Sessions
+    result.push({ id: 'nav:home', type: 'nav', action: handleHomeClick })
+    result.push({ id: 'nav:search', type: 'nav', action: handleSearchClick })
+    result.push({ id: 'nav:pages', type: 'nav', action: handlePagesClick })
+    if (isExpanded('nav:pages')) {
+      for (const p of pages.slice(0, 10)) {
+        result.push({ id: `nav:page:${p.id}`, type: 'nav', action: () => navigate(routes.view.savedPage(p.id)) })
+      }
+    }
     result.push({ id: 'nav:allSessions', type: 'nav', action: handleAllSessionsClick })
     for (const state of effectiveSessionStatuses) {
       result.push({ id: `nav:state:${state.id}`, type: 'nav', action: () => handleSessionStatusClick(state.id) })
@@ -1967,21 +1981,15 @@ function AppShellContent({
     }
     flattenTree(labelTree)
 
-    // 3. Sources, Skills, Settings
+    // 3. Files/context, Skills, Settings
     result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
-    result.push({ id: 'nav:pages', type: 'nav', action: handlePagesClick })
-    if (isExpanded('nav:pages')) {
-      for (const p of pages.slice(0, 10)) {
-        result.push({ id: `nav:page:${p.id}`, type: 'nav', action: () => navigate(routes.view.savedPage(p.id)) })
-      }
-    }
     result.push({ id: 'nav:automations', type: 'nav', action: handleAutomationsClick })
     result.push({ id: 'nav:settings', type: 'nav', action: () => handleSettingsClick('app') })
     result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
 
     return result
-  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handlePagesClick, pages, isExpanded, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
+  }, [handleHomeClick, handleSearchClick, handlePagesClick, pages, isExpanded, handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick, navigate])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2276,6 +2284,38 @@ function AppShellContent({
                   focusedItemId={focusedSidebarItemId}
                   links={[
                     // --- Sessions Section ---
+                    {
+                      id: "nav:home",
+                      title: t("sidebar.home"),
+                      icon: House,
+                      variant: isHomeNavigation(navState) ? "default" : "ghost",
+                      onClick: handleHomeClick,
+                    },
+                    {
+                      id: "nav:search",
+                      title: t("sidebar.search"),
+                      icon: Search,
+                      variant: isSearchNavigation(navState) ? "default" : "ghost",
+                      onClick: handleSearchClick,
+                    },
+                    {
+                      id: "nav:pages",
+                      title: t("sidebar.pages"),
+                      label: String(pages.length),
+                      icon: FileText,
+                      variant: isPageCanvasNavigation(navState) ? "default" : "ghost",
+                      onClick: handlePagesClick,
+                      expandable: pages.length > 0,
+                      expanded: isExpanded('nav:pages'),
+                      onToggle: () => toggleExpanded('nav:pages'),
+                      items: pages.slice(0, 10).map(p => ({
+                        id: `nav:page:${p.id}`,
+                        title: p.title || 'Untitled Doc',
+                        icon: FileText,
+                        variant: (isPageCanvasNavigation(navState) && navState.details?.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
+                        onClick: () => navigate(routes.view.savedPage(p.id)),
+                      })),
+                    },
                     // All Sessions: expandable with status children (sortable) + Flagged & Archived as trailing items
                     {
                       id: "nav:allSessions",
@@ -2367,14 +2407,7 @@ function AppShellContent({
                     },
                     // --- Separator ---
                     { id: "separator:chats-sources", type: "separator" },
-                    // --- Sources & Skills Section ---
-                    {
-                      id: "nav:search",
-                      title: t("sidebar.search"),
-                      icon: Search,
-                      variant: isSearchNavigation(navState) ? "default" : "ghost",
-                      onClick: handleSearchClick,
-                    },
+                    // --- Files, Skills & Automations Section ---
                     {
                       id: "nav:sources",
                       title: t("sidebar.sources"),
@@ -2443,24 +2476,6 @@ function AppShellContent({
                         type: 'skills',
                         onAddSkill: openAddSkill,
                       },
-                    },
-                    {
-                      id: "nav:pages",
-                      title: t("sidebar.pages"),
-                      label: String(pages.length),
-                      icon: FileText,
-                      variant: isPageCanvasNavigation(navState) ? "default" : "ghost",
-                      onClick: handlePagesClick,
-                      expandable: pages.length > 0,
-                      expanded: isExpanded('nav:pages'),
-                      onToggle: () => toggleExpanded('nav:pages'),
-                      items: pages.slice(0, 10).map(p => ({
-                        id: `nav:page:${p.id}`,
-                        title: p.title || 'Untitled Doc',
-                        icon: FileText,
-                        variant: (isPageCanvasNavigation(navState) && navState.details?.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
-                        onClick: () => navigate(routes.view.savedPage(p.id)),
-                      })),
                     },
                     {
                       id: "nav:automations",
@@ -3272,7 +3287,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
+          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isHomeNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}

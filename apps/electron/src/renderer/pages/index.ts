@@ -9,6 +9,7 @@ export { default as DocsHome } from './DocsHome'
 export { default as PageCanvas } from './PageCanvas'
 export { default as SearchPage } from './SearchPage'
 export { default as SourceInfoPage } from './SourceInfoPage'
+export { default as WorkspaceHome } from './WorkspaceHome'
 // Settings pages
 export {
   SettingsNavigator,

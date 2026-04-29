@@ -135,6 +135,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const [query, setQuery] = React.useState('')
   const [docContents, setDocContents] = React.useState<Record<string, string>>({})
+  const [isLoadingDocContents, setIsLoadingDocContents] = React.useState(false)
 
   const workspaceSessions = React.useMemo(
     () => Array.from(sessionMetaMap.values()).filter(session =>
@@ -146,13 +147,15 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
   React.useEffect(() => {
     if (!workspaceId || pages.length === 0) {
       setDocContents({})
+      setIsLoadingDocContents(false)
       return
     }
 
     let stale = false
+    setIsLoadingDocContents(true)
 
     Promise.all(
-      pages.slice(0, 50).map(async (page) => {
+      pages.map(async (page) => {
         try {
           const fullPage = await window.electronAPI.getPage(workspaceId, page.id)
           return [page.id, fullPage?.content ?? ''] as const
@@ -162,6 +165,8 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
       })
     ).then((entries) => {
       if (!stale) setDocContents(Object.fromEntries(entries))
+    }).finally(() => {
+      if (!stale) setIsLoadingDocContents(false)
     })
 
     return () => {
@@ -216,6 +221,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
 
   const hasQuery = trimmedQuery.length > 0
   const hasResults = docResults.length > 0 || chatResults.length > 0
+  const showLoading = hasQuery && isLoadingDocContents
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -232,7 +238,8 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search docs and chats"
+              placeholder="Search docs and chat previews"
+              aria-label="Search docs and chat previews"
               autoFocus
               className="h-10 pl-9"
             />
@@ -248,8 +255,15 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                 <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
                   <Search className="h-5 w-5" />
                 </div>
-                <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Search docs and chats</h1>
+                <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Search docs and chat previews</h1>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Searches doc titles and contents, plus chat titles and previews.
+                </p>
               </div>
+            </section>
+          ) : showLoading ? (
+            <section className="flex min-h-[calc(100vh-220px)] items-center justify-center">
+              <p className="text-sm text-muted-foreground">Searching docs and chat previews...</p>
             </section>
           ) : !hasResults ? (
             <section className="flex min-h-[calc(100vh-220px)] items-center justify-center">

@@ -70,6 +70,7 @@ import {
   isAutomationsNavigation,
   isPageCanvasNavigation,
   isSearchNavigation,
+  isHomeNavigation,
   DEFAULT_NAVIGATION_STATE,
 } from '../../shared/types'
 import { isValidSettingsSubpage, type SettingsSubpage } from '../../shared/settings-registry'
@@ -93,7 +94,7 @@ export type { Route }
 
 // Re-export navigation state types for consumers
 export type { NavigationState, SessionFilter }
-export { isSessionsNavigation, isSourcesNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation, isPageCanvasNavigation, isSearchNavigation }
+export { isSessionsNavigation, isSourcesNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation, isPageCanvasNavigation, isSearchNavigation, isHomeNavigation }
 
 // =============================================================================
 // Context
@@ -1059,7 +1060,7 @@ export function NavigationProvider({
 
     // If nothing was in the URL, navigate to default
     if (!params.get('route') && !params.get('panels')) {
-      navigate(routes.view.allSessions())
+      navigate(routes.view.home())
     }
 
     // Initialize history with seq=0 (replaceState so we don't create an extra entry)

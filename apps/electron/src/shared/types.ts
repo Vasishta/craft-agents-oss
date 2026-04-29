@@ -822,6 +822,15 @@ export interface SearchNavigationState {
 }
 
 /**
+ * Workspace home/start navigation state.
+ */
+export interface HomeNavigationState {
+  navigator: 'home'
+  details: null
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
  * Unified navigation state
  */
 export type NavigationState =
@@ -832,6 +841,7 @@ export type NavigationState =
   | AutomationsNavigationState
   | PageCanvasNavigationState
   | SearchNavigationState
+  | HomeNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -861,9 +871,12 @@ export const isSearchNavigation = (
   state: NavigationState
 ): state is SearchNavigationState => state.navigator === 'search'
 
+export const isHomeNavigation = (
+  state: NavigationState
+): state is HomeNavigationState => state.navigator === 'home'
+
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
-  navigator: 'sessions',
-  filter: { kind: 'allSessions' },
+  navigator: 'home',
   details: null,
 }
 
@@ -900,6 +913,9 @@ export const getNavigationStateKey = (state: NavigationState): string => {
   }
   if (state.navigator === 'search') {
     return 'search'
+  }
+  if (state.navigator === 'home') {
+    return 'home'
   }
   // Chats
   const f = state.filter
@@ -977,6 +993,9 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
 
   // Handle search
   if (key === 'search') return { navigator: 'search', details: null }
+
+  // Handle home
+  if (key === 'home') return { navigator: 'home', details: null }
 
   // Handle sessions
   const parseSessionsKey = (filterKey: string, sessionId?: string): NavigationState | null => {

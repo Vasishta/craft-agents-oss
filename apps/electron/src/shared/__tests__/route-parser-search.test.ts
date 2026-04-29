@@ -29,3 +29,27 @@ describe('search route parsing', () => {
     })).toBe('search')
   })
 })
+
+describe('home route parsing', () => {
+  it('parses home routes', () => {
+    expect(parseCompoundRoute('home')).toEqual({
+      navigator: 'home',
+      details: null,
+    })
+
+    expect(parseRouteToNavigationState('home')).toEqual({
+      navigator: 'home',
+      details: null,
+    })
+  })
+
+  it('builds home routes from compound and navigation state', () => {
+    const parsed = parseCompoundRoute('home')!
+
+    expect(buildCompoundRoute(parsed)).toBe('home')
+    expect(buildRouteFromNavigationState({
+      navigator: 'home',
+      details: null,
+    })).toBe('home')
+  })
+})
