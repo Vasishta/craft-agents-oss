@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas' | 'search'
+export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas' | 'search' | 'home'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -159,6 +159,14 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
   if (segments.length === 0) return null
 
   const first = segments[0]
+
+  // Workspace home/start surface
+  if (first === 'home' && segments.length === 1) {
+    return {
+      navigator: 'home',
+      details: null,
+    }
+  }
 
   // Search navigator
   if (first === 'search' && segments.length === 1) {
@@ -406,6 +414,10 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
     return 'search'
   }
 
+  if (parsed.navigator === 'home') {
+    return 'home'
+  }
+
   if (parsed.navigator === 'sources') {
     // Build base from filter (sources, sources/api, sources/mcp, sources/local)
     let base = 'sources'
@@ -478,6 +490,10 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
  */
 export function parseRoute(route: string): ParsedRoute | null {
   try {
+    if (route === 'home') {
+      return { type: 'view', name: 'home', params: {} }
+    }
+
     // Check if this is a compound route (preferred format)
     if (isCompoundRoute(route)) {
       const compound = parseCompoundRoute(route)
@@ -556,6 +572,10 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
     return { type: 'view', name: 'search', params: {} }
   }
 
+  if (compound.navigator === 'home') {
+    return { type: 'view', name: 'home', params: {} }
+  }
+
   // Sources
   if (compound.navigator === 'sources') {
     if (!compound.details) {
@@ -627,6 +647,12 @@ export function parseRouteToNavigationState(
   route: string,
   sidebarParam?: string
 ): NavigationState | null {
+  if (route === 'home') {
+    const rightSidebar = parseRightSidebarParam(sidebarParam)
+    const state: NavigationState = { navigator: 'home', details: null }
+    return rightSidebar ? { ...state, rightSidebar } : state
+  }
+
   // Parse compound routes
   if (isCompoundRoute(route)) {
     const compound = parseCompoundRoute(route)
@@ -690,6 +716,10 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
 
   if (compound.navigator === 'search') {
     return { navigator: 'search', details: null }
+  }
+
+  if (compound.navigator === 'home') {
+    return { navigator: 'home', details: null }
   }
 
   // Sources - include filter if present
@@ -805,6 +835,8 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
       return { navigator: 'pageCanvas', details: null }
     case 'search':
       return { navigator: 'search', details: null }
+    case 'home':
+      return { navigator: 'home', details: null }
     case 'automation-info':
       if (parsed.id) {
         return {
@@ -946,6 +978,13 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
   if (state.navigator === 'search') {
     return {
       navigator: 'search',
+      details: null,
+    }
+  }
+
+  if (state.navigator === 'home') {
+    return {
+      navigator: 'home',
       details: null,
     }
   }

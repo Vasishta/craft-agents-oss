@@ -86,6 +86,7 @@ describe('isCompoundRoute: all prefix families', () => {
   it.each([
     'session-id-plain',
     'random-string',
+    'home',
     '',
     'pages/',
   ])('rejects "%s"', (route) => {
