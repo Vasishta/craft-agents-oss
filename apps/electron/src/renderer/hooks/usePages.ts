@@ -17,7 +17,10 @@ import {
   pageLoadingStateAtom,
   pageErrorAtom,
   pageDirtyAtom,
+  bumpPageSaveGeneration,
+  getPageSaveGeneration,
   initializePageListAtom,
+  clearPageWorkspaceAtom,
   createPageAtom,
   loadPageAtom,
   updatePageContentAtom,
@@ -32,13 +35,16 @@ import type { PageDocument, PageListEntry } from '../../shared/types'
 export function usePageList(workspaceId: string | null) {
   const pages = useAtomValue(pageListAtom)
   const initializeList = useSetAtom(initializePageListAtom)
+  const clearPageWorkspace = useSetAtom(clearPageWorkspaceAtom)
   const handlePageChanged = useSetAtom(handlePageChangedAtom)
 
   useEffect(() => {
     if (workspaceId) {
       initializeList(workspaceId)
+    } else {
+      clearPageWorkspace()
     }
-  }, [workspaceId, initializeList])
+  }, [workspaceId, initializeList, clearPageWorkspace])
 
   useEffect(() => {
     if (!workspaceId) return
@@ -88,9 +94,9 @@ export function usePage(workspaceId: string, pageId: string | null) {
       }
     }, [workspaceId, pageId, loadPage]),
     saveContent: useCallback(
-      (content: string) => {
+      (content: string, expectedSaveGeneration?: number) => {
         if (workspaceId && pageId) {
-          return updateContent(workspaceId, pageId, content)
+          return updateContent(workspaceId, pageId, content, expectedSaveGeneration)
         }
       },
       [workspaceId, pageId, updateContent]
@@ -164,20 +170,49 @@ export function useDebouncedPageSave(workspaceId: string, pageId: string | null,
   const { saveContent, isSaving, isDirty } = usePage(workspaceId, pageId)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingContentRef = useRef<string | null>(null)
+  const pendingIdentityRef = useRef<{ workspaceId: string; pageId: string; generation: number } | null>(null)
+  const [hasPendingSave, setHasPendingSave] = useState(false)
+
+  const cancelPendingSave = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    if (pendingIdentityRef.current) {
+      bumpPageSaveGeneration(pendingIdentityRef.current.workspaceId, pendingIdentityRef.current.pageId)
+    }
+    pendingContentRef.current = null
+    pendingIdentityRef.current = null
+    setHasPendingSave(false)
+  }, [])
 
   const debouncedSave = useCallback(
     (content: string) => {
+      if (!workspaceId || !pageId) return
+      const generation = bumpPageSaveGeneration(workspaceId, pageId)
       pendingContentRef.current = content
+      pendingIdentityRef.current = { workspaceId, pageId, generation }
+      setHasPendingSave(true)
       if (debounceRef.current) {
         clearTimeout(debounceRef.current)
       }
       debounceRef.current = setTimeout(() => {
-        saveContent(content)
+        const pending = pendingIdentityRef.current
+        if (
+          pending &&
+          pending.workspaceId === workspaceId &&
+          pending.pageId === pageId &&
+          getPageSaveGeneration(workspaceId, pageId) === pending.generation
+        ) {
+          saveContent(content, pending.generation)
+        }
         pendingContentRef.current = null
+        pendingIdentityRef.current = null
         debounceRef.current = null
+        setHasPendingSave(false)
       }, delay)
     },
-    [saveContent, delay]
+    [workspaceId, pageId, saveContent, delay]
   )
 
   useEffect(() => {
@@ -186,19 +221,22 @@ export function useDebouncedPageSave(workspaceId: string, pageId: string | null,
         clearTimeout(debounceRef.current)
         debounceRef.current = null
       }
-      // Flush any pending content so the last edit is not lost
-      if (pendingContentRef.current !== null) {
-        saveContent(pendingContentRef.current)
-        pendingContentRef.current = null
+      if (pendingIdentityRef.current) {
+        bumpPageSaveGeneration(pendingIdentityRef.current.workspaceId, pendingIdentityRef.current.pageId)
       }
+      pendingContentRef.current = null
+      pendingIdentityRef.current = null
+      setHasPendingSave(false)
     }
-  }, [saveContent])
+  }, [workspaceId, pageId])
 
   return {
     save: debouncedSave,
     saveImmediately: saveContent,
+    cancelPendingSave,
     isSaving,
-    isDirty,
+    isDirty: isDirty || hasPendingSave,
+    hasPendingSave,
   }
 }
 
@@ -222,6 +260,7 @@ export function usePages(workspaceId: string) {
     deletePage,
     saveContent: activePageSave.save,
     saveImmediately: activePageSave.saveImmediately,
+    cancelPendingSave: activePageSave.cancelPendingSave,
     isSaving: activePageSave.isSaving,
     isDirty: activePageSave.isDirty,
   }

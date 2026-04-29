@@ -106,16 +106,20 @@ describe('page canvas route parsing', () => {
     })).toBe('pages/page/abc-123')
   })
 
-  it('handles URL-encoded page IDs in saved page routes', () => {
+  it('rejects URL-encoded unsafe page IDs in saved page routes', () => {
     const result = parseCompoundRoute('pages/page/my%20page%2F1')
 
-    expect(result).toEqual({
-      navigator: 'pageCanvas',
-      details: {
-        type: 'savedPage',
-        id: 'my page/1',
-      },
-    })
+    expect(result).toBeNull()
+  })
+
+  it.each([
+    '../bad',
+    '..%2Fbad',
+    'foo%2Fbar',
+    'C%3A%5Ctemp%5Cbad',
+    'bad%20id',
+  ])('rejects unsafe saved page route ID "%s"', (pageId) => {
+    expect(parseCompoundRoute(`pages/page/${pageId}`)).toBeNull()
   })
 
   it('returns null for pages/page with no ID', () => {

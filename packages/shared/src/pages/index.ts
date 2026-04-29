@@ -13,6 +13,8 @@ export {
   getPageMarkdownPath,
   getPageIndexPath,
   getPagesDirectoryPath,
+  isSafePageId,
+  assertSafePageId,
   ensurePagesDirectory,
   extractTitleFromContent,
   loadPageIndex,

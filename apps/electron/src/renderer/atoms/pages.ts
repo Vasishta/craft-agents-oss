@@ -12,6 +12,25 @@ import type { Getter, Setter } from 'jotai/vanilla'
 import { atomFamily } from 'jotai-family'
 import type { PageDocument, PageListEntry } from '@craft-agent/shared/protocol'
 
+const pageSaveGenerations = new Map<string, number>()
+let pageListLoadGeneration = 0
+let pageLoadGeneration = 0
+
+function pageWorkspaceKey(workspaceId: string, pageId: string): string {
+  return `${workspaceId}:${pageId}`
+}
+
+export function getPageSaveGeneration(workspaceId: string, pageId: string): number {
+  return pageSaveGenerations.get(pageWorkspaceKey(workspaceId, pageId)) ?? 0
+}
+
+export function bumpPageSaveGeneration(workspaceId: string, pageId: string): number {
+  const key = pageWorkspaceKey(workspaceId, pageId)
+  const next = (pageSaveGenerations.get(key) ?? 0) + 1
+  pageSaveGenerations.set(key, next)
+  return next
+}
+
 /**
  * Page document atom family - each page gets its own atom
  * Updates are isolated per page for performance
@@ -26,6 +45,8 @@ export const pageAtomFamily = atomFamily(
  * Lightweight entries without full content
  */
 export const pageListAtom = atom<PageListEntry[]>([])
+
+export const pageListWorkspaceIdAtom = atom<string | null>(null)
 
 /**
  * Currently active page ID - the page being viewed/edited
@@ -62,13 +83,32 @@ export const pageDirtyAtom = atomFamily(
  */
 export const initializePageListAtom = atom(
   null,
-  async (_get: Getter, set: Setter, workspaceId: string): Promise<void> => {
+  async (get: Getter, set: Setter, workspaceId: string): Promise<void> => {
+    const generation = ++pageListLoadGeneration
+    if (get(pageListWorkspaceIdAtom) !== workspaceId) {
+      set(pageListWorkspaceIdAtom, workspaceId)
+      set(pageListAtom, [])
+      set(activePageIdAtom, null)
+    }
     try {
       const pages = await window.electronAPI.listPages(workspaceId)
+      if (generation !== pageListLoadGeneration || get(pageListWorkspaceIdAtom) !== workspaceId) return
       set(pageListAtom, pages)
     } catch (error) {
+      if (generation !== pageListLoadGeneration || get(pageListWorkspaceIdAtom) !== workspaceId) return
       console.error('[pages] Failed to load page list:', error)
     }
+  }
+)
+
+export const clearPageWorkspaceAtom = atom(
+  null,
+  (_get: Getter, set: Setter): void => {
+    pageListLoadGeneration += 1
+    pageLoadGeneration += 1
+    set(pageListWorkspaceIdAtom, null)
+    set(pageListAtom, [])
+    set(activePageIdAtom, null)
   }
 )
 
@@ -78,12 +118,23 @@ export const initializePageListAtom = atom(
  */
 export const loadPageAtom = atom(
   null,
-  async (_get: Getter, set: Setter, workspaceId: string, pageId: string): Promise<PageDocument | null> => {
+  async (get: Getter, set: Setter, workspaceId: string, pageId: string): Promise<PageDocument | null> => {
+    const generation = ++pageLoadGeneration
+    const expectedSaveGeneration = getPageSaveGeneration(workspaceId, pageId)
     try {
       set(pageLoadingStateAtom(pageId), 'loading')
       set(pageErrorAtom(pageId), null)
 
       const page = await window.electronAPI.getPage(workspaceId, pageId)
+
+      if (
+        generation !== pageLoadGeneration ||
+        get(pageListWorkspaceIdAtom) !== workspaceId ||
+        getPageSaveGeneration(workspaceId, pageId) !== expectedSaveGeneration ||
+        (page && page.workspaceId !== workspaceId)
+      ) {
+        return null
+      }
 
       if (page) {
         set(pageAtomFamily(pageId), page)
@@ -93,6 +144,7 @@ export const loadPageAtom = atom(
       set(pageLoadingStateAtom(pageId), 'idle')
       return page
     } catch (error) {
+      if (generation !== pageLoadGeneration || get(pageListWorkspaceIdAtom) !== workspaceId) return null
       const errorMessage = error instanceof Error ? error.message : 'Failed to load page'
       set(pageErrorAtom(pageId), errorMessage)
       set(pageLoadingStateAtom(pageId), 'error')
@@ -122,7 +174,7 @@ export const createPageAtom = atom(
     try {
       const page = await window.electronAPI.createPage(workspaceId, input)
 
-      if (page) {
+      if (page && page.workspaceId === workspaceId && get(pageListWorkspaceIdAtom) === workspaceId) {
         // Add to page list
         const currentList = get(pageListAtom)
         const listEntry: PageListEntry = {
@@ -165,11 +217,13 @@ export const updatePageContentAtom = atom(
     set: Setter,
     workspaceId: string,
     pageId: string,
-    content: string
+    content: string,
+    expectedSaveGeneration?: number
   ): Promise<void> => {
+    const generation = expectedSaveGeneration ?? getPageSaveGeneration(workspaceId, pageId)
     // Optimistic update - update local state immediately
     const currentPage = get(pageAtomFamily(pageId))
-    if (currentPage) {
+    if (currentPage?.workspaceId === workspaceId && getPageSaveGeneration(workspaceId, pageId) === generation) {
       set(pageAtomFamily(pageId), {
         ...currentPage,
         content,
@@ -183,6 +237,15 @@ export const updatePageContentAtom = atom(
       set(pageLoadingStateAtom(pageId), 'saving')
 
       const updatedPage = await window.electronAPI.updatePageContent(workspaceId, pageId, content)
+
+      if (
+        getPageSaveGeneration(workspaceId, pageId) !== generation ||
+        get(pageListWorkspaceIdAtom) !== workspaceId ||
+        get(activePageIdAtom) !== pageId ||
+        (updatedPage && updatedPage.workspaceId !== workspaceId)
+      ) {
+        return
+      }
 
       if (updatedPage) {
         // Update with server response (may have new title from content extraction)
@@ -205,6 +268,7 @@ export const updatePageContentAtom = atom(
 
       set(pageLoadingStateAtom(pageId), 'idle')
     } catch (error) {
+      if (getPageSaveGeneration(workspaceId, pageId) !== generation || get(pageListWorkspaceIdAtom) !== workspaceId) return
       const errorMessage = error instanceof Error ? error.message : 'Failed to save page'
       set(pageErrorAtom(pageId), errorMessage)
       set(pageLoadingStateAtom(pageId), 'error')
@@ -229,7 +293,7 @@ export const updatePageMetadataAtom = atom(
     try {
       const updatedPage = await window.electronAPI.updatePage(workspaceId, pageId, updates)
 
-      if (updatedPage) {
+      if (updatedPage && updatedPage.workspaceId === workspaceId && get(pageListWorkspaceIdAtom) === workspaceId) {
         // Update local state
         const currentPage = get(pageAtomFamily(pageId))
         if (currentPage) {
@@ -274,6 +338,7 @@ export const deletePageAtom = atom(
     pageId: string
   ): Promise<boolean> => {
     try {
+      bumpPageSaveGeneration(workspaceId, pageId)
       await window.electronAPI.deletePage(workspaceId, pageId)
 
       // Remove from local state
@@ -314,6 +379,10 @@ export const handlePageChangedAtom = atom(
     changeType: 'created' | 'updated' | 'deleted'
   ): Promise<void> => {
     if (changeType === 'deleted') {
+      const currentPage = get(pageAtomFamily(pageId))
+      if (currentPage) {
+        bumpPageSaveGeneration(currentPage.workspaceId, pageId)
+      }
       // Clean up local state
       pageAtomFamily.remove(pageId)
       pageLoadingStateAtom.remove(pageId)
@@ -364,7 +433,7 @@ export const setActivePageAtom = atom(
 
     if (pageId) {
       const currentPage = get(pageAtomFamily(pageId))
-      if (!currentPage) {
+      if (!currentPage || currentPage.workspaceId !== workspaceId) {
         // Page not loaded yet, load it
         await set(loadPageAtom, workspaceId, pageId)
       }

@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from 'fs'
-import { join } from 'path'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync } from 'fs'
+import { basename, join, relative, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import type {
   PageDocument,
@@ -17,9 +17,14 @@ import { debug } from '../utils/debug'
 const PAGES_DIR = 'pages'
 const PAGE_INDEX_FILE = 'pages/index.json'
 const CURRENT_INDEX_VERSION = 1
+const SAFE_PAGE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
 
 export function getPageMarkdownPath(workspaceRootPath: string, pageId: string): string {
-  return join(workspaceRootPath, PAGES_DIR, `${pageId}.md`)
+  assertSafePageId(pageId)
+  const pagesDir = resolve(getPagesDirectoryPath(workspaceRootPath))
+  const mdPath = resolve(pagesDir, `${pageId}.md`)
+  assertPathInsideDirectory(mdPath, pagesDir)
+  return mdPath
 }
 
 export function getPageIndexPath(workspaceRootPath: string): string {
@@ -28,6 +33,31 @@ export function getPageIndexPath(workspaceRootPath: string): string {
 
 export function getPagesDirectoryPath(workspaceRootPath: string): string {
   return join(workspaceRootPath, PAGES_DIR)
+}
+
+export function isSafePageId(pageId: string): boolean {
+  return SAFE_PAGE_ID_PATTERN.test(pageId)
+}
+
+export function assertSafePageId(pageId: string): void {
+  if (
+    !pageId ||
+    !isSafePageId(pageId) ||
+    pageId.includes('..') ||
+    pageId.includes('/') ||
+    pageId.includes('\\') ||
+    pageId !== basename(pageId) ||
+    resolve(pageId) === pageId
+  ) {
+    throw new Error('Invalid doc ID')
+  }
+}
+
+function assertPathInsideDirectory(filePath: string, directoryPath: string): void {
+  const relativePath = relative(directoryPath, filePath)
+  if (!relativePath || relativePath.startsWith('..') || relativePath.includes('..') || resolve(relativePath) === relativePath) {
+    throw new Error('Invalid doc path')
+  }
 }
 
 export function ensurePagesDirectory(workspaceRootPath: string): void {
@@ -53,26 +83,26 @@ export function extractTitleFromContent(content: string): string {
   return 'Untitled Doc'
 }
 
-export function loadPageIndex(workspaceRootPath: string): PageIndex {
+export function loadPageIndex(workspaceRootPath: string, workspaceId?: string): PageIndex {
   const indexPath = getPageIndexPath(workspaceRootPath)
   if (!existsSync(indexPath)) {
-    debug('[page-storage] No index found, returning empty index')
-    return { version: CURRENT_INDEX_VERSION, pages: [] }
+    debug('[page-storage] No index found, attempting rebuild')
+    return rebuildPageIndex(workspaceRootPath, workspaceId)
   }
   try {
     const index = readJsonFileSync<PageIndex>(indexPath)
     if (!index || typeof index !== 'object' || !Array.isArray(index.pages)) {
       debug('[page-storage] Invalid index structure, attempting rebuild')
-      return rebuildPageIndex(workspaceRootPath)
+      return rebuildPageIndex(workspaceRootPath, workspaceId)
     }
     if (index.version !== CURRENT_INDEX_VERSION) {
       debug('[page-storage] Migrating index from version', index.version, 'to', CURRENT_INDEX_VERSION)
       index.version = CURRENT_INDEX_VERSION
     }
-    return index
+    return repairPageIndex(workspaceRootPath, index, workspaceId)
   } catch (error) {
     debug('[page-storage] Failed to load index, attempting rebuild:', error)
-    return rebuildPageIndex(workspaceRootPath)
+    return rebuildPageIndex(workspaceRootPath, workspaceId)
   }
 }
 
@@ -87,7 +117,29 @@ export function savePageIndex(workspaceRootPath: string, index: PageIndex): void
   }
 }
 
-export function rebuildPageIndex(workspaceRootPath: string): PageIndex {
+function getFallbackPageMetadata(workspaceRootPath: string, pageId: string, workspaceId?: string): PageDocument | null {
+  try {
+    assertSafePageId(pageId)
+    const mdPath = getPageMarkdownPath(workspaceRootPath, pageId)
+    const content = readFileSync(mdPath, 'utf-8')
+    const stats = statSync(mdPath)
+    const createdAt = stats.birthtimeMs || stats.ctimeMs || Date.now()
+    const updatedAt = stats.mtimeMs || Date.now()
+    return {
+      id: pageId,
+      title: extractTitleFromContent(content),
+      content,
+      createdAt,
+      updatedAt,
+      workspaceId: workspaceId || '',
+    }
+  } catch (error) {
+    debug('[page-storage] Failed to build fallback page metadata:', pageId, error)
+    return null
+  }
+}
+
+function scanMarkdownPages(workspaceRootPath: string, workspaceId?: string): PageDocument[] {
   ensurePagesDirectory(workspaceRootPath)
   const pagesDir = getPagesDirectoryPath(workspaceRootPath)
   const pages: PageDocument[] = []
@@ -96,25 +148,60 @@ export function rebuildPageIndex(workspaceRootPath: string): PageIndex {
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith('.md')) continue
       const pageId = entry.name.slice(0, -3)
-      const mdPath = join(pagesDir, entry.name)
-      try {
-        const content = readFileSync(mdPath, 'utf-8')
-        const page: PageDocument = {
-          id: pageId,
-          title: extractTitleFromContent(content),
-          content: content,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          workspaceId: '',
-        }
+      if (!isSafePageId(pageId)) {
+        debug('[page-storage] Skipping unsafe markdown filename during rebuild:', entry.name)
+        continue
+      }
+      const page = getFallbackPageMetadata(workspaceRootPath, pageId, workspaceId)
+      if (page) {
         pages.push(page)
-      } catch (error) {
-        debug('[page-storage] Failed to read page file during rebuild:', entry.name, error)
       }
     }
   } catch (error) {
     debug('[page-storage] Failed to scan pages directory during rebuild:', error)
   }
+  return pages
+}
+
+function repairPageIndex(workspaceRootPath: string, index: PageIndex, workspaceId?: string): PageIndex {
+  const repaired: PageIndex = { version: CURRENT_INDEX_VERSION, pages: [] }
+  let changed = index.version !== CURRENT_INDEX_VERSION
+  const seen = new Set<string>()
+
+  for (const page of index.pages) {
+    if (!page || typeof page.id !== 'string' || !isSafePageId(page.id) || seen.has(page.id)) {
+      changed = true
+      continue
+    }
+    const mdPath = getPageMarkdownPath(workspaceRootPath, page.id)
+    if (!existsSync(mdPath)) {
+      changed = true
+      continue
+    }
+    repaired.pages.push({
+      ...page,
+      workspaceId: page.workspaceId || workspaceId || '',
+    })
+    seen.add(page.id)
+  }
+
+  for (const page of scanMarkdownPages(workspaceRootPath, workspaceId)) {
+    if (seen.has(page.id)) continue
+    repaired.pages.push(page)
+    seen.add(page.id)
+    changed = true
+  }
+
+  if (changed) {
+    try {
+      savePageIndex(workspaceRootPath, repaired)
+    } catch {}
+  }
+  return repaired
+}
+
+export function rebuildPageIndex(workspaceRootPath: string, workspaceId?: string): PageIndex {
+  const pages = scanMarkdownPages(workspaceRootPath, workspaceId)
   const index: PageIndex = { version: CURRENT_INDEX_VERSION, pages }
   try {
     savePageIndex(workspaceRootPath, index)
@@ -132,8 +219,12 @@ export function readPageDocument(
     debug('[page-storage] Page markdown not found:', pageId)
     return null
   }
-  const index = loadPageIndex(workspaceRootPath)
+  const index = loadPageIndex(workspaceRootPath, workspaceId)
   const indexEntry = index.pages.find(p => p.id === pageId)
+  if (workspaceId && indexEntry?.workspaceId && indexEntry.workspaceId !== workspaceId) {
+    debug('[page-storage] Page workspace mismatch:', pageId)
+    return null
+  }
   try {
     const content = readFileSync(mdPath, 'utf-8')
     if (indexEntry) {
@@ -169,7 +260,7 @@ export function createPageDocument(
     const content = input.content || ''
     const title = input.title || extractTitleFromContent(content)
     const mdPath = getPageMarkdownPath(workspaceRootPath, pageId)
-    writeFileSync(mdPath, content, 'utf-8')
+    atomicWriteFileSync(mdPath, content)
     const page: PageDocument = {
       id: pageId,
       title,
@@ -182,7 +273,7 @@ export function createPageDocument(
       notebookId: input.notebookId,
       outputIds: [],
     }
-    const index = loadPageIndex(workspaceRootPath)
+    const index = loadPageIndex(workspaceRootPath, workspaceId)
     index.pages.push(page)
     savePageIndex(workspaceRootPath, index)
     debug('[page-storage] Created page:', pageId, title)
@@ -196,16 +287,21 @@ export function createPageDocument(
 export function updatePageDocument(
   workspaceRootPath: string,
   pageId: string,
-  input: UpdatePageInput
+  input: UpdatePageInput,
+  workspaceId?: string
 ): UpdatePageResult {
   try {
-    const index = loadPageIndex(workspaceRootPath)
+    assertSafePageId(pageId)
+    const index = loadPageIndex(workspaceRootPath, workspaceId)
     const pageIndex = index.pages.findIndex(p => p.id === pageId)
     if (pageIndex === -1) {
       return { success: false, error: 'Doc not found' }
     }
     const existingPage = index.pages[pageIndex]
     if (!existingPage) {
+      return { success: false, error: 'Doc not found' }
+    }
+    if (workspaceId && existingPage.workspaceId !== workspaceId) {
       return { success: false, error: 'Doc not found' }
     }
     const now = Date.now()
@@ -229,32 +325,37 @@ export function updatePageDocument(
 export function updatePageContent(
   workspaceRootPath: string,
   pageId: string,
-  content: string
+  content: string,
+  workspaceId?: string
 ): UpdatePageResult {
   try {
     const mdPath = getPageMarkdownPath(workspaceRootPath, pageId)
     if (!existsSync(mdPath)) {
       return { success: false, error: 'Doc not found' }
     }
-    writeFileSync(mdPath, content, 'utf-8')
-    const index = loadPageIndex(workspaceRootPath)
+    const index = loadPageIndex(workspaceRootPath, workspaceId)
     const pageIndex = index.pages.findIndex(p => p.id === pageId)
-    if (pageIndex !== -1) {
-      const existingPage = index.pages[pageIndex]
-      if (!existingPage) {
-        return { success: false, error: 'Doc not found' }
-      }
-      const now = Date.now()
-      const newTitle = extractTitleFromContent(content)
-      const updatedPage: PageDocument = {
-        ...existingPage,
-        content,
-        title: newTitle,
-        updatedAt: now,
-      }
-      index.pages[pageIndex] = updatedPage
-      savePageIndex(workspaceRootPath, index)
+    if (pageIndex === -1) {
+      return { success: false, error: 'Doc not found' }
     }
+    if (workspaceId && index.pages[pageIndex]?.workspaceId !== workspaceId) {
+      return { success: false, error: 'Doc not found' }
+    }
+    atomicWriteFileSync(mdPath, content)
+    const existingPage = index.pages[pageIndex]
+    if (!existingPage) {
+      return { success: false, error: 'Doc not found' }
+    }
+    const now = Date.now()
+    const newTitle = extractTitleFromContent(content)
+    const updatedPage: PageDocument = {
+      ...existingPage,
+      content,
+      title: newTitle,
+      updatedAt: now,
+    }
+    index.pages[pageIndex] = updatedPage
+    savePageIndex(workspaceRootPath, index)
     debug('[page-storage] Updated page content:', pageId)
     return { success: true, page: pageIndex !== -1 ? index.pages[pageIndex] : undefined }
   } catch (error) {
@@ -264,7 +365,7 @@ export function updatePageContent(
 }
 
 export function listPageDocuments(workspaceRootPath: string, workspaceId?: string): PageDocument[] {
-  const index = loadPageIndex(workspaceRootPath)
+  const index = loadPageIndex(workspaceRootPath, workspaceId)
   const pages = workspaceId
     ? index.pages.filter(p => p.workspaceId === workspaceId)
     : [...index.pages]
@@ -287,13 +388,17 @@ export function listPageEntries(workspaceRootPath: string): PageListEntry[] {
   }))
 }
 
-export function deletePageDocument(workspaceRootPath: string, pageId: string): DeletePageResult {
+export function deletePageDocument(workspaceRootPath: string, pageId: string, workspaceId?: string): DeletePageResult {
   try {
     const mdPath = getPageMarkdownPath(workspaceRootPath, pageId)
+    const index = loadPageIndex(workspaceRootPath, workspaceId)
+    const existingPage = index.pages.find(p => p.id === pageId)
+    if (workspaceId && existingPage?.workspaceId && existingPage.workspaceId !== workspaceId) {
+      return { success: false, error: 'Doc not found' }
+    }
     if (existsSync(mdPath)) {
       unlinkSync(mdPath)
     }
-    const index = loadPageIndex(workspaceRootPath)
     const filteredPages = index.pages.filter(p => p.id !== pageId)
     if (filteredPages.length === index.pages.length) {
       debug('[page-storage] Page not found in index:', pageId)
@@ -309,8 +414,12 @@ export function deletePageDocument(workspaceRootPath: string, pageId: string): D
 }
 
 export function pageDocumentExists(workspaceRootPath: string, pageId: string): boolean {
-  const mdPath = getPageMarkdownPath(workspaceRootPath, pageId)
-  return existsSync(mdPath)
+  try {
+    const mdPath = getPageMarkdownPath(workspaceRootPath, pageId)
+    return existsSync(mdPath)
+  } catch {
+    return false
+  }
 }
 
 export function getPageCount(workspaceRootPath: string): number {
