@@ -13,7 +13,7 @@ import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAppShellContext, useSession as useSessionData } from '@/context/AppShellContext'
 import { ensureSessionMessagesLoadedAtom, sessionMetaMapAtom } from '@/atoms/sessions'
-import { activePageIdAtom, pageAtomFamily, pageDirtyAtom, pageLoadingStateAtom } from '@/atoms/pages'
+import { activePageIdAtom, pageAtomFamily, pageDirtyAtom, pageErrorAtom, pageLoadingStateAtom } from '@/atoms/pages'
 import { useCreatePage, useDebouncedPageSave } from '@/hooks/usePages'
 import { useNavigation } from '@/contexts/NavigationContext'
 import { routes } from '@/lib/navigate'
@@ -60,8 +60,9 @@ export default function PageCanvas({
 
   const page = useAtomValue(pageId ? pageAtomFamily(pageId) : atom(null))
   const pageLoadingState = useAtomValue(pageId ? pageLoadingStateAtom(pageId) : atom('idle' as const))
+  const pageError = useAtomValue(pageId ? pageErrorAtom(pageId) : atom(null))
   const isPageDirty = useAtomValue(pageId ? pageDirtyAtom(pageId) : atom(false))
-  const { save, isSaving, isDirty: hasLocalEdits } = useDebouncedPageSave(workspaceId, pageId ?? null, 500)
+  const { save, cancelPendingSave, isSaving, isDirty: hasLocalEdits } = useDebouncedPageSave(workspaceId, pageId ?? null, 500)
 
   const sessionData = useSessionData(sessionId ?? '')
   const session = mode === 'message' ? sessionData : null
@@ -139,11 +140,13 @@ export default function PageCanvas({
   }, [draftContent, mode])
 
   const handleResetDraft = React.useCallback(() => {
+    cancelPendingSave()
     setDraftContent(sourceContent)
     toast.success(mode === 'page' ? 'Doc reset' : 'Canvas reset')
-  }, [mode, sourceContent])
+  }, [cancelPendingSave, mode, sourceContent])
 
   const isLoading = mode === 'page' && pageLoadingState === 'loading'
+  const isPageNotFound = mode === 'page' && pageLoadingState === 'error' && !!pageError
   const canEdit = mode === 'page'
   const content = draftContent
   const isEditablePage = mode === 'page' && editMode === 'edit'
@@ -260,6 +263,10 @@ export default function PageCanvas({
                 <div className="flex min-h-[280px] items-center justify-center text-center text-sm text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
                   Loading doc...
+                </div>
+              ) : isPageNotFound ? (
+                <div className="flex min-h-[280px] items-center justify-center text-center text-sm text-muted-foreground">
+                  Doc not found.
                 </div>
               ) : content || mode === 'page' ? (
                 mode === 'page' ? (

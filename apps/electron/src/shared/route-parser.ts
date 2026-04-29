@@ -68,6 +68,10 @@ export function maybeDecodeURIComponent(str: string): string {
   return decodeURIComponent(str)
 }
 
+function isSafePageRouteId(pageId: string): boolean {
+  return /^[a-zA-Z0-9_-]+$/.test(pageId)
+}
+
 // =============================================================================
 // Compound Route Parsing
 // =============================================================================
@@ -184,13 +188,13 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
 
   // Saved page route: pages/page/{pageId}
   if (first === 'pages' && segments[1] === 'page') {
-    const pageId = segments[2]
-    if (pageId) {
+    const pageId = segments[2] ? maybeDecodeURIComponent(segments[2]) : undefined
+    if (pageId && isSafePageRouteId(pageId)) {
       return {
         navigator: 'pageCanvas',
         details: {
           type: 'savedPage',
-          id: maybeDecodeURIComponent(pageId),
+          id: pageId,
         },
       }
     }

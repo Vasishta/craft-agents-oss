@@ -141,7 +141,7 @@ export function registerPagesHandlers(server: RpcServer, deps: HandlerDeps): voi
     }
 
     try {
-      const result = updatePageDocument(workspace.rootPath, pageId, input)
+      const result = updatePageDocument(workspace.rootPath, pageId, input, workspaceId)
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to update doc')
@@ -167,7 +167,7 @@ export function registerPagesHandlers(server: RpcServer, deps: HandlerDeps): voi
     }
 
     try {
-      const result = updatePageContent(workspace.rootPath, pageId, content)
+      const result = updatePageContent(workspace.rootPath, pageId, content, workspaceId)
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to update doc content')
@@ -194,7 +194,7 @@ export function registerPagesHandlers(server: RpcServer, deps: HandlerDeps): voi
     }
 
     try {
-      const result = deletePageDocument(workspace.rootPath, pageId)
+      const result = deletePageDocument(workspace.rootPath, pageId, workspaceId)
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to delete doc')
