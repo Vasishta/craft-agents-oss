@@ -109,10 +109,10 @@ export default function PageCanvas({
 
   const pageProvenance = mode === 'page' && page
     ? page.outputIds?.length
-      ? 'Promoted from Output'
+      ? 'Created from Output'
       : page.sourceSessionId || page.sourceMessageId
-        ? sessionMetaMap.has(page.sourceSessionId || '') ? 'From chat' : 'Source chat unavailable'
-        : 'Doc'
+        ? 'From chat'
+        : 'Workspace Doc'
     : null
 
   React.useEffect(() => {

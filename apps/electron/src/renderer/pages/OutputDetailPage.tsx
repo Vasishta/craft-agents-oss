@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { useAtomValue } from 'jotai'
 import { ArrowLeft, Archive, FileText, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
 import { Markdown } from '@craft-agent/ui'
 import { toast } from 'sonner'
@@ -7,7 +6,6 @@ import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAppShellContext } from '@/context/AppShellContext'
-import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { useDeleteOutput, useOutput, usePromoteOutputToDoc } from '@/hooks/useOutputs'
 import { navigate, routes } from '@/lib/navigate'
 
@@ -23,7 +21,6 @@ function formatKind(kind?: string): string {
 
 export default function OutputDetailPage({ workspaceId, outputId }: OutputDetailPageProps) {
   const { leadingAction, rightSidebarButton } = useAppShellContext()
-  const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const { output, isLoading } = useOutput(workspaceId, outputId)
   const deleteOutput = useDeleteOutput(workspaceId)
   const promoteOutputToDoc = usePromoteOutputToDoc(workspaceId)
@@ -60,16 +57,13 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
     }
   }, [deleteOutput, isDeleting, output])
 
-  const sourceChatExists = !!output?.sourceSessionId && sessionMetaMap.has(output.sourceSessionId)
   const sourceLabel = output?.sourceSessionId || output?.sourceMessageId
-    ? sourceChatExists
-      ? 'From assistant response'
-      : 'Source chat unavailable'
-    : 'Source not recorded'
+    ? 'From assistant response'
+    : 'Saved manually'
 
   const actions = output ? (
     <div className="flex items-center gap-2">
-      {output.sourceSessionId && sourceChatExists && (
+      {output.sourceSessionId && (
         <Button
           type="button"
           variant="outline"
@@ -158,7 +152,6 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
                     )}
                     {sourceLabel}
                   </span>
-                  {output.sourceMessageId && <span>Message {output.sourceMessageId}</span>}
                   {output.promotedDocId && <span>Promoted to Doc</span>}
                 </div>
               </div>

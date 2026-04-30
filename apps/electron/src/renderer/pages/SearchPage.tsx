@@ -418,7 +418,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                       title={page.title || 'Untitled Doc'}
                       snippet={snippet}
                       timestamp={formatUpdatedTime(page.updatedAt)}
-                      meta={page.outputIdCount > 0 ? 'Promoted from Output' : page.sourceSessionId ? 'From chat' : 'Doc'}
+                      meta={page.outputIdCount > 0 ? 'Created from Output' : page.sourceSessionId ? 'From chat' : 'Workspace Doc'}
                       onClick={() => navigate(routes.view.savedPage(page.id))}
                     />
                   ))
@@ -436,9 +436,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                       title={output.title || 'Untitled Output'}
                       snippet={snippet}
                       timestamp={formatUpdatedTime(output.updatedAt)}
-                      meta={output.sourceSessionId
-                        ? sessionMetaMap.has(output.sourceSessionId) ? 'From assistant response' : 'Source chat unavailable'
-                        : 'Source not recorded'}
+                      meta={output.sourceSessionId || output.sourceMessageId ? 'From assistant response' : 'Saved manually'}
                       onClick={() => navigate(routes.view.savedOutput(output.id))}
                     />
                   ))

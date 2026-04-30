@@ -84,6 +84,24 @@ describe('page storage hardening', () => {
     expect(pages[0]?.workspaceId).toBe('workspace-a')
   })
 
+  it('documents that index rebuild cannot recover provenance stored only in metadata', () => {
+    const page = createPageDocument(workspaceRootPath, 'workspace-a', {
+      title: 'Promoted Doc',
+      content: '# Promoted Doc\n\nBody',
+      sourceSessionId: 'session-a',
+      sourceMessageId: 'message-a',
+      outputIds: ['output-a'],
+    }).page!
+    rmSync(join(workspaceRootPath, 'pages', 'index.json'), { force: true })
+
+    const rebuiltPage = readPageDocument(workspaceRootPath, page.id, 'workspace-a')
+
+    expect(rebuiltPage?.content).toContain('Body')
+    expect(rebuiltPage?.sourceSessionId).toBeUndefined()
+    expect(rebuiltPage?.sourceMessageId).toBeUndefined()
+    expect(rebuiltPage?.outputIds).toBeUndefined()
+  })
+
   it('recovers docs from a corrupt index', () => {
     mkdirSync(join(workspaceRootPath, 'pages'), { recursive: true })
     writeFileSync(join(workspaceRootPath, 'pages', 'index.json'), '{not json')

@@ -1464,9 +1464,10 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
     const prompt = findPreviousUserMessage(session.messages, messageId)?.content?.trim()
     const promptTitle = prompt ? prompt.replace(/\s+/g, ' ').slice(0, 80) : undefined
+    const titleBase = promptTitle || response.replace(/\s+/g, ' ').slice(0, 80) || 'Saved Output'
     const title = session.name
-      ? `${session.name} assistant response`
-      : `Assistant response: ${promptTitle || response.replace(/\s+/g, ' ').slice(0, 80) || 'Saved Output'}`
+      ? `${session.name}: ${titleBase}`
+      : `Assistant response: ${titleBase}`
 
     savingOutputMessageIdsRef.current.add(messageId)
     try {

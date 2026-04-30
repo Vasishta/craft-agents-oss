@@ -243,7 +243,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                     icon={<FileText className="h-4 w-4" />}
                     title={page.title || 'Untitled Doc'}
                     meta={formatUpdatedTime(page.updatedAt)}
-                    detail={page.outputIdCount > 0 ? 'Promoted from Output' : page.sourceSessionId ? 'From chat' : undefined}
+                    detail={page.outputIdCount > 0 ? 'Created from Output' : page.sourceSessionId ? 'From chat' : undefined}
                     onClick={() => navigate(routes.view.savedPage(page.id))}
                   />
                 ))}
@@ -256,9 +256,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                     icon={<Box className="h-4 w-4" />}
                     title={output.title || 'Untitled Output'}
                     meta={formatUpdatedTime(output.updatedAt)}
-                    detail={output.sourceSessionId
-                      ? sessionMetaMap.has(output.sourceSessionId) ? 'From assistant response' : 'Source chat unavailable'
-                      : 'Source not recorded'}
+                    detail={output.sourceSessionId || output.sourceMessageId ? 'From assistant response' : 'Saved manually'}
                     onClick={() => navigate(routes.view.savedOutput(output.id))}
                   />
                 ))}
