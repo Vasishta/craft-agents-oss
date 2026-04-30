@@ -33,6 +33,9 @@ function formatUpdatedTime(timestamp: number): string {
 }
 
 function getProvenance(page: PageListEntry): { label: string; icon: React.ElementType } {
+  if (page.outputIdCount > 0) {
+    return { label: 'Promoted from Output', icon: FileText }
+  }
   if (page.sourceSessionId || page.sourceMessageId) {
     return { label: 'From chat', icon: MessageSquareText }
   }

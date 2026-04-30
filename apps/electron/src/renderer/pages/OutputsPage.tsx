@@ -1,10 +1,12 @@
 import * as React from 'react'
+import { useAtomValue } from 'jotai'
 import { Archive, Box, FileText, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAppShellContext } from '@/context/AppShellContext'
+import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { useDeleteOutput, useOutputList } from '@/hooks/useOutputs'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -35,15 +37,16 @@ function formatKind(kind: OutputIndexEntry['kind']): string {
   return kind.split('_').map(part => part[0]?.toUpperCase() + part.slice(1)).join(' ')
 }
 
-function getProvenance(output: OutputIndexEntry): { label: string; icon: React.ElementType } {
+function getProvenance(output: OutputIndexEntry, sourceExists: boolean): { label: string; icon: React.ElementType } {
   if (output.sourceSessionId || output.sourceMessageId) {
-    return { label: 'From chat', icon: MessageSquareText }
+    return { label: sourceExists ? 'From assistant response' : 'Source chat unavailable', icon: MessageSquareText }
   }
-  return { label: 'Saved output', icon: Archive }
+  return { label: 'Source not recorded', icon: Archive }
 }
 
 export default function OutputsPage({ workspaceId }: OutputsPageProps) {
   const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const { outputs, isLoading, refresh } = useOutputList(workspaceId)
   const deleteOutput = useDeleteOutput(workspaceId)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
@@ -99,7 +102,7 @@ export default function OutputsPage({ workspaceId }: OutputsPageProps) {
           ) : (
             <section aria-label="Outputs list" className="flex flex-col gap-2">
               {outputs.map((output) => {
-                const provenance = getProvenance(output)
+                const provenance = getProvenance(output, !!output.sourceSessionId && sessionMetaMap.has(output.sourceSessionId))
                 const ProvenanceIcon = provenance.icon
                 const isDeleting = deletingId === output.id
 

@@ -107,6 +107,14 @@ export default function PageCanvas({
     ? (session?.name || sessionMetaMap.get(sessionId || '')?.name || 'Session')
     : 'Workspace Doc'
 
+  const pageProvenance = mode === 'page' && page
+    ? page.outputIds?.length
+      ? 'Promoted from Output'
+      : page.sourceSessionId || page.sourceMessageId
+        ? sessionMetaMap.has(page.sourceSessionId || '') ? 'From chat' : 'Source chat unavailable'
+        : 'Doc'
+    : null
+
   React.useEffect(() => {
     if (!hasLocalEdits) {
       setDraftContent(sourceContent)
@@ -252,7 +260,7 @@ export default function PageCanvas({
                 <div className="min-w-0 flex-1">
                   <h1 className="text-[26px] font-semibold leading-tight tracking-normal text-foreground">{title}</h1>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {mode === 'page' ? sessionTitle : `${subtitle} from ${sessionTitle}`}
+                    {mode === 'page' ? pageProvenance || sessionTitle : `${subtitle} from ${sessionTitle}`}
                   </p>
                 </div>
               </div>

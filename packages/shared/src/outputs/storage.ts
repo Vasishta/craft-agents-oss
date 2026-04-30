@@ -3,7 +3,7 @@ import { basename, join, relative, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files'
 import { debug } from '../utils/debug'
-import { createPageDocument } from '../pages/storage'
+import { createPageDocument, readPageDocument } from '../pages/storage'
 import type {
   CreateOutputInput,
   DeleteOutputResult,
@@ -243,6 +243,9 @@ export function createOutputDocument(
     const outputId = `output_${randomUUID().slice(0, 8)}`
     const now = Date.now()
     const content = input.content || ''
+    if (!content.trim()) {
+      return { success: false, error: 'Output content is required' }
+    }
     const output: OutputDocument = {
       id: outputId,
       workspaceId,
@@ -356,11 +359,19 @@ export function promoteOutputToPageDocument(
   const output = readOutputDocument(workspaceRootPath, outputId, workspaceId)
   if (!output) return { success: false, error: 'Output not found' }
 
+  if (output.promotedDocId) {
+    const existingPage = readPageDocument(workspaceRootPath, output.promotedDocId, workspaceId)
+    if (existingPage) {
+      return { success: true, output, page: existingPage }
+    }
+  }
+
   const pageResult = createPageDocument(workspaceRootPath, workspaceId, {
     title: output.title,
     content: output.content,
     sourceSessionId: output.sourceSessionId,
     sourceMessageId: output.sourceMessageId,
+    outputIds: [output.id],
   })
   if (!pageResult.success || !pageResult.page) {
     return { success: false, error: pageResult.error || 'Failed to promote output' }

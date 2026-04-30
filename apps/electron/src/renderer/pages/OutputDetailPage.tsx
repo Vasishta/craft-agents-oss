@@ -1,11 +1,13 @@
 import * as React from 'react'
-import { ArrowLeft, FileText, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { useAtomValue } from 'jotai'
+import { ArrowLeft, Archive, FileText, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
 import { Markdown } from '@craft-agent/ui'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAppShellContext } from '@/context/AppShellContext'
+import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { useDeleteOutput, useOutput, usePromoteOutputToDoc } from '@/hooks/useOutputs'
 import { navigate, routes } from '@/lib/navigate'
 
@@ -21,6 +23,7 @@ function formatKind(kind?: string): string {
 
 export default function OutputDetailPage({ workspaceId, outputId }: OutputDetailPageProps) {
   const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const { output, isLoading } = useOutput(workspaceId, outputId)
   const deleteOutput = useDeleteOutput(workspaceId)
   const promoteOutputToDoc = usePromoteOutputToDoc(workspaceId)
@@ -57,9 +60,16 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
     }
   }, [deleteOutput, isDeleting, output])
 
+  const sourceChatExists = !!output?.sourceSessionId && sessionMetaMap.has(output.sourceSessionId)
+  const sourceLabel = output?.sourceSessionId || output?.sourceMessageId
+    ? sourceChatExists
+      ? 'From assistant response'
+      : 'Source chat unavailable'
+    : 'Source not recorded'
+
   const actions = output ? (
     <div className="flex items-center gap-2">
-      {output.sourceSessionId && (
+      {output.sourceSessionId && sourceChatExists && (
         <Button
           type="button"
           variant="outline"
@@ -140,7 +150,16 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>{formatKind(output.kind)}</span>
                   <span>{output.status}</span>
-                  {output.sourceSessionId && <span>From chat</span>}
+                  <span className="inline-flex items-center gap-1">
+                    {output.sourceSessionId || output.sourceMessageId ? (
+                      <MessageSquareText className="h-3.5 w-3.5" />
+                    ) : (
+                      <Archive className="h-3.5 w-3.5" />
+                    )}
+                    {sourceLabel}
+                  </span>
+                  {output.sourceMessageId && <span>Message {output.sourceMessageId}</span>}
+                  {output.promotedDocId && <span>Promoted to Doc</span>}
                 </div>
               </div>
 

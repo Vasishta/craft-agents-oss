@@ -260,6 +260,7 @@ export function createPageDocument(
     const content = input.content || ''
     const title = input.title || extractTitleFromContent(content)
     const mdPath = getPageMarkdownPath(workspaceRootPath, pageId)
+    const index = loadPageIndex(workspaceRootPath, workspaceId)
     atomicWriteFileSync(mdPath, content)
     const page: PageDocument = {
       id: pageId,
@@ -271,9 +272,8 @@ export function createPageDocument(
       sourceSessionId: input.sourceSessionId,
       sourceMessageId: input.sourceMessageId,
       notebookId: input.notebookId,
-      outputIds: [],
+      outputIds: input.outputIds ?? [],
     }
-    const index = loadPageIndex(workspaceRootPath, workspaceId)
     index.pages.push(page)
     savePageIndex(workspaceRootPath, index)
     debug('[page-storage] Created page:', pageId, title)

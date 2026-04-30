@@ -26,6 +26,7 @@ export interface CreatePageInput {
   sourceSessionId?: string
   sourceMessageId?: string
   notebookId?: string
+  outputIds?: string[]
 }
 
 export interface UpdatePageInput {

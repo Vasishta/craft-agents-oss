@@ -30,10 +30,16 @@ describe('page storage hardening', () => {
     const created = createPageDocument(workspaceRootPath, 'workspace-a', {
       title: 'Doc A',
       content: '# Doc A\n\nInitial',
+      sourceSessionId: 'session-a',
+      sourceMessageId: 'message-a',
+      outputIds: ['output-a'],
     })
 
     expect(created.success).toBe(true)
     expect(created.page?.workspaceId).toBe('workspace-a')
+    expect(created.page?.sourceSessionId).toBe('session-a')
+    expect(created.page?.sourceMessageId).toBe('message-a')
+    expect(created.page?.outputIds).toEqual(['output-a'])
 
     const pageId = created.page!.id
     const updated = updatePageContent(workspaceRootPath, pageId, '# Doc A\n\nUpdated', 'workspace-a')
