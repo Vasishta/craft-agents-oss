@@ -141,7 +141,7 @@ Notes:
 │                                                                    │
 │ Recent                                                             │
 │ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐              │
-│ │ Recent chats  │ │ Recent docs   │ │ Outputs       │              │
+│ │ Recent chats  │ │ Recent docs   │ │ Recent outputs│              │
 │ │ ...           │ │ ...           │ │ ...           │              │
 │ └───────────────┘ └───────────────┘ └───────────────┘              │
 │                                                                    │
@@ -335,7 +335,7 @@ Recommended next tasks:
 12. Project v0 model with optional links
 13. Project Home and project-scoped filters
 14. Decisions v0 from Output/Chat
-15. Notebook v0 as collection/view over Docs/Outputs/Sources
+15. Notebook v0 as collection/view over Docs/Outputs/Files & Context
 ```
 
 ## 13. Task 8 candidate: Output polish and provenance hardening

@@ -96,7 +96,7 @@ The user-facing name for durable editable pages. Internally this can continue us
 
 ### Notebook
 
-A collection or view over docs, outputs, sources, and notes. It should not strictly own pages. A page may eventually appear in multiple notebooks through a relationship/index model.
+A collection or view over docs, outputs, files, context, and notes. It should not strictly own pages. A page may eventually appear in multiple notebooks through a relationship/index model.
 
 ### Files
 
@@ -199,7 +199,7 @@ The assistant should be able to:
 - search across everything locally;
 - operate on code with permissions and reviewable diffs;
 - organize research into notebooks and projects;
-- preserve provenance from every generated artifact back to chat/session/source.
+- preserve provenance from every generated artifact back to chat/session/context.
 
 ## 9. Non-goals for the next few tasks
 
@@ -258,7 +258,7 @@ For knowledge work:
 
 ```text
 Research topic
-  -> collect sources/files
+  -> collect files/context
   -> create notes/docs
   -> save outputs
   -> organize into notebook/project
