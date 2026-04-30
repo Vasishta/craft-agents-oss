@@ -598,3 +598,12 @@ export interface PageChangedEvent {
 // ---------------------------------------------------------------------------
 
 export type { PageDocument, PageListEntry } from '../pages/types'
+export type {
+  CreateOutputInput,
+  OutputDocument,
+  OutputIndexEntry,
+  OutputKind,
+  OutputStatus,
+  OutputContentType,
+  UpdateOutputInput,
+} from '../outputs/types'

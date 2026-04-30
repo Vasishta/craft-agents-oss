@@ -73,4 +73,7 @@ export interface BroadcastEventMap {
 
   // Page events (workspace-scoped)
   [RPC_CHANNELS.pages.CHANGED]: [workspaceId: string, data: { pageId: string; changeType: 'created' | 'updated' | 'deleted'; timestamp: number }]
+
+  // Output events (workspace-scoped)
+  [RPC_CHANNELS.outputs.CHANGED]: [workspaceId: string, data: { outputId: string; changeType: 'created' | 'updated' | 'deleted' | 'promoted'; timestamp: number }]
 }

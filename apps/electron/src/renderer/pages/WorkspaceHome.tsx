@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
-import { DatabaseZap, FileText, MessageSquareText, Search, SquarePen } from 'lucide-react'
+import { Box, DatabaseZap, FileText, MessageSquareText, Search, SquarePen } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -8,6 +8,7 @@ import { SourceAvatar } from '@/components/ui/source-avatar'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { sourcesAtom } from '@/atoms/sources'
+import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -118,6 +119,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const sources = useAtomValue(sourcesAtom)
   const { pages } = usePageList(workspaceId)
+  const { outputs } = useOutputList(workspaceId)
 
   const workspaceName = getWorkspaceName(workspaces, workspaceId)
 
@@ -132,6 +134,11 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
   const recentDocs = React.useMemo(
     () => [...pages].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
     [pages]
+  )
+
+  const recentOutputs = React.useMemo(
+    () => [...outputs].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
+    [outputs]
   )
 
   const recentSources = React.useMemo(
@@ -181,7 +188,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
 
           <section>
             <h2 className="mb-3 text-sm font-medium text-foreground">What do you want to do?</h2>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
               <ActionButton
                 icon={<SquarePen className="h-4 w-4" />}
                 label="Start chat"
@@ -191,6 +198,11 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                 icon={<FileText className="h-4 w-4" />}
                 label="Open docs"
                 onClick={() => navigate(routes.view.pages())}
+              />
+              <ActionButton
+                icon={<Box className="h-4 w-4" />}
+                label="Open outputs"
+                onClick={() => navigate(routes.view.outputs())}
               />
               <ActionButton
                 icon={<Search className="h-4 w-4" />}
@@ -207,7 +219,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
 
           <section>
             <h2 className="mb-3 text-sm font-medium text-foreground">Recent</h2>
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-4">
               <RecentSection title="Recent chats" empty="No recent chats">
                 {recentChats.map((session) => (
                   <RecentRow
@@ -228,6 +240,18 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                     title={page.title || 'Untitled Doc'}
                     meta={formatUpdatedTime(page.updatedAt)}
                     onClick={() => navigate(routes.view.savedPage(page.id))}
+                  />
+                ))}
+              </RecentSection>
+
+              <RecentSection title="Recent outputs" empty="No recent outputs">
+                {recentOutputs.map((output) => (
+                  <RecentRow
+                    key={output.id}
+                    icon={<Box className="h-4 w-4" />}
+                    title={output.title || 'Untitled Output'}
+                    meta={formatUpdatedTime(output.updatedAt)}
+                    onClick={() => navigate(routes.view.savedOutput(output.id))}
                   />
                 ))}
               </RecentSection>

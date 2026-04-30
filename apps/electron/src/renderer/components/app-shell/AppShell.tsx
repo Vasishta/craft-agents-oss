@@ -33,6 +33,7 @@ import {
   Radio,
   Bot,
   Info,
+  Box,
 } from "lucide-react"
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
 import { SourceAvatar } from "@/components/ui/source-avatar"
@@ -91,6 +92,7 @@ import { sessionMetaMapAtom, sendToWorkspaceAtom, type SessionMeta } from "@/ato
 import { sourcesAtom } from "@/atoms/sources"
 import { skillsAtom } from "@/atoms/skills"
 import { usePageList } from "@/hooks/usePages"
+import { useOutputList } from "@/hooks/useOutputs"
 import { panelStackAtom, panelCountAtom, focusedPanelIdAtom, focusedSessionIdAtom, focusNextPanelAtom, focusPrevPanelAtom, parseSessionIdFromRoute } from "@/atoms/panel-stack"
 import { type SessionStatusId, type SessionStatus, statusConfigsToSessionStatuses } from "@/config/session-status-config"
 import { useStatuses } from "@/hooks/useStatuses"
@@ -116,6 +118,7 @@ import {
   isAutomationsNavigation,
   isPageCanvasNavigation,
   isSearchNavigation,
+  isOutputsNavigation,
   isHomeNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
@@ -591,7 +594,7 @@ function AppShellContent({
   // UNIFIED NAVIGATION STATE - single source of truth from NavigationContext
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
-  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isHomeNavigation(navState)
+  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isOutputsNavigation(navState) && !isHomeNavigation(navState)
 
   const store = useStore()
   const panelStack = useAtomValue(panelStackAtom)
@@ -1288,6 +1291,7 @@ function AppShellContent({
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const setSessionMetaMap = useSetAtom(sessionMetaMapAtom)
   const { pages } = usePageList(activeWorkspaceId ?? null)
+  const { outputs } = useOutputList(activeWorkspaceId ?? null)
 
   const hasPendingPrompt = React.useCallback((sessionId: string) => {
     return (pendingPermissions.get(sessionId)?.length ?? 0) > 0
@@ -1733,6 +1737,10 @@ function AppShellContent({
     navigate(routes.view.search())
   }, [navigate])
 
+  const handleOutputsClick = useCallback(() => {
+    navigate(routes.view.outputs())
+  }, [navigate])
+
   // Handler for settings view
   const handleSettingsClick = useCallback((subpage: SettingsSubpage = 'app') => {
     navigate(routes.view.settings(subpage))
@@ -1952,13 +1960,19 @@ function AppShellContent({
   const unifiedSidebarItems = React.useMemo((): SidebarItem[] => {
     const result: SidebarItem[] = []
 
-    // 1. Primary workspace section: Home, Search, Docs, All Sessions
+    // 1. Primary workspace section: Home, Search, Docs, Outputs, All Sessions
     result.push({ id: 'nav:home', type: 'nav', action: handleHomeClick })
     result.push({ id: 'nav:search', type: 'nav', action: handleSearchClick })
     result.push({ id: 'nav:pages', type: 'nav', action: handlePagesClick })
     if (isExpanded('nav:pages')) {
       for (const p of pages.slice(0, 10)) {
         result.push({ id: `nav:page:${p.id}`, type: 'nav', action: () => navigate(routes.view.savedPage(p.id)) })
+      }
+    }
+    result.push({ id: 'nav:outputs', type: 'nav', action: handleOutputsClick })
+    if (isExpanded('nav:outputs')) {
+      for (const output of outputs.slice(0, 10)) {
+        result.push({ id: `nav:output:${output.id}`, type: 'nav', action: () => navigate(routes.view.savedOutput(output.id)) })
       }
     }
     result.push({ id: 'nav:allSessions', type: 'nav', action: handleAllSessionsClick })
@@ -1989,7 +2003,7 @@ function AppShellContent({
     result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
 
     return result
-  }, [handleHomeClick, handleSearchClick, handlePagesClick, pages, isExpanded, handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick, navigate])
+  }, [handleHomeClick, handleSearchClick, handlePagesClick, pages, handleOutputsClick, outputs, isExpanded, handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick, navigate])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2314,6 +2328,24 @@ function AppShellContent({
                         icon: FileText,
                         variant: (isPageCanvasNavigation(navState) && navState.details?.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
                         onClick: () => navigate(routes.view.savedPage(p.id)),
+                      })),
+                    },
+                    {
+                      id: "nav:outputs",
+                      title: t("sidebar.outputs"),
+                      label: String(outputs.length),
+                      icon: Box,
+                      variant: isOutputsNavigation(navState) ? "default" : "ghost",
+                      onClick: handleOutputsClick,
+                      expandable: outputs.length > 0,
+                      expanded: isExpanded('nav:outputs'),
+                      onToggle: () => toggleExpanded('nav:outputs'),
+                      items: outputs.slice(0, 10).map(output => ({
+                        id: `nav:output:${output.id}`,
+                        title: output.title || 'Untitled Output',
+                        icon: Box,
+                        variant: (isOutputsNavigation(navState) && navState.details?.type === 'output' && navState.details.outputId === output.id) ? "default" : "ghost",
+                        onClick: () => navigate(routes.view.savedOutput(output.id)),
                       })),
                     },
                     // All Sessions: expandable with status children (sortable) + Flagged & Archived as trailing items
@@ -3287,7 +3319,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isHomeNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
+          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isOutputsNavigation(navState) && !isHomeNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}
