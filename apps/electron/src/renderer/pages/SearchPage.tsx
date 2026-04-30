@@ -260,6 +260,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
     }
 
     setIsLoadingOutputContents(true)
+    const loadedContents: Record<string, string> = {}
 
     runWithConcurrency(outputsToLoad, 6, async (output) => {
       let content = ''
@@ -270,11 +271,12 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
         content = ''
       }
 
-      if (!stale) {
-        setOutputContents(current => ({ ...current, [output.id]: content }))
-      }
+      loadedContents[output.id] = content
     }).finally(() => {
-      if (!stale) setIsLoadingOutputContents(false)
+      if (!stale) {
+        setOutputContents(current => ({ ...current, ...loadedContents }))
+        setIsLoadingOutputContents(false)
+      }
     })
 
     return () => {

@@ -213,9 +213,9 @@ export function loadOutputIndex(workspaceRootPath: string, workspaceId?: string)
       return rebuildOutputIndex(workspaceRootPath)
     }
     if (index.version !== CURRENT_INDEX_VERSION) {
-      index.version = CURRENT_INDEX_VERSION
+      return repairOutputIndex(workspaceRootPath, index, workspaceId)
     }
-    return repairOutputIndex(workspaceRootPath, index, workspaceId)
+    return index
   } catch (error) {
     debug('[output-storage] Failed to load index, attempting rebuild:', error)
     return rebuildOutputIndex(workspaceRootPath)
@@ -259,7 +259,13 @@ export function createOutputDocument(
     }
     atomicWriteFileSync(getOutputDocumentPath(workspaceRootPath, outputId), JSON.stringify(output, null, 2))
     const index = loadOutputIndex(workspaceRootPath, workspaceId)
-    index.outputs.push(toIndexEntry(output))
+    const entry = toIndexEntry(output)
+    const outputIndex = index.outputs.findIndex(item => item.id === outputId)
+    if (outputIndex === -1) {
+      index.outputs.push(entry)
+    } else {
+      index.outputs[outputIndex] = entry
+    }
     saveOutputIndex(workspaceRootPath, index)
     return { success: true, output }
   } catch (error) {
