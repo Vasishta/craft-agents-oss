@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeft, FileText, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { ArrowLeft, Archive, FileText, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
 import { Markdown } from '@craft-agent/ui'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
@@ -56,6 +56,10 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
       setIsDeleting(false)
     }
   }, [deleteOutput, isDeleting, output])
+
+  const sourceLabel = output?.sourceSessionId || output?.sourceMessageId
+    ? 'From assistant response'
+    : 'Saved manually'
 
   const actions = output ? (
     <div className="flex items-center gap-2">
@@ -140,7 +144,15 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>{formatKind(output.kind)}</span>
                   <span>{output.status}</span>
-                  {output.sourceSessionId && <span>From chat</span>}
+                  <span className="inline-flex items-center gap-1">
+                    {output.sourceSessionId || output.sourceMessageId ? (
+                      <MessageSquareText className="h-3.5 w-3.5" />
+                    ) : (
+                      <Archive className="h-3.5 w-3.5" />
+                    )}
+                    {sourceLabel}
+                  </span>
+                  {output.promotedDocId && <span>Promoted to Doc</span>}
                 </div>
               </div>
 

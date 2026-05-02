@@ -105,12 +105,14 @@ function ResultRow({
   title,
   snippet,
   timestamp,
+  meta,
   onClick,
 }: {
   icon: React.ReactNode
   title: string
   snippet: string
   timestamp: string | null
+  meta?: string
   onClick: () => void
 }) {
   return (
@@ -125,8 +127,10 @@ function ResultRow({
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium text-foreground">{title}</span>
         <span className="mt-1.5 line-clamp-2 block text-sm leading-5 text-muted-foreground">{snippet}</span>
-        {timestamp && (
-          <span className="mt-2 block text-xs text-muted-foreground">Updated {timestamp}</span>
+        {(timestamp || meta) && (
+          <span className="mt-2 block text-xs text-muted-foreground">
+            {timestamp ? `Updated ${timestamp}` : null}{timestamp && meta ? ' · ' : ''}{meta}
+          </span>
         )}
       </span>
     </button>
@@ -414,6 +418,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                       title={page.title || 'Untitled Doc'}
                       snippet={snippet}
                       timestamp={formatUpdatedTime(page.updatedAt)}
+                      meta={page.outputIdCount > 0 ? 'Created from Output' : page.sourceSessionId ? 'From chat' : 'Workspace Doc'}
                       onClick={() => navigate(routes.view.savedPage(page.id))}
                     />
                   ))
@@ -431,6 +436,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                       title={output.title || 'Untitled Output'}
                       snippet={snippet}
                       timestamp={formatUpdatedTime(output.updatedAt)}
+                      meta={output.sourceSessionId || output.sourceMessageId ? 'From assistant response' : 'Saved manually'}
                       onClick={() => navigate(routes.view.savedOutput(output.id))}
                     />
                   ))

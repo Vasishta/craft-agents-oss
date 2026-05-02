@@ -67,11 +67,13 @@ function RecentRow({
   icon,
   title,
   meta,
+  detail,
   onClick,
 }: {
   icon: React.ReactNode
   title: string
   meta: string
+  detail?: string
   onClick: () => void
 }) {
   return (
@@ -85,7 +87,9 @@ function RecentRow({
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium text-foreground">{title}</span>
-        <span className="mt-1 block truncate text-xs text-muted-foreground">{meta}</span>
+        <span className="mt-1 block truncate text-xs text-muted-foreground">
+          {meta}{detail ? ` · ${detail}` : ''}
+        </span>
       </span>
     </button>
   )
@@ -239,6 +243,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                     icon={<FileText className="h-4 w-4" />}
                     title={page.title || 'Untitled Doc'}
                     meta={formatUpdatedTime(page.updatedAt)}
+                    detail={page.outputIdCount > 0 ? 'Created from Output' : page.sourceSessionId ? 'From chat' : undefined}
                     onClick={() => navigate(routes.view.savedPage(page.id))}
                   />
                 ))}
@@ -251,6 +256,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                     icon={<Box className="h-4 w-4" />}
                     title={output.title || 'Untitled Output'}
                     meta={formatUpdatedTime(output.updatedAt)}
+                    detail={output.sourceSessionId || output.sourceMessageId ? 'From assistant response' : 'Saved manually'}
                     onClick={() => navigate(routes.view.savedOutput(output.id))}
                   />
                 ))}

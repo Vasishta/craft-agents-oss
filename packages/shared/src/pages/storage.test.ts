@@ -30,10 +30,16 @@ describe('page storage hardening', () => {
     const created = createPageDocument(workspaceRootPath, 'workspace-a', {
       title: 'Doc A',
       content: '# Doc A\n\nInitial',
+      sourceSessionId: 'session-a',
+      sourceMessageId: 'message-a',
+      outputIds: ['output-a'],
     })
 
     expect(created.success).toBe(true)
     expect(created.page?.workspaceId).toBe('workspace-a')
+    expect(created.page?.sourceSessionId).toBe('session-a')
+    expect(created.page?.sourceMessageId).toBe('message-a')
+    expect(created.page?.outputIds).toEqual(['output-a'])
 
     const pageId = created.page!.id
     const updated = updatePageContent(workspaceRootPath, pageId, '# Doc A\n\nUpdated', 'workspace-a')
@@ -76,6 +82,24 @@ describe('page storage hardening', () => {
     expect(pages[0]?.id).toBe('page_recovered')
     expect(pages[0]?.title).toBe('Recovered')
     expect(pages[0]?.workspaceId).toBe('workspace-a')
+  })
+
+  it('documents that index rebuild cannot recover provenance stored only in metadata', () => {
+    const page = createPageDocument(workspaceRootPath, 'workspace-a', {
+      title: 'Promoted Doc',
+      content: '# Promoted Doc\n\nBody',
+      sourceSessionId: 'session-a',
+      sourceMessageId: 'message-a',
+      outputIds: ['output-a'],
+    }).page!
+    rmSync(join(workspaceRootPath, 'pages', 'index.json'), { force: true })
+
+    const rebuiltPage = readPageDocument(workspaceRootPath, page.id, 'workspace-a')
+
+    expect(rebuiltPage?.content).toContain('Body')
+    expect(rebuiltPage?.sourceSessionId).toBeUndefined()
+    expect(rebuiltPage?.sourceMessageId).toBeUndefined()
+    expect(rebuiltPage?.outputIds).toBeUndefined()
   })
 
   it('recovers docs from a corrupt index', () => {

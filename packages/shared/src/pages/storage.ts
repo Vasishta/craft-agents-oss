@@ -271,10 +271,15 @@ export function createPageDocument(
       sourceSessionId: input.sourceSessionId,
       sourceMessageId: input.sourceMessageId,
       notebookId: input.notebookId,
-      outputIds: [],
+      outputIds: input.outputIds ?? [],
     }
     const index = loadPageIndex(workspaceRootPath, workspaceId)
-    index.pages.push(page)
+    const existingIndex = index.pages.findIndex(item => item.id === pageId)
+    if (existingIndex === -1) {
+      index.pages.push(page)
+    } else {
+      index.pages[existingIndex] = page
+    }
     savePageIndex(workspaceRootPath, index)
     debug('[page-storage] Created page:', pageId, title)
     return { success: true, page }

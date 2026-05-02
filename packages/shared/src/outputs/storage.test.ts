@@ -12,7 +12,7 @@ import {
   readOutputDocument,
   updateOutputDocument,
 } from './storage'
-import { readPageDocument } from '../pages/storage'
+import { listPageDocuments, readPageDocument } from '../pages/storage'
 
 describe('output storage', () => {
   let workspaceRootPath: string
@@ -48,6 +48,17 @@ describe('output storage', () => {
 
     expect(deleteOutputDocument(workspaceRootPath, outputId, 'workspace-a').success).toBe(true)
     expect(readOutputDocument(workspaceRootPath, outputId, 'workspace-a')).toBeNull()
+  })
+
+  it('rejects empty output content', () => {
+    const created = createOutputDocument(workspaceRootPath, 'workspace-a', {
+      title: 'Empty',
+      content: '   \n\t',
+    })
+
+    expect(created.success).toBe(false)
+    expect(created.error).toBe('Output content is required')
+    expect(listOutputDocuments(workspaceRootPath, 'workspace-a')).toEqual([])
   })
 
   it('scopes outputs by workspace id', () => {
@@ -115,7 +126,7 @@ describe('output storage', () => {
     expect(readFileSync(join(workspaceRootPath, 'outputs', 'index.json'), 'utf-8')).toContain('output_safe')
   })
 
-  it('promotes an output to a doc and marks the output promoted', () => {
+  it('promotes an output to a doc and preserves output, session, and message lineage', () => {
     const output = createOutputDocument(workspaceRootPath, 'workspace-a', {
       title: 'Draft Summary',
       content: '# Draft Summary\n\nPromote me',
@@ -130,6 +141,37 @@ describe('output storage', () => {
     expect(promoted.page?.title).toBe('Draft Summary')
     expect(promoted.output?.status).toBe('promoted')
     expect(promoted.output?.promotedDocId).toBe(promoted.page?.id)
-    expect(readPageDocument(workspaceRootPath, promoted.page!.id, 'workspace-a')?.content).toContain('Promote me')
+    const promotedPage = readPageDocument(workspaceRootPath, promoted.page!.id, 'workspace-a')
+    expect(promotedPage?.content).toContain('Promote me')
+    expect(promotedPage?.sourceSessionId).toBe('session-a')
+    expect(promotedPage?.sourceMessageId).toBe('message-a')
+    expect(promotedPage?.outputIds).toEqual([output.id])
+  })
+
+  it('returns the existing promoted doc on repeated promotion when it still exists', () => {
+    const output = createOutputDocument(workspaceRootPath, 'workspace-a', {
+      title: 'Reusable Draft',
+      content: 'Promote me once',
+      kind: 'assistant_response',
+    }).output!
+
+    const firstPromotion = promoteOutputToPageDocument(workspaceRootPath, 'workspace-a', output.id)
+    const secondPromotion = promoteOutputToPageDocument(workspaceRootPath, 'workspace-a', output.id)
+
+    expect(firstPromotion.success).toBe(true)
+    expect(secondPromotion.success).toBe(true)
+    expect(secondPromotion.page?.id).toBe(firstPromotion.page?.id)
+    expect(listPageDocuments(workspaceRootPath, 'workspace-a')).toHaveLength(1)
+  })
+
+  it('does not promote an output across workspace boundaries', () => {
+    const output = createOutputDocument(workspaceRootPath, 'workspace-a', {
+      content: 'Workspace A only',
+    }).output!
+
+    const promoted = promoteOutputToPageDocument(workspaceRootPath, 'workspace-b', output.id)
+
+    expect(promoted.success).toBe(false)
+    expect(promoted.error).toBe('Output not found')
   })
 })

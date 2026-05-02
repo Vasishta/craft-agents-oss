@@ -1449,8 +1449,11 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     }
   }, [activePageId, navigate, pages, session])
 
+  const savingOutputMessageIdsRef = React.useRef(new Set<string>())
+
   const handleSaveMessageAsOutput = useCallback(async (messageId: string) => {
     if (!session) return
+    if (savingOutputMessageIdsRef.current.has(messageId)) return
 
     const message = session.messages.find(item => item.id === messageId)
     const response = message?.content?.trim()
@@ -1461,10 +1464,12 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
     const prompt = findPreviousUserMessage(session.messages, messageId)?.content?.trim()
     const promptTitle = prompt ? prompt.replace(/\s+/g, ' ').slice(0, 80) : undefined
+    const titleBase = promptTitle || response.replace(/\s+/g, ' ').slice(0, 80) || 'Saved Output'
     const title = session.name
-      ? `${session.name} output`
-      : promptTitle || response.replace(/\s+/g, ' ').slice(0, 80) || 'Saved Output'
+      ? `${session.name}: ${titleBase}`
+      : `Assistant response: ${titleBase}`
 
+    savingOutputMessageIdsRef.current.add(messageId)
     try {
       const output = await window.electronAPI.createOutput(session.workspaceId, {
         title,
@@ -1484,6 +1489,8 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
       toast.error('Failed to save output', {
         description: error instanceof Error ? error.message : 'Unknown error',
       })
+    } finally {
+      savingOutputMessageIdsRef.current.delete(messageId)
     }
   }, [navigate, session])
 

@@ -33,10 +33,13 @@ function formatUpdatedTime(timestamp: number): string {
 }
 
 function getProvenance(page: PageListEntry): { label: string; icon: React.ElementType } {
+  if (page.outputIdCount > 0) {
+    return { label: 'Created from Output', icon: FileText }
+  }
   if (page.sourceSessionId || page.sourceMessageId) {
     return { label: 'From chat', icon: MessageSquareText }
   }
-  return { label: 'Manual', icon: PencilLine }
+  return { label: 'Workspace Doc', icon: PencilLine }
 }
 
 function getPreview(content: string | undefined): string {

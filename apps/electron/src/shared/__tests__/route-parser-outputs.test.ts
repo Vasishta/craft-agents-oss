@@ -49,5 +49,7 @@ describe('outputs route parsing', () => {
   it('rejects unsafe output ids', () => {
     expect(parseRoute('outputs/output/../bad')).toBeNull()
     expect(parseRouteToNavigationState('outputs/output/bad%2Fid')).toBeNull()
+    expect(parseRoute('outputs/output/output_abc/extra')).toBeNull()
+    expect(parseRouteToNavigationState('outputs/output/%2E%2E')).toBeNull()
   })
 })

@@ -190,7 +190,7 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
         details: null,
       }
     }
-    if (segments[1] === 'output') {
+    if (segments.length === 3 && segments[1] === 'output') {
       const outputId = segments[2] ? maybeDecodeURIComponent(segments[2]) : undefined
       if (outputId && isSafeOutputRouteId(outputId)) {
         return {

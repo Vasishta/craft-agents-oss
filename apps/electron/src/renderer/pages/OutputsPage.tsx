@@ -37,9 +37,9 @@ function formatKind(kind: OutputIndexEntry['kind']): string {
 
 function getProvenance(output: OutputIndexEntry): { label: string; icon: React.ElementType } {
   if (output.sourceSessionId || output.sourceMessageId) {
-    return { label: 'From chat', icon: MessageSquareText }
+    return { label: 'From assistant response', icon: MessageSquareText }
   }
-  return { label: 'Saved output', icon: Archive }
+  return { label: 'Saved manually', icon: Archive }
 }
 
 export default function OutputsPage({ workspaceId }: OutputsPageProps) {
