@@ -86,6 +86,13 @@ export function SourcesListPanel({
       selectedId={selectedSourceSlug}
       onItemClick={onSourceClick}
       className={className}
+      footer={
+        <div className="px-4 py-3 mt-auto">
+          <p className="text-[11px] text-muted-foreground leading-relaxed bg-foreground/[0.02] rounded-[8px] p-2 border border-foreground/[0.03]">
+            {t('sourcesList.capabilityNote')}
+          </p>
+        </div>
+      }
       emptyState={
         <EntityListEmptyScreen
           icon={<DatabaseZap />}

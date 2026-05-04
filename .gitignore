@@ -82,3 +82,5 @@ sessions/
 statuses/
 views.json
 /pages/
+# AI tool settings
+.qwen/

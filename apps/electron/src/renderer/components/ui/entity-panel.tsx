@@ -29,6 +29,8 @@ export interface EntityPanelProps<T> {
   onItemClick: (item: T) => void
   selectedId?: string | null
   emptyState?: React.ReactNode
+  /** Optional footer content rendered below all items */
+  footer?: React.ReactNode
   className?: string
 }
 
@@ -40,6 +42,7 @@ export function EntityPanel<T>({
   onItemClick,
   selectedId,
   emptyState,
+  footer,
   className,
 }: EntityPanelProps<T>) {
   const selectionStore = selection.useSelectionStore()
@@ -68,6 +71,7 @@ export function EntityPanel<T>({
       containerProps={interactions.listProps.containerProps}
       className={className}
       emptyState={emptyState}
+      footer={footer}
       renderItem={(item, index, isFirst) => {
         const mapped = mapItem(item)
         const rowProps = interactions.getRowProps(item, index)

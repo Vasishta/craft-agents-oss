@@ -2158,6 +2158,23 @@ function AppShellContent({
     }
   }, [navState, t, sessionFilter, automationFilter, labelConfigs, viewConfigs, effectiveSessionStatuses])
 
+  // Optional navigator subtitle for Files & Context.
+  const listSubtitle = React.useMemo(() => {
+    if (isSourcesNavigation(navState)) {
+      return t("sourcesList.headerSubtitle")
+    }
+    return undefined
+  }, [navState, t])
+
+  // Optional navigator title tooltip for Files & Context.
+  const listTitleTooltip = React.useMemo(() => {
+    if (isSourcesNavigation(navState)) {
+      return t("sourcesList.capabilityNote")
+    }
+    return undefined
+  }, [navState, t])
+
+
   // Build recursive sidebar items from the shared display-sorted label tree.
   // Each node renders with condensed height (compact: true) since many labels expected.
   // Clicking any label navigates to its filter view; the chevron toggles expand/collapse.
@@ -2594,6 +2611,8 @@ function AppShellContent({
             >
             <PanelHeader
               title={isSidebarVisible ? listTitle : undefined}
+              subtitle={isSidebarVisible ? listSubtitle : undefined}
+              titleTooltip={isSidebarVisible ? listTitleTooltip : undefined}
               compensateForStoplight={!isSidebarVisible}
               badge={automationFilter?.automationType === 'scheduled' ? (
                 <Tooltip>
