@@ -1,5 +1,5 @@
-import * as React from 'react'
 import { Check, DatabaseZap } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { FilterableSelectPopover } from '@craft-agent/ui'
 
 import { cn } from '@/lib/utils'
@@ -23,6 +23,8 @@ export function SourceSelectorPopover({
   selectedSlugs,
   onToggleSlug,
 }: SourceSelectorPopoverProps) {
+  const { t } = useTranslation()
+
   return (
     <FilterableSelectPopover
       open={open}
@@ -33,15 +35,15 @@ export function SourceSelectorPopover({
       getLabel={(source) => source.config.name}
       isSelected={(source) => selectedSlugs.includes(source.config.slug)}
       onToggle={(source) => onToggleSlug(source.config.slug)}
-      filterPlaceholder="Search sources..."
+      filterPlaceholder={t("chat.searchContextPlaceholder")}
       emptyState={(
         <>
-          No sources configured.
+          {t("chat.noContextSources")}
           <br />
-          Add sources in Settings.
+          {t("chat.addFilesInFilesContext")}
         </>
       )}
-      noResultsState="No matching sources."
+      noResultsState={t("chat.noMatchingContextSources")}
       minWidth={200}
       maxWidth={320}
       renderItem={(source, state, index) => (

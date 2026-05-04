@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { StyledDropdownMenuContent } from '@/components/ui/styled-dropdown'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@craft-agent/ui'
 
 // Spring transition for smooth animations (matches sidebar)
 const springTransition = { type: 'spring' as const, stiffness: 300, damping: 30 }
@@ -49,6 +50,10 @@ const STOPLIGHT_PADDING = 84
 export interface PanelHeaderProps {
   /** Header title (undefined hides with animation) */
   title?: string
+  /** Optional subtitle rendered below the title */
+  subtitle?: string
+  /** Optional tooltip content for the title */
+  titleTooltip?: string
   /** Optional badge element (e.g., agent badge) */
   badge?: React.ReactNode
   /** Optional dropdown menu content for interactive title (renders chevron when provided) */
@@ -76,6 +81,8 @@ export interface PanelHeaderProps {
  */
 export function PanelHeader({
   title,
+  subtitle,
+  titleTooltip,
   badge,
   titleMenu,
   leadingAction,
@@ -103,13 +110,20 @@ export function PanelHeader({
       initial={false}
       animate={{ opacity: title ? 1 : 0 }}
       transition={{ duration: 0.15 }}
-      className="flex items-center gap-1"
+      className="flex flex-col min-w-0"
     >
-      <h1 className={cn(
-        "text-sm font-semibold truncate font-sans leading-tight",
-        isRegeneratingTitle && "animate-shimmer-text"
-      )}>{title}</h1>
-      {badge}
+      <div className="flex items-center gap-1">
+        <h1 className={cn(
+          "text-sm font-semibold truncate font-sans leading-tight",
+          isRegeneratingTitle && "animate-shimmer-text"
+        )}>{title}</h1>
+        {badge}
+      </div>
+      {subtitle && (
+        <p className="text-[10px] text-muted-foreground truncate leading-tight font-medium mt-0.5">
+          {subtitle}
+        </p>
+      )}
     </motion.div>
   )
 
@@ -146,6 +160,15 @@ export function PanelHeader({
                 {titleMenu}
               </StyledDropdownMenuContent>
             </DropdownMenu>
+          ) : titleTooltip ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="titlebar-no-drag cursor-default">{titleContent}</div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="center" className="max-w-[240px]">
+                {titleTooltip}
+              </TooltipContent>
+            </Tooltip>
           ) : (
             titleContent
           )}
