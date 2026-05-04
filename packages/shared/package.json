@@ -58,6 +58,7 @@
     "./search": "./src/search/index.ts",
     "./tools": "./src/tools/index.ts",
     "./mentions": "./src/mentions/index.ts",
+    "./notebooks": "./src/notebooks/index.ts",
     "./outputs": "./src/outputs/index.ts",
     "./projects": "./src/projects/index.ts",
     "./workitems": "./src/workitems/index.ts",

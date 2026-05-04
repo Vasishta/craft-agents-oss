@@ -623,3 +623,12 @@ export type {
   DecisionStatus,
   UpdateDecisionInput,
 } from '../decisions/types'
+export type {
+  CreateNotebookInput,
+  NotebookDocument,
+  NotebookIndexEntry,
+  NotebookLinks,
+  NotebookSection,
+  NotebookStatus,
+  UpdateNotebookInput,
+} from '../notebooks/types'
