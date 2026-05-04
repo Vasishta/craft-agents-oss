@@ -80,17 +80,16 @@ export function normalizeSearchText(value: string | undefined): string {
   return stripMarkdown(value ?? '').replace(/\s+/g, ' ').trim()
 }
 
-export function makeSearchSnippet(text: string | undefined, query: string, emptyText: string): string {
-  const plain = normalizeSearchText(text)
-  if (!plain) return emptyText
+export function makeSearchSnippet(normalizedText: string, query: string, emptyText: string): string {
+  if (!normalizedText) return emptyText
 
-  const lowerPlain = plain.toLowerCase()
+  const lowerPlain = normalizedText.toLowerCase()
   const lowerQuery = query.toLowerCase()
   const matchIndex = lowerQuery ? lowerPlain.indexOf(lowerQuery) : -1
   const start = matchIndex > 48 ? matchIndex - 48 : 0
-  const sliced = plain.slice(start, start + 180)
+  const sliced = normalizedText.slice(start, start + 180)
   const prefix = start > 0 ? '...' : ''
-  const suffix = start + 180 < plain.length ? '...' : ''
+  const suffix = start + 180 < normalizedText.length ? '...' : ''
 
   return `${prefix}${sliced}${suffix}`
 }
@@ -115,13 +114,14 @@ export function buildDocSearchResults(
   for (const page of pages) {
     const title = page.title || 'Untitled Doc'
     const content = docContents[page.id] ?? ''
+    const normalizedContent = normalizeSearchText(content)
     const titleMatched = title.toLowerCase().includes(lowerQuery)
-    const contentMatched = content ? normalizeSearchText(content).toLowerCase().includes(lowerQuery) : false
+    const contentMatched = normalizedContent.toLowerCase().includes(lowerQuery)
     if (!titleMatched && !contentMatched) continue
 
     matches.push({
       item: page,
-      snippet: content ? makeSearchSnippet(content, trimmedQuery, 'Empty doc') : 'Title match',
+      snippet: normalizedContent ? makeSearchSnippet(normalizedContent, trimmedQuery, 'Empty doc') : 'Title match',
       titleMatched,
       updatedAt: page.updatedAt,
     })
@@ -143,13 +143,14 @@ export function buildOutputSearchResults(
   for (const output of outputs) {
     const title = output.title || 'Untitled Output'
     const content = outputContents[output.id] ?? output.preview ?? ''
+    const normalizedContent = normalizeSearchText(content)
     const titleMatched = title.toLowerCase().includes(lowerQuery)
-    const contentMatched = content ? normalizeSearchText(content).toLowerCase().includes(lowerQuery) : false
+    const contentMatched = normalizedContent.toLowerCase().includes(lowerQuery)
     if (!titleMatched && !contentMatched) continue
 
     matches.push({
       item: output,
-      snippet: content ? makeSearchSnippet(content, trimmedQuery, 'Empty output') : 'Title match',
+      snippet: normalizedContent ? makeSearchSnippet(normalizedContent, trimmedQuery, 'Empty output') : 'Title match',
       titleMatched,
       updatedAt: output.updatedAt,
     })
@@ -170,14 +171,15 @@ export function buildChatSearchResults(
   for (const session of sessions) {
     const title = session.name || session.preview || 'Untitled Chat'
     const preview = session.preview || ''
+    const normalizedPreview = normalizeSearchText(preview)
     const titleMatched = title.toLowerCase().includes(lowerQuery)
-    const previewMatched = normalizeSearchText(preview).toLowerCase().includes(lowerQuery)
+    const previewMatched = normalizedPreview.toLowerCase().includes(lowerQuery)
     if (!titleMatched && !previewMatched) continue
 
     const updatedAt = session.lastMessageAt ?? session.createdAt
     matches.push({
       item: session,
-      snippet: makeSearchSnippet(preview, trimmedQuery, 'No preview available'),
+      snippet: makeSearchSnippet(normalizedPreview, trimmedQuery, 'No preview available'),
       titleMatched,
       updatedAt,
     })
