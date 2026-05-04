@@ -77,7 +77,7 @@ export function normalizeChatSearchResult(session: SearchableSessionMeta, snippe
 }
 
 export function normalizeSearchText(value: string | undefined): string {
-  return stripMarkdown(value ?? '').replace(/\s+/g, ' ').trim()
+  return stripMarkdown(value ?? '')
 }
 
 export function makeSearchSnippet(normalizedText: string, query: string, emptyText: string): string {
