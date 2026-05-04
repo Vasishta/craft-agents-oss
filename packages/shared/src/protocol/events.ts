@@ -76,4 +76,7 @@ export interface BroadcastEventMap {
 
   // Output events (workspace-scoped)
   [RPC_CHANNELS.outputs.CHANGED]: [workspaceId: string, data: { outputId: string; changeType: 'created' | 'updated' | 'deleted' | 'promoted'; timestamp: number }]
+
+  // Project events (workspace-scoped)
+  [RPC_CHANNELS.projects.CHANGED]: [workspaceId: string, data: { projectId: string; changeType: 'created' | 'updated' | 'deleted'; timestamp: number }]
 }

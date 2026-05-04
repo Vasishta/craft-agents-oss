@@ -384,6 +384,16 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.pages.DELETE,
   RPC_CHANNELS.pages.CHANGED,
 
+  // projects — workspace project storage
+  RPC_CHANNELS.projects.LIST,
+  RPC_CHANNELS.projects.GET,
+  RPC_CHANNELS.projects.CREATE,
+  RPC_CHANNELS.projects.UPDATE,
+  RPC_CHANNELS.projects.DELETE,
+  RPC_CHANNELS.projects.LINK_OBJECTS,
+  RPC_CHANNELS.projects.UNLINK_OBJECTS,
+  RPC_CHANNELS.projects.CHANGED,
+
   // views — workspace UI views
   RPC_CHANNELS.views.LIST,
   RPC_CHANNELS.views.SAVE,

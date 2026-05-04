@@ -34,13 +34,14 @@ import {
   isPageCanvasNavigation,
   isSearchNavigation,
   isOutputsNavigation,
+  isProjectsNavigation,
   isHomeNavigation,
 } from '@/contexts/NavigationContext'
 import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelectionCount } from '@/hooks/useSession'
 import { sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
 import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
-import { SourceInfoPage, ChatPage, DocsHome, OutputDetailPage, OutputsPage, PageCanvas, SearchPage, WorkspaceHome } from '@/pages'
+import { SourceInfoPage, ChatPage, DocsHome, OutputDetailPage, OutputsPage, PageCanvas, ProjectDetailPage, ProjectsPage, SearchPage, WorkspaceHome } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
@@ -305,6 +306,22 @@ export function MainContentPanel({
           />
         ) : (
           <OutputsPage workspaceId={activeWorkspaceId || ''} />
+        )}
+      </Panel>
+    )
+  }
+
+  // Projects navigator - optional workspace organizers with project-scoped links
+  if (isProjectsNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        {navState.details?.type === 'project' ? (
+          <ProjectDetailPage
+            workspaceId={activeWorkspaceId || ''}
+            projectId={navState.details.projectId}
+          />
+        ) : (
+          <ProjectsPage workspaceId={activeWorkspaceId || ''} />
         )}
       </Panel>
     )

@@ -607,3 +607,11 @@ export type {
   OutputContentType,
   UpdateOutputInput,
 } from '../outputs/types'
+export type {
+  CreateProjectInput,
+  ProjectDocument,
+  ProjectIndexEntry,
+  ProjectLinks,
+  ProjectStatus,
+  UpdateProjectInput,
+} from '../projects/types'

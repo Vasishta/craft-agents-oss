@@ -25,6 +25,7 @@ import { registerWorkspaceCoreHandlers } from './workspace'
 import { registerMessagingHandlers } from './messaging'
 import { registerPagesHandlers } from './pages'
 import { registerOutputsHandlers } from './outputs'
+import { registerProjectsHandlers } from './projects'
 
 export function registerCoreRpcHandlers(
   server: RpcServer,
@@ -51,4 +52,5 @@ export function registerCoreRpcHandlers(
   registerMessagingHandlers(server, deps)
   registerPagesHandlers(server, deps)
   registerOutputsHandlers(server, deps)
+  registerProjectsHandlers(server, deps)
 }

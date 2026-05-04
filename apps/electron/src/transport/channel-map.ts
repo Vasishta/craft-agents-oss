@@ -261,6 +261,16 @@ export const CHANNEL_MAP = {
   promoteOutputToDoc: invoke(RPC_CHANNELS.outputs.PROMOTE_TO_DOC),
   onOutputsChanged: listener(RPC_CHANNELS.outputs.CHANGED),
 
+  // Projects
+  listProjects: invoke(RPC_CHANNELS.projects.LIST),
+  getProject: invoke(RPC_CHANNELS.projects.GET),
+  createProject: invoke(RPC_CHANNELS.projects.CREATE),
+  updateProject: invoke(RPC_CHANNELS.projects.UPDATE),
+  deleteProject: invoke(RPC_CHANNELS.projects.DELETE),
+  linkProjectObjects: invoke(RPC_CHANNELS.projects.LINK_OBJECTS),
+  unlinkProjectObjects: invoke(RPC_CHANNELS.projects.UNLINK_OBJECTS),
+  onProjectsChanged: listener(RPC_CHANNELS.projects.CHANGED),
+
   // LLM connections change listener
   onLlmConnectionsChanged: listener(RPC_CHANNELS.llmConnections.CHANGED),
 

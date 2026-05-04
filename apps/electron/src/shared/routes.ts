@@ -189,9 +189,16 @@ export const routes = {
     /** Outputs list/detail view */
     outputs: () => 'outputs' as const,
 
+    /** Projects list/detail view */
+    projects: () => 'projects' as const,
+
     /** Saved output detail view */
     savedOutput: (outputId: string) =>
       `outputs/output/${encodeURIComponent(outputId)}` as const,
+
+    /** Project detail view */
+    project: (projectId: string) =>
+      `projects/project/${encodeURIComponent(projectId)}` as const,
 
     /** Page canvas view for a session message */
     pageCanvas: (params: { sessionId: string; messageId: string }) =>

@@ -515,6 +515,16 @@ export interface ElectronAPI {
   promoteOutputToDoc(workspaceId: string, outputId: string): Promise<import("@craft-agent/shared/protocol").PageDocument | null>
   onOutputsChanged(callback: (workspaceId: string, data: { outputId: string; changeType: "created" | "updated" | "deleted" | "promoted"; timestamp: number }) => void): () => void
 
+  // Projects (workspace-scoped)
+  listProjects(workspaceId: string): Promise<import("@craft-agent/shared/protocol").ProjectIndexEntry[]>
+  getProject(workspaceId: string, projectId: string): Promise<import("@craft-agent/shared/protocol").ProjectDocument | null>
+  createProject(workspaceId: string, input: import("@craft-agent/shared/protocol").CreateProjectInput): Promise<import("@craft-agent/shared/protocol").ProjectDocument | null>
+  updateProject(workspaceId: string, projectId: string, updates: import("@craft-agent/shared/protocol").UpdateProjectInput): Promise<import("@craft-agent/shared/protocol").ProjectDocument | null>
+  deleteProject(workspaceId: string, projectId: string): Promise<void>
+  linkProjectObjects(workspaceId: string, projectId: string, links: Partial<import("@craft-agent/shared/protocol").ProjectLinks>): Promise<import("@craft-agent/shared/protocol").ProjectDocument | null>
+  unlinkProjectObjects(workspaceId: string, projectId: string, links: Partial<import("@craft-agent/shared/protocol").ProjectLinks>): Promise<import("@craft-agent/shared/protocol").ProjectDocument | null>
+  onProjectsChanged(callback: (workspaceId: string, data: { projectId: string; changeType: "created" | "updated" | "deleted"; timestamp: number }) => void): () => void
+
   listViews(workspaceId: string): Promise<import('@craft-agent/shared/views').ViewConfig[]>
   saveViews(workspaceId: string, views: import('@craft-agent/shared/views').ViewConfig[]): Promise<void>
 
@@ -840,6 +850,15 @@ export interface OutputsNavigationState {
 }
 
 /**
+ * Projects navigation state.
+ */
+export interface ProjectsNavigationState {
+  navigator: 'projects'
+  details: null | { type: 'project'; projectId: string }
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
  * Workspace home/start navigation state.
  */
 export interface HomeNavigationState {
@@ -860,6 +879,7 @@ export type NavigationState =
   | PageCanvasNavigationState
   | SearchNavigationState
   | OutputsNavigationState
+  | ProjectsNavigationState
   | HomeNavigationState
 
 export const isSessionsNavigation = (
@@ -893,6 +913,10 @@ export const isSearchNavigation = (
 export const isOutputsNavigation = (
   state: NavigationState
 ): state is OutputsNavigationState => state.navigator === 'outputs'
+
+export const isProjectsNavigation = (
+  state: NavigationState
+): state is ProjectsNavigationState => state.navigator === 'projects'
 
 export const isHomeNavigation = (
   state: NavigationState
@@ -942,6 +966,12 @@ export const getNavigationStateKey = (state: NavigationState): string => {
       return `outputs/output/${state.details.outputId}`
     }
     return 'outputs'
+  }
+  if (state.navigator === 'projects') {
+    if (state.details?.type === 'project') {
+      return `projects/project/${state.details.projectId}`
+    }
+    return 'projects'
   }
   if (state.navigator === 'home') {
     return 'home'
@@ -1031,6 +1061,16 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
       return { navigator: 'outputs', details: { type: 'output', outputId } }
     }
     return { navigator: 'outputs', details: null }
+  }
+
+  // Handle projects
+  if (key === 'projects') return { navigator: 'projects', details: null }
+  if (key.startsWith('projects/project/')) {
+    const projectId = key.slice(17)
+    if (projectId) {
+      return { navigator: 'projects', details: { type: 'project', projectId } }
+    }
+    return { navigator: 'projects', details: null }
   }
 
   // Handle home
