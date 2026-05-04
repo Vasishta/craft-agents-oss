@@ -615,3 +615,11 @@ export type {
   ProjectStatus,
   UpdateProjectInput,
 } from '../projects/types'
+export type {
+  CreateDecisionInput,
+  DecisionDocument,
+  DecisionIndexEntry,
+  DecisionLinks,
+  DecisionStatus,
+  UpdateDecisionInput,
+} from '../decisions/types'

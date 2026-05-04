@@ -23,6 +23,7 @@
     "./config": "./src/config/index.ts",
     "./docs": "./src/docs/index.ts",
     "./docs/doc-links": "./src/docs/doc-links.ts",
+    "./decisions": "./src/decisions/index.ts",
     "./config/types": "./src/config/types.ts",
     "./credentials": "./src/credentials/index.ts",
     "./mcp": "./src/mcp/index.ts",
