@@ -21,6 +21,7 @@
  *   - credentials: Encrypted credential storage
  *   - mcp: MCP client, connection validation
  *   - prompts: System prompt generation
+ *   - projects: Optional workspace-scoped project containers and links
  *   - sources: Workspace-scoped source management (MCP, API, local)
  *   - utils: Debug logging, file handling, summarization
  *   - validation: URL validation

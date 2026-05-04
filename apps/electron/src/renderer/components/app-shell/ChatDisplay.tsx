@@ -75,8 +75,8 @@ import { CHAT_LAYOUT } from "@/config/layout"
 import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } from "@/lib/file-changes"
 import { resolveBranchNewPanelOption } from "./branching"
 import { handleErrorMessageAction } from "./error-message-actions"
-import { activePageIdAtom } from "@/atoms/pages"
-import { usePageList } from "@/hooks/usePages"
+import { useCreatePage } from "@/hooks/usePages"
+import { stripMarkdown } from "@/utils/text"
 
 // ============================================================================
 // CSS Custom Highlight API helper
@@ -103,8 +103,8 @@ function findPreviousUserMessage(messages: Message[], messageId: string): Messag
   return undefined
 }
 
-function buildPageAppendBlock(prompt: string | undefined, response: string): string {
-  const lines = ['---', '']
+function buildPageContentFromMessage(prompt: string | undefined, response: string): string {
+  const lines: string[] = []
   if (prompt?.trim()) {
     lines.push(`**Prompt** ${prompt.trim()}`, '')
   }
@@ -112,9 +112,10 @@ function buildPageAppendBlock(prompt: string | undefined, response: string): str
   return lines.join('\n').trim()
 }
 
-function appendMarkdownBlock(existingContent: string, block: string): string {
-  const existing = existingContent.trimEnd()
-  return existing ? `${existing}\n\n${block}\n` : `${block}\n`
+function getDocTitleFromMessage(response: string, fallback: string): string {
+  const heading = response.match(/^\s{0,3}#{1,3}\s+(.+)$/m)?.[1]?.trim()
+  const title = heading || stripMarkdown(response)
+  return title.replace(/\s+/g, ' ').trim().slice(0, 80) || fallback
 }
 
 // ============================================================================
@@ -550,8 +551,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
   // Navigation for session branching
   const { navigate } = useNavigation()
-  const activePageId = useAtomValue(activePageIdAtom)
-  const { pages } = usePageList(session?.workspaceId ?? null)
+  const { createFromMessage } = useCreatePage(session?.workspaceId ?? '')
 
   // Get isDark from useTheme hook for overlay theme
   // This accounts for scenic themes (like Haze) that force dark mode
@@ -1411,12 +1411,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   const handleAddMessageToPage = useCallback(async (messageId: string) => {
     if (!session) return
 
-    const targetPage = (activePageId ? pages.find(page => page.id === activePageId) : undefined) ?? pages[0]
-    if (!targetPage) {
-      toast.error('Create a Doc first')
-      return
-    }
-
     const message = session.messages.find(item => item.id === messageId)
     const response = message?.content?.trim()
     if (!response) {
@@ -1425,29 +1419,23 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     }
 
     try {
-      const page = await window.electronAPI.getPage(session.workspaceId, targetPage.id)
+      const prompt = findPreviousUserMessage(session.messages, messageId)?.content
+      const content = buildPageContentFromMessage(prompt, response)
+      const title = getDocTitleFromMessage(response, session.name || 'Assistant response')
+      const page = await createFromMessage(session.id, messageId, content, title)
       if (!page) {
-        toast.error('Doc not found')
+        toast.error('Failed to create Doc')
         return
       }
 
-      const prompt = findPreviousUserMessage(session.messages, messageId)?.content
-      const block = buildPageAppendBlock(prompt, response)
-      const nextContent = appendMarkdownBlock(page.content, block)
-      const updatedPage = await window.electronAPI.updatePageContent(session.workspaceId, targetPage.id, nextContent)
-      const title = updatedPage?.title || page.title || 'Doc'
-
-      toast.success(`Added to ${title}`)
-
-      if (!activePageId) {
-        navigate(routes.view.savedPage(targetPage.id), { newPanel: true })
-      }
+      toast.success(`Added to ${page.title || title}`)
+      navigate(routes.view.savedPage(page.id), { newPanel: true })
     } catch (error) {
       toast.error('Failed to add to Doc', {
         description: error instanceof Error ? error.message : 'Unknown error',
       })
     }
-  }, [activePageId, navigate, pages, session])
+  }, [createFromMessage, navigate, session])
 
   const savingOutputMessageIdsRef = React.useRef(new Set<string>())
 

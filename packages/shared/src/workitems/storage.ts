@@ -1,8 +1,9 @@
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, statSync, unlinkSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs'
 import { basename, join, relative, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files'
 import { debug } from '../utils/debug'
+import { withFileLock } from '../utils/file-lock'
 import type {
   CreateWorkItemInput,
   DeleteWorkItemResult,
@@ -130,53 +131,17 @@ export function saveWorkItemIndex(workspaceRootPath: string, index: WorkItemInde
   atomicWriteFileSync(getWorkItemIndexPath(workspaceRootPath), JSON.stringify(index, null, 2))
 }
 
-function sleepSync(ms: number): void {
-  const buffer = new SharedArrayBuffer(4)
-  Atomics.wait(new Int32Array(buffer), 0, 0, ms)
-}
-
-function removeStaleWorkItemIndexLock(lockPath: string): void {
-  try {
-    if (!existsSync(lockPath)) return
-    const ageMs = Date.now() - statSync(lockPath).mtimeMs
-    if (ageMs > STALE_INDEX_LOCK_MS) {
-      unlinkSync(lockPath)
-      debug('[workitem-storage] Removed stale index lock:', lockPath)
-    }
-  } catch (error) {
-    debug('[workitem-storage] Failed to inspect index lock:', error)
-  }
-}
-
 function withWorkItemIndexLock<T>(workspaceRootPath: string, operation: () => T): T {
   ensureWorkItemsDirectory(workspaceRootPath)
-  const lockPath = getWorkItemIndexLockPath(workspaceRootPath)
-  const deadline = Date.now() + INDEX_LOCK_TIMEOUT_MS
-  let locked = false
-
-  while (!locked) {
-    try {
-      const fd = openSync(lockPath, 'wx')
-      closeSync(fd)
-      locked = true
-    } catch (error) {
-      removeStaleWorkItemIndexLock(lockPath)
-      if (Date.now() >= deadline) {
-        throw new Error('Timed out waiting for WorkItem index lock')
-      }
-      sleepSync(25)
-    }
-  }
-
-  try {
-    return operation()
-  } finally {
-    try {
-      unlinkSync(lockPath)
-    } catch (error) {
-      debug('[workitem-storage] Failed to release index lock:', error)
-    }
-  }
+  return withFileLock(
+    getWorkItemIndexLockPath(workspaceRootPath),
+    {
+      label: 'workitem-storage',
+      timeoutMs: INDEX_LOCK_TIMEOUT_MS,
+      staleMs: STALE_INDEX_LOCK_MS,
+    },
+    operation
+  )
 }
 
 export function rebuildWorkItemIndex(workspaceRootPath: string): WorkItemIndex {
