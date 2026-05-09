@@ -35,14 +35,15 @@ function broadcastProjectChanged(
   server: RpcServer,
   workspaceId: string,
   projectId: string,
-  changeType: 'created' | 'updated' | 'deleted'
+  changeType: 'created' | 'updated' | 'deleted',
+  timestamp: number
 ): void {
   pushTyped(
     server,
     RPC_CHANNELS.projects.CHANGED,
     { to: 'workspace', workspaceId },
     workspaceId,
-    { projectId, changeType, timestamp: Date.now() }
+    { projectId, changeType, timestamp }
   )
 }
 
@@ -85,7 +86,7 @@ export function registerProjectsHandlers(server: RpcServer, deps: HandlerDeps): 
       if (!result.success || !result.project) {
         throw new Error(result.error || 'Failed to create project')
       }
-      broadcastProjectChanged(server, workspaceId, result.project.id, 'created')
+      broadcastProjectChanged(server, workspaceId, result.project.id, 'created', Date.now())
       return result.project
     } catch (error) {
       log.error('[projects] Failed to create project:', error)
@@ -102,7 +103,7 @@ export function registerProjectsHandlers(server: RpcServer, deps: HandlerDeps): 
       if (!result.success || !result.project) {
         throw new Error(result.error || 'Failed to update project')
       }
-      broadcastProjectChanged(server, workspaceId, projectId, 'updated')
+      broadcastProjectChanged(server, workspaceId, projectId, 'updated', Date.now())
       return result.project
     } catch (error) {
       log.error('[projects] Failed to update project:', projectId, error)
@@ -119,7 +120,7 @@ export function registerProjectsHandlers(server: RpcServer, deps: HandlerDeps): 
       if (!result.success || !result.project) {
         throw new Error(result.error || 'Failed to link project objects')
       }
-      broadcastProjectChanged(server, workspaceId, projectId, 'updated')
+      broadcastProjectChanged(server, workspaceId, projectId, 'updated', Date.now())
       return result.project
     } catch (error) {
       log.error('[projects] Failed to link project objects:', projectId, error)
@@ -136,7 +137,7 @@ export function registerProjectsHandlers(server: RpcServer, deps: HandlerDeps): 
       if (!result.success || !result.project) {
         throw new Error(result.error || 'Failed to unlink project objects')
       }
-      broadcastProjectChanged(server, workspaceId, projectId, 'updated')
+      broadcastProjectChanged(server, workspaceId, projectId, 'updated', Date.now())
       return result.project
     } catch (error) {
       log.error('[projects] Failed to unlink project objects:', projectId, error)
@@ -153,7 +154,7 @@ export function registerProjectsHandlers(server: RpcServer, deps: HandlerDeps): 
       if (!result.success) {
         throw new Error(result.error || 'Failed to delete project')
       }
-      broadcastProjectChanged(server, workspaceId, projectId, 'deleted')
+      broadcastProjectChanged(server, workspaceId, projectId, 'deleted', Date.now())
       return { success: true }
     } catch (error) {
       log.error('[projects] Failed to delete project:', projectId, error)

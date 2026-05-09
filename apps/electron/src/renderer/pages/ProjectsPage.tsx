@@ -14,8 +14,8 @@ interface ProjectsPageProps {
   workspaceId: string
 }
 
-function formatUpdatedTime(timestamp: number): string {
-  const diffMs = timestamp - Date.now()
+function formatUpdatedTime(timestamp: number, now: number): string {
+  const diffMs = timestamp - now
   const absMs = Math.abs(diffMs)
   const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
 
@@ -51,6 +51,7 @@ export default function ProjectsPage({ workspaceId }: ProjectsPageProps) {
   const deleteProject = useDeleteProject(workspaceId)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [isCreating, setIsCreating] = React.useState(false)
+  const now = Date.now()
 
   const handleCreate = React.useCallback(async () => {
     const name = window.prompt('Project name')
@@ -164,7 +165,7 @@ export default function ProjectsPage({ workspaceId }: ProjectsPageProps) {
                           </span>
                         )}
                         <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span>Updated {formatUpdatedTime(project.updatedAt)}</span>
+                          <span>Updated {formatUpdatedTime(project.updatedAt, now)}</span>
                           <span>{project.status}</span>
                           <span className="inline-flex items-center gap-1">
                             <Layers className="h-3.5 w-3.5" />
