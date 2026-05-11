@@ -3,7 +3,7 @@ import { basename, join, relative, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files'
 import { debug } from '../utils/debug'
-import { withFileLock } from '../utils/file-lock'
+import { mutateSerializedLocalIndex, trySaveLocalIndex } from '../utils/local-index'
 import type {
   CreateProjectInput,
   DeleteProjectResult,
@@ -21,8 +21,6 @@ const PROJECT_INDEX_FILE = 'projects/index.json'
 const PROJECT_INDEX_LOCK_FILE = 'projects/index.json.lock'
 const CURRENT_INDEX_VERSION = 1
 const SAFE_PROJECT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
-const INDEX_LOCK_TIMEOUT_MS = 5_000
-const STALE_INDEX_LOCK_MS = 30_000
 
 const EMPTY_PROJECT_LINKS: ProjectLinks = {
   sessionIds: [],
@@ -202,16 +200,16 @@ export function saveProjectIndex(workspaceRootPath: string, index: ProjectIndex)
   atomicWriteFileSync(getProjectIndexPath(workspaceRootPath), JSON.stringify(index, null, 2))
 }
 
-function withProjectIndexLock<T>(workspaceRootPath: string, operation: () => T): T {
-  ensureProjectsDirectory(workspaceRootPath)
-  return withFileLock(
-    getProjectIndexLockPath(workspaceRootPath),
+function mutateProjectIndex<TResult>(workspaceRootPath: string, mutation: (index: ProjectIndex) => TResult): TResult {
+  return mutateSerializedLocalIndex(
     {
       label: 'project-storage',
-      timeoutMs: INDEX_LOCK_TIMEOUT_MS,
-      staleMs: STALE_INDEX_LOCK_MS,
+      lockPath: getProjectIndexLockPath(workspaceRootPath),
+      ensureDirectory: () => ensureProjectsDirectory(workspaceRootPath),
+      loadIndex: () => loadProjectIndex(workspaceRootPath),
+      saveIndex: index => saveProjectIndex(workspaceRootPath, index),
     },
-    operation
+    mutation
   )
 }
 
@@ -221,11 +219,7 @@ export function rebuildProjectIndex(workspaceRootPath: string): ProjectIndex {
     version: CURRENT_INDEX_VERSION,
     projects: projects.map(toIndexEntry),
   }
-  try {
-    saveProjectIndex(workspaceRootPath, index)
-  } catch (error) {
-    debug('[project-storage] Failed to save rebuilt index:', error)
-  }
+  trySaveLocalIndex('project-storage', () => saveProjectIndex(workspaceRootPath, index))
   return index
 }
 
@@ -253,8 +247,7 @@ function writeProject(workspaceRootPath: string, project: ProjectDocument): void
 }
 
 function upsertProjectIndexEntry(workspaceRootPath: string, project: ProjectDocument): void {
-  withProjectIndexLock(workspaceRootPath, () => {
-    const index = loadProjectIndex(workspaceRootPath)
+  mutateProjectIndex(workspaceRootPath, (index) => {
     const entry = toIndexEntry(project)
     const existingIndex = index.projects.findIndex(item => item.id === project.id)
     if (existingIndex === -1) {
@@ -262,7 +255,6 @@ function upsertProjectIndexEntry(workspaceRootPath: string, project: ProjectDocu
     } else {
       index.projects[existingIndex] = entry
     }
-    saveProjectIndex(workspaceRootPath, index)
   })
 }
 
@@ -429,10 +421,8 @@ export function deleteProjectDocument(
       unlinkSync(projectPath)
     }
 
-    withProjectIndexLock(workspaceRootPath, () => {
-      const index = loadProjectIndex(workspaceRootPath)
+    mutateProjectIndex(workspaceRootPath, (index) => {
       index.projects = index.projects.filter(entry => entry.id !== projectId)
-      saveProjectIndex(workspaceRootPath, index)
     })
 
     return { success: true }

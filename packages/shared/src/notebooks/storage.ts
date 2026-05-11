@@ -3,7 +3,7 @@ import { basename, join, relative, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files'
 import { debug } from '../utils/debug'
-import { withFileLock } from '../utils/file-lock'
+import { mutateSerializedLocalIndex, trySaveLocalIndex } from '../utils/local-index'
 import type {
   CreateNotebookInput,
   DeleteNotebookResult,
@@ -22,8 +22,6 @@ const NOTEBOOK_INDEX_FILE = 'notebooks/index.json'
 const NOTEBOOK_INDEX_LOCK_FILE = 'notebooks/index.json.lock'
 const CURRENT_INDEX_VERSION = 1
 const SAFE_NOTEBOOK_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
-const INDEX_LOCK_TIMEOUT_MS = 5_000
-const STALE_INDEX_LOCK_MS = 30_000
 
 const EMPTY_NOTEBOOK_LINKS: NotebookLinks = {
   projectIds: [],
@@ -240,16 +238,16 @@ export function saveNotebookIndex(workspaceRootPath: string, index: NotebookInde
   atomicWriteFileSync(getNotebookIndexPath(workspaceRootPath), JSON.stringify(index, null, 2))
 }
 
-function withNotebookIndexLock<T>(workspaceRootPath: string, operation: () => T): T {
-  ensureNotebooksDirectory(workspaceRootPath)
-  return withFileLock(
-    getNotebookIndexLockPath(workspaceRootPath),
+function mutateNotebookIndex<TResult>(workspaceRootPath: string, mutation: (index: NotebookIndex) => TResult): TResult {
+  return mutateSerializedLocalIndex(
     {
       label: 'notebook-storage',
-      timeoutMs: INDEX_LOCK_TIMEOUT_MS,
-      staleMs: STALE_INDEX_LOCK_MS,
+      lockPath: getNotebookIndexLockPath(workspaceRootPath),
+      ensureDirectory: () => ensureNotebooksDirectory(workspaceRootPath),
+      loadIndex: () => loadNotebookIndex(workspaceRootPath),
+      saveIndex: index => saveNotebookIndex(workspaceRootPath, index),
     },
-    operation
+    mutation
   )
 }
 
@@ -259,11 +257,7 @@ export function rebuildNotebookIndex(workspaceRootPath: string): NotebookIndex {
     version: CURRENT_INDEX_VERSION,
     notebooks: notebooks.map(toIndexEntry),
   }
-  try {
-    saveNotebookIndex(workspaceRootPath, index)
-  } catch (error) {
-    debug('[notebook-storage] Failed to save rebuilt index:', error)
-  }
+  trySaveLocalIndex('notebook-storage', () => saveNotebookIndex(workspaceRootPath, index))
   return index
 }
 
@@ -291,8 +285,7 @@ function writeNotebook(workspaceRootPath: string, notebook: NotebookDocument): v
 }
 
 function upsertNotebookIndexEntry(workspaceRootPath: string, notebook: NotebookDocument): void {
-  withNotebookIndexLock(workspaceRootPath, () => {
-    const index = loadNotebookIndex(workspaceRootPath)
+  mutateNotebookIndex(workspaceRootPath, (index) => {
     const entry = toIndexEntry(notebook)
     const existingIndex = index.notebooks.findIndex(item => item.id === notebook.id)
     if (existingIndex === -1) {
@@ -300,7 +293,6 @@ function upsertNotebookIndexEntry(workspaceRootPath: string, notebook: NotebookD
     } else {
       index.notebooks[existingIndex] = entry
     }
-    saveNotebookIndex(workspaceRootPath, index)
   })
 }
 
@@ -467,10 +459,8 @@ export function deleteNotebookDocument(
       unlinkSync(notebookPath)
     }
 
-    withNotebookIndexLock(workspaceRootPath, () => {
-      const index = loadNotebookIndex(workspaceRootPath)
+    mutateNotebookIndex(workspaceRootPath, (index) => {
       index.notebooks = index.notebooks.filter(entry => entry.id !== notebookId)
-      saveNotebookIndex(workspaceRootPath, index)
     })
 
     return { success: true }

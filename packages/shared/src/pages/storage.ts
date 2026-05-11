@@ -13,9 +13,11 @@ import type {
 } from './types'
 import { readJsonFileSync, atomicWriteFileSync } from '../utils/files'
 import { debug } from '../utils/debug'
+import { mutateSerializedLocalIndex, trySaveLocalIndex } from '../utils/local-index'
 
 const PAGES_DIR = 'pages'
 const PAGE_INDEX_FILE = 'pages/index.json'
+const PAGE_INDEX_LOCK_FILE = 'pages/index.json.lock'
 const CURRENT_INDEX_VERSION = 1
 const SAFE_PAGE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
 
@@ -29,6 +31,10 @@ export function getPageMarkdownPath(workspaceRootPath: string, pageId: string): 
 
 export function getPageIndexPath(workspaceRootPath: string): string {
   return join(workspaceRootPath, PAGE_INDEX_FILE)
+}
+
+export function getPageIndexLockPath(workspaceRootPath: string): string {
+  return join(workspaceRootPath, PAGE_INDEX_LOCK_FILE)
 }
 
 export function getPagesDirectoryPath(workspaceRootPath: string): string {
@@ -117,6 +123,19 @@ export function savePageIndex(workspaceRootPath: string, index: PageIndex): void
   }
 }
 
+function mutatePageIndex<TResult>(workspaceRootPath: string, mutation: (index: PageIndex) => TResult): TResult {
+  return mutateSerializedLocalIndex(
+    {
+      label: 'page-storage',
+      lockPath: getPageIndexLockPath(workspaceRootPath),
+      ensureDirectory: () => ensurePagesDirectory(workspaceRootPath),
+      loadIndex: () => loadPageIndex(workspaceRootPath),
+      saveIndex: index => savePageIndex(workspaceRootPath, index),
+    },
+    mutation
+  )
+}
+
 function getFallbackPageMetadata(workspaceRootPath: string, pageId: string, workspaceId?: string): PageDocument | null {
   try {
     assertSafePageId(pageId)
@@ -193,9 +212,7 @@ function repairPageIndex(workspaceRootPath: string, index: PageIndex, workspaceI
   }
 
   if (changed) {
-    try {
-      savePageIndex(workspaceRootPath, repaired)
-    } catch {}
+    trySaveLocalIndex('page-storage', () => savePageIndex(workspaceRootPath, repaired))
   }
   return repaired
 }
@@ -203,9 +220,7 @@ function repairPageIndex(workspaceRootPath: string, index: PageIndex, workspaceI
 export function rebuildPageIndex(workspaceRootPath: string, workspaceId?: string): PageIndex {
   const pages = scanMarkdownPages(workspaceRootPath, workspaceId)
   const index: PageIndex = { version: CURRENT_INDEX_VERSION, pages }
-  try {
-    savePageIndex(workspaceRootPath, index)
-  } catch {}
+  trySaveLocalIndex('page-storage', () => savePageIndex(workspaceRootPath, index))
   return index
 }
 
@@ -239,8 +254,14 @@ export function readPageDocument(
       updatedAt: Date.now(),
       workspaceId: workspaceId || '',
     }
-    index.pages.push(page)
-    savePageIndex(workspaceRootPath, index)
+    mutatePageIndex(workspaceRootPath, latestIndex => {
+      const existingIndex = latestIndex.pages.findIndex(p => p.id === pageId)
+      if (existingIndex === -1) {
+        latestIndex.pages.push(page)
+      } else {
+        latestIndex.pages[existingIndex] = page
+      }
+    })
     return page
   } catch (error) {
     debug('[page-storage] Failed to read page:', pageId, error)
@@ -273,14 +294,14 @@ export function createPageDocument(
       notebookId: input.notebookId,
       outputIds: input.outputIds ?? [],
     }
-    const index = loadPageIndex(workspaceRootPath, workspaceId)
-    const existingIndex = index.pages.findIndex(item => item.id === pageId)
-    if (existingIndex === -1) {
-      index.pages.push(page)
-    } else {
-      index.pages[existingIndex] = page
-    }
-    savePageIndex(workspaceRootPath, index)
+    mutatePageIndex(workspaceRootPath, index => {
+      const existingIndex = index.pages.findIndex(item => item.id === pageId)
+      if (existingIndex === -1) {
+        index.pages.push(page)
+      } else {
+        index.pages[existingIndex] = page
+      }
+    })
     debug('[page-storage] Created page:', pageId, title)
     return { success: true, page }
   } catch (error) {
@@ -297,30 +318,33 @@ export function updatePageDocument(
 ): UpdatePageResult {
   try {
     assertSafePageId(pageId)
-    const index = loadPageIndex(workspaceRootPath, workspaceId)
-    const pageIndex = index.pages.findIndex(p => p.id === pageId)
-    if (pageIndex === -1) {
-      return { success: false, error: 'Doc not found' }
+    const result = mutatePageIndex(workspaceRootPath, (index) => {
+      const pageIndex = index.pages.findIndex(p => p.id === pageId)
+      if (pageIndex === -1) {
+        return { success: false, error: 'Doc not found' } as UpdatePageResult
+      }
+      const existingPage = index.pages[pageIndex]
+      if (!existingPage) {
+        return { success: false, error: 'Doc not found' } as UpdatePageResult
+      }
+      if (workspaceId && existingPage.workspaceId !== workspaceId) {
+        return { success: false, error: 'Doc not found' } as UpdatePageResult
+      }
+      const now = Date.now()
+      const updatedPage: PageDocument = { ...existingPage, updatedAt: now }
+      if (input.title !== undefined) {
+        updatedPage.title = input.title
+      }
+      if (input.outputIds !== undefined) {
+        updatedPage.outputIds = input.outputIds
+      }
+      index.pages[pageIndex] = updatedPage
+      return { success: true, page: updatedPage } as UpdatePageResult
+    })
+    if (result.success) {
+      debug('[page-storage] Updated page metadata:', pageId)
     }
-    const existingPage = index.pages[pageIndex]
-    if (!existingPage) {
-      return { success: false, error: 'Doc not found' }
-    }
-    if (workspaceId && existingPage.workspaceId !== workspaceId) {
-      return { success: false, error: 'Doc not found' }
-    }
-    const now = Date.now()
-    const updatedPage: PageDocument = { ...existingPage, updatedAt: now }
-    if (input.title !== undefined) {
-      updatedPage.title = input.title
-    }
-    if (input.outputIds !== undefined) {
-      updatedPage.outputIds = input.outputIds
-    }
-    index.pages[pageIndex] = updatedPage
-    savePageIndex(workspaceRootPath, index)
-    debug('[page-storage] Updated page metadata:', pageId)
-    return { success: true, page: updatedPage }
+    return result
   } catch (error) {
     debug('[page-storage] Failed to update page:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -338,31 +362,38 @@ export function updatePageContent(
     if (!existsSync(mdPath)) {
       return { success: false, error: 'Doc not found' }
     }
-    const index = loadPageIndex(workspaceRootPath, workspaceId)
-    const pageIndex = index.pages.findIndex(p => p.id === pageId)
-    if (pageIndex === -1) {
-      return { success: false, error: 'Doc not found' }
-    }
-    if (workspaceId && index.pages[pageIndex]?.workspaceId !== workspaceId) {
+    const existingEntry = loadPageIndex(workspaceRootPath, workspaceId).pages.find(p => p.id === pageId)
+    if (!existingEntry || (workspaceId && existingEntry.workspaceId !== workspaceId)) {
       return { success: false, error: 'Doc not found' }
     }
     atomicWriteFileSync(mdPath, content)
-    const existingPage = index.pages[pageIndex]
-    if (!existingPage) {
-      return { success: false, error: 'Doc not found' }
+    const result = mutatePageIndex(workspaceRootPath, (index) => {
+      const pageIndex = index.pages.findIndex(p => p.id === pageId)
+      if (pageIndex === -1) {
+        return { success: false, error: 'Doc not found' } as UpdatePageResult
+      }
+      if (workspaceId && index.pages[pageIndex]?.workspaceId !== workspaceId) {
+        return { success: false, error: 'Doc not found' } as UpdatePageResult
+      }
+      const existingPage = index.pages[pageIndex]
+      if (!existingPage) {
+        return { success: false, error: 'Doc not found' } as UpdatePageResult
+      }
+      const now = Date.now()
+      const newTitle = extractTitleFromContent(content)
+      const updatedPage: PageDocument = {
+        ...existingPage,
+        content,
+        title: newTitle,
+        updatedAt: now,
+      }
+      index.pages[pageIndex] = updatedPage
+      return { success: true, page: updatedPage } as UpdatePageResult
+    })
+    if (result.success) {
+      debug('[page-storage] Updated page content:', pageId)
     }
-    const now = Date.now()
-    const newTitle = extractTitleFromContent(content)
-    const updatedPage: PageDocument = {
-      ...existingPage,
-      content,
-      title: newTitle,
-      updatedAt: now,
-    }
-    index.pages[pageIndex] = updatedPage
-    savePageIndex(workspaceRootPath, index)
-    debug('[page-storage] Updated page content:', pageId)
-    return { success: true, page: pageIndex !== -1 ? index.pages[pageIndex] : undefined }
+    return result
   } catch (error) {
     debug('[page-storage] Failed to update page content:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -396,20 +427,20 @@ export function listPageEntries(workspaceRootPath: string): PageListEntry[] {
 export function deletePageDocument(workspaceRootPath: string, pageId: string, workspaceId?: string): DeletePageResult {
   try {
     const mdPath = getPageMarkdownPath(workspaceRootPath, pageId)
-    const index = loadPageIndex(workspaceRootPath, workspaceId)
-    const existingPage = index.pages.find(p => p.id === pageId)
+    const existingPage = loadPageIndex(workspaceRootPath, workspaceId).pages.find(p => p.id === pageId)
     if (workspaceId && existingPage?.workspaceId && existingPage.workspaceId !== workspaceId) {
       return { success: false, error: 'Doc not found' }
     }
     if (existsSync(mdPath)) {
       unlinkSync(mdPath)
     }
-    const filteredPages = index.pages.filter(p => p.id !== pageId)
-    if (filteredPages.length === index.pages.length) {
-      debug('[page-storage] Page not found in index:', pageId)
-    }
-    index.pages = filteredPages
-    savePageIndex(workspaceRootPath, index)
+    mutatePageIndex(workspaceRootPath, (index) => {
+      const filteredPages = index.pages.filter(p => p.id !== pageId)
+      if (filteredPages.length === index.pages.length) {
+        debug('[page-storage] Page not found in index:', pageId)
+      }
+      index.pages = filteredPages
+    })
     debug('[page-storage] Deleted page:', pageId)
     return { success: true }
   } catch (error) {

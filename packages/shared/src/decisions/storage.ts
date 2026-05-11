@@ -3,7 +3,7 @@ import { basename, join, relative, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files'
 import { debug } from '../utils/debug'
-import { withFileLock } from '../utils/file-lock'
+import { mutateSerializedLocalIndex, trySaveLocalIndex } from '../utils/local-index'
 import type {
   CreateDecisionInput,
   DecisionDocument,
@@ -21,8 +21,6 @@ const DECISION_INDEX_FILE = 'decisions/index.json'
 const DECISION_INDEX_LOCK_FILE = 'decisions/index.json.lock'
 const CURRENT_INDEX_VERSION = 1
 const SAFE_DECISION_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
-const INDEX_LOCK_TIMEOUT_MS = 5_000
-const STALE_INDEX_LOCK_MS = 30_000
 
 const EMPTY_DECISION_LINKS: DecisionLinks = {
   projectIds: [],
@@ -207,16 +205,16 @@ export function saveDecisionIndex(workspaceRootPath: string, index: DecisionInde
   atomicWriteFileSync(getDecisionIndexPath(workspaceRootPath), JSON.stringify(index, null, 2))
 }
 
-function withDecisionIndexLock<T>(workspaceRootPath: string, operation: () => T): T {
-  ensureDecisionsDirectory(workspaceRootPath)
-  return withFileLock(
-    getDecisionIndexLockPath(workspaceRootPath),
+function mutateDecisionIndex<TResult>(workspaceRootPath: string, mutation: (index: DecisionIndex) => TResult): TResult {
+  return mutateSerializedLocalIndex(
     {
       label: 'decision-storage',
-      timeoutMs: INDEX_LOCK_TIMEOUT_MS,
-      staleMs: STALE_INDEX_LOCK_MS,
+      lockPath: getDecisionIndexLockPath(workspaceRootPath),
+      ensureDirectory: () => ensureDecisionsDirectory(workspaceRootPath),
+      loadIndex: () => loadDecisionIndex(workspaceRootPath),
+      saveIndex: index => saveDecisionIndex(workspaceRootPath, index),
     },
-    operation
+    mutation
   )
 }
 
@@ -226,11 +224,7 @@ export function rebuildDecisionIndex(workspaceRootPath: string): DecisionIndex {
     version: CURRENT_INDEX_VERSION,
     decisions: decisions.map(toIndexEntry),
   }
-  try {
-    saveDecisionIndex(workspaceRootPath, index)
-  } catch (error) {
-    debug('[decision-storage] Failed to save rebuilt index:', error)
-  }
+  trySaveLocalIndex('decision-storage', () => saveDecisionIndex(workspaceRootPath, index))
   return index
 }
 
@@ -258,8 +252,7 @@ function writeDecision(workspaceRootPath: string, decision: DecisionDocument): v
 }
 
 function upsertDecisionIndexEntry(workspaceRootPath: string, decision: DecisionDocument): void {
-  withDecisionIndexLock(workspaceRootPath, () => {
-    const index = loadDecisionIndex(workspaceRootPath)
+  mutateDecisionIndex(workspaceRootPath, (index) => {
     const entry = toIndexEntry(decision)
     const existingIndex = index.decisions.findIndex(item => item.id === decision.id)
     if (existingIndex === -1) {
@@ -267,7 +260,6 @@ function upsertDecisionIndexEntry(workspaceRootPath: string, decision: DecisionD
     } else {
       index.decisions[existingIndex] = entry
     }
-    saveDecisionIndex(workspaceRootPath, index)
   })
 }
 
@@ -446,10 +438,8 @@ export function deleteDecisionDocument(
       unlinkSync(decisionPath)
     }
 
-    withDecisionIndexLock(workspaceRootPath, () => {
-      const index = loadDecisionIndex(workspaceRootPath)
+    mutateDecisionIndex(workspaceRootPath, (index) => {
       index.decisions = index.decisions.filter(entry => entry.id !== decisionId)
-      saveDecisionIndex(workspaceRootPath, index)
     })
 
     return { success: true }

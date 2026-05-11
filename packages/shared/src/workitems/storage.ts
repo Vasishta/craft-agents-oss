@@ -3,7 +3,7 @@ import { basename, join, relative, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files'
 import { debug } from '../utils/debug'
-import { withFileLock } from '../utils/file-lock'
+import { mutateSerializedLocalIndex, trySaveLocalIndex } from '../utils/local-index'
 import type {
   CreateWorkItemInput,
   DeleteWorkItemResult,
@@ -19,8 +19,6 @@ const WORKITEM_INDEX_FILE = 'workitems/index.json'
 const WORKITEM_INDEX_LOCK_FILE = 'workitems/index.json.lock'
 const CURRENT_INDEX_VERSION = 1
 const SAFE_WORKITEM_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
-const INDEX_LOCK_TIMEOUT_MS = 5_000
-const STALE_INDEX_LOCK_MS = 30_000
 
 export function getWorkItemsDirectoryPath(workspaceRootPath: string): string {
   return join(workspaceRootPath, WORKITEMS_DIR)
@@ -131,16 +129,16 @@ export function saveWorkItemIndex(workspaceRootPath: string, index: WorkItemInde
   atomicWriteFileSync(getWorkItemIndexPath(workspaceRootPath), JSON.stringify(index, null, 2))
 }
 
-function withWorkItemIndexLock<T>(workspaceRootPath: string, operation: () => T): T {
-  ensureWorkItemsDirectory(workspaceRootPath)
-  return withFileLock(
-    getWorkItemIndexLockPath(workspaceRootPath),
+function mutateWorkItemIndex<TResult>(workspaceRootPath: string, mutation: (index: WorkItemIndex) => TResult): TResult {
+  return mutateSerializedLocalIndex(
     {
       label: 'workitem-storage',
-      timeoutMs: INDEX_LOCK_TIMEOUT_MS,
-      staleMs: STALE_INDEX_LOCK_MS,
+      lockPath: getWorkItemIndexLockPath(workspaceRootPath),
+      ensureDirectory: () => ensureWorkItemsDirectory(workspaceRootPath),
+      loadIndex: () => loadWorkItemIndex(workspaceRootPath),
+      saveIndex: index => saveWorkItemIndex(workspaceRootPath, index),
     },
-    operation
+    mutation
   )
 }
 
@@ -150,11 +148,7 @@ export function rebuildWorkItemIndex(workspaceRootPath: string): WorkItemIndex {
     version: CURRENT_INDEX_VERSION,
     workItems: workItems.map(toIndexEntry),
   }
-  try {
-    saveWorkItemIndex(workspaceRootPath, index)
-  } catch (error) {
-    debug('[workitem-storage] Failed to save rebuilt index:', error)
-  }
+  trySaveLocalIndex('workitem-storage', () => saveWorkItemIndex(workspaceRootPath, index))
   return index
 }
 
@@ -205,8 +199,7 @@ export function createWorkItemDocument(
 
     atomicWriteFileSync(getWorkItemDocumentPath(workspaceRootPath, workItemId), JSON.stringify(workItem, null, 2))
 
-    withWorkItemIndexLock(workspaceRootPath, () => {
-      const index = loadWorkItemIndex(workspaceRootPath)
+    mutateWorkItemIndex(workspaceRootPath, (index) => {
       const entry = toIndexEntry(workItem)
       const existingIdx = index.workItems.findIndex(item => item.id === workItemId)
       if (existingIdx === -1) {
@@ -214,7 +207,6 @@ export function createWorkItemDocument(
       } else {
         index.workItems[existingIdx] = entry
       }
-      saveWorkItemIndex(workspaceRootPath, index)
     })
 
     return { success: true, workItem }
@@ -256,15 +248,13 @@ export function updateWorkItemDocument(
 
     atomicWriteFileSync(getWorkItemDocumentPath(workspaceRootPath, workItemId), JSON.stringify(updated, null, 2))
 
-    withWorkItemIndexLock(workspaceRootPath, () => {
-      const index = loadWorkItemIndex(workspaceRootPath)
+    mutateWorkItemIndex(workspaceRootPath, (index) => {
       const entryIdx = index.workItems.findIndex(e => e.id === workItemId)
       if (entryIdx !== -1) {
         index.workItems[entryIdx] = toIndexEntry(updated)
       } else {
         index.workItems.push(toIndexEntry(updated))
       }
-      saveWorkItemIndex(workspaceRootPath, index)
     })
 
     return { success: true, workItem: updated }
@@ -301,10 +291,8 @@ export function deleteWorkItemDocument(
       unlinkSync(workItemPath)
     }
 
-    withWorkItemIndexLock(workspaceRootPath, () => {
-      const index = loadWorkItemIndex(workspaceRootPath)
+    mutateWorkItemIndex(workspaceRootPath, (index) => {
       index.workItems = index.workItems.filter(e => e.id !== workItemId)
-      saveWorkItemIndex(workspaceRootPath, index)
     })
 
     return { success: true }

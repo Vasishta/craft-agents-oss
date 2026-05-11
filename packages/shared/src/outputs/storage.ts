@@ -3,6 +3,7 @@ import { basename, join, relative, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files'
 import { debug } from '../utils/debug'
+import { mutateSerializedLocalIndex, trySaveLocalIndex } from '../utils/local-index'
 import { createPageDocument, readPageDocument } from '../pages/storage'
 import type {
   CreateOutputInput,
@@ -17,6 +18,7 @@ import type {
 
 const OUTPUTS_DIR = 'outputs'
 const OUTPUT_INDEX_FILE = 'outputs/index.json'
+const OUTPUT_INDEX_LOCK_FILE = 'outputs/index.json.lock'
 const CURRENT_INDEX_VERSION = 1
 const SAFE_OUTPUT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
 
@@ -26,6 +28,10 @@ export function getOutputsDirectoryPath(workspaceRootPath: string): string {
 
 export function getOutputIndexPath(workspaceRootPath: string): string {
   return join(workspaceRootPath, OUTPUT_INDEX_FILE)
+}
+
+export function getOutputIndexLockPath(workspaceRootPath: string): string {
+  return join(workspaceRootPath, OUTPUT_INDEX_LOCK_FILE)
 }
 
 export function getOutputDocumentPath(workspaceRootPath: string, outputId: string): string {
@@ -156,15 +162,26 @@ export function saveOutputIndex(workspaceRootPath: string, index: OutputIndex): 
   atomicWriteFileSync(getOutputIndexPath(workspaceRootPath), JSON.stringify(index, null, 2))
 }
 
+function mutateOutputIndex<TResult>(workspaceRootPath: string, mutation: (index: OutputIndex) => TResult): TResult {
+  return mutateSerializedLocalIndex(
+    {
+      label: 'output-storage',
+      lockPath: getOutputIndexLockPath(workspaceRootPath),
+      ensureDirectory: () => ensureOutputsDirectory(workspaceRootPath),
+      loadIndex: () => loadOutputIndex(workspaceRootPath),
+      saveIndex: index => saveOutputIndex(workspaceRootPath, index),
+    },
+    mutation
+  )
+}
+
 export function rebuildOutputIndex(workspaceRootPath: string, workspaceId?: string): OutputIndex {
   const outputs = scanOutputs(workspaceRootPath)
   const index: OutputIndex = {
     version: CURRENT_INDEX_VERSION,
     outputs: outputs.map(toIndexEntry),
   }
-  try {
-    saveOutputIndex(workspaceRootPath, index)
-  } catch {}
+  trySaveLocalIndex('output-storage', () => saveOutputIndex(workspaceRootPath, index))
   return index
 }
 
@@ -195,9 +212,7 @@ function repairOutputIndex(workspaceRootPath: string, index: OutputIndex, worksp
   }
 
   if (changed) {
-    try {
-      saveOutputIndex(workspaceRootPath, repaired)
-    } catch {}
+    trySaveLocalIndex('output-storage', () => saveOutputIndex(workspaceRootPath, repaired))
   }
   return repaired
 }
@@ -261,15 +276,15 @@ export function createOutputDocument(
       status: input.status || 'saved',
     }
     atomicWriteFileSync(getOutputDocumentPath(workspaceRootPath, outputId), JSON.stringify(output, null, 2))
-    const index = loadOutputIndex(workspaceRootPath, workspaceId)
-    const entry = toIndexEntry(output)
-    const outputIndex = index.outputs.findIndex(item => item.id === outputId)
-    if (outputIndex === -1) {
-      index.outputs.push(entry)
-    } else {
-      index.outputs[outputIndex] = entry
-    }
-    saveOutputIndex(workspaceRootPath, index)
+    mutateOutputIndex(workspaceRootPath, (index) => {
+      const entry = toIndexEntry(output)
+      const outputIndex = index.outputs.findIndex(item => item.id === outputId)
+      if (outputIndex === -1) {
+        index.outputs.push(entry)
+      } else {
+        index.outputs[outputIndex] = entry
+      }
+    })
     return { success: true, output }
   } catch (error) {
     debug('[output-storage] Failed to create output:', error)
@@ -300,15 +315,15 @@ export function updateOutputDocument(
     }
 
     atomicWriteFileSync(getOutputDocumentPath(workspaceRootPath, outputId), JSON.stringify(updated, null, 2))
-    const index = loadOutputIndex(workspaceRootPath, workspaceId)
-    const entry = toIndexEntry(updated)
-    const outputIndex = index.outputs.findIndex(item => item.id === outputId)
-    if (outputIndex === -1) {
-      index.outputs.push(entry)
-    } else {
-      index.outputs[outputIndex] = entry
-    }
-    saveOutputIndex(workspaceRootPath, index)
+    mutateOutputIndex(workspaceRootPath, (index) => {
+      const entry = toIndexEntry(updated)
+      const outputIndex = index.outputs.findIndex(item => item.id === outputId)
+      if (outputIndex === -1) {
+        index.outputs.push(entry)
+      } else {
+        index.outputs[outputIndex] = entry
+      }
+    })
     return { success: true, output: updated }
   } catch (error) {
     debug('[output-storage] Failed to update output:', outputId, error)
@@ -341,9 +356,9 @@ export function deleteOutputDocument(workspaceRootPath: string, outputId: string
     if (existsSync(outputPath)) {
       unlinkSync(outputPath)
     }
-    const index = loadOutputIndex(workspaceRootPath, workspaceId)
-    index.outputs = index.outputs.filter(output => output.id !== outputId)
-    saveOutputIndex(workspaceRootPath, index)
+    mutateOutputIndex(workspaceRootPath, (index) => {
+      index.outputs = index.outputs.filter(output => output.id !== outputId)
+    })
     return { success: true }
   } catch (error) {
     debug('[output-storage] Failed to delete output:', outputId, error)
