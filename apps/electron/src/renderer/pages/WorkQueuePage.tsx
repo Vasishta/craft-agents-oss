@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { Archive, Flag, Inbox } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
+import { buildSessionStatusCounts, buildWorkQueueSummary } from '@/lib/session-meta-selectors'
 import { navigate, routes } from '@/lib/navigate'
 
 interface WorkQueuePageProps {
@@ -44,25 +45,22 @@ function QueueRow({ icon, title, description, count, onClick }: QueueRowProps) {
 export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
   const { t } = useTranslation()
   const { leadingAction, rightSidebarButton, sessionStatuses } = useAppShellContext()
+  const activeWorkspace = useActiveWorkspace()
   const effectiveSessionStatuses = sessionStatuses ?? []
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
+  const remoteWorkspaceId = activeWorkspace?.remoteServer?.remoteWorkspaceId
 
-  const workspaceSessions = React.useMemo(
-    () => Array.from(sessionMetaMap.values()).filter(session => session.workspaceId === workspaceId && !session.hidden),
-    [sessionMetaMap, workspaceId]
+  const { activeSessionMetas, flaggedCount, archivedCount } = React.useMemo(
+    () => buildWorkQueueSummary(sessionMetaMap.values(), workspaceId, remoteWorkspaceId),
+    [sessionMetaMap, workspaceId, remoteWorkspaceId]
   )
 
   const statusCounts = React.useMemo(() => {
-    const counts: Record<string, number> = {}
-    for (const session of workspaceSessions) {
-      const statusId = session.sessionStatus || 'todo'
-      counts[statusId] = (counts[statusId] || 0) + 1
-    }
-    return counts
-  }, [workspaceSessions])
-
-  const flaggedCount = workspaceSessions.filter(session => session.isFlagged).length
-  const archivedCount = Array.from(sessionMetaMap.values()).filter(session => session.workspaceId === workspaceId && session.hidden).length
+    return buildSessionStatusCounts(
+      activeSessionMetas,
+      effectiveSessionStatuses.map((status) => status.id)
+    )
+  }, [activeSessionMetas, effectiveSessionStatuses])
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -86,7 +84,7 @@ export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
               icon={<Inbox className="h-4 w-4" />}
               title="All Sessions"
               description="Compatibility view for all active chat sessions."
-              count={workspaceSessions.length}
+              count={activeSessionMetas.length}
               onClick={() => navigate(routes.view.allSessions())}
             />
             {effectiveSessionStatuses.map(status => (

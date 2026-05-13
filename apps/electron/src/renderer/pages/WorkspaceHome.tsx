@@ -5,13 +5,14 @@ import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SourceAvatar } from '@/components/ui/source-avatar'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { sourcesAtom } from '@/atoms/sources'
 import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
 import { useProjectList } from '@/hooks/useProjects'
 import { navigate, routes } from '@/lib/navigate'
+import { getWorkspaceSessionMetas } from '@/lib/session-meta-selectors'
 import { cn } from '@/lib/utils'
 import type { Workspace } from '../../shared/types'
 
@@ -121,6 +122,7 @@ function RecentSection({
 
 export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
   const { leadingAction, rightSidebarButton, workspaces, openNewChat } = useAppShellContext()
+  const activeWorkspace = useActiveWorkspace()
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const sources = useAtomValue(sourcesAtom)
   const { pages } = usePageList(workspaceId)
@@ -128,13 +130,13 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
   const { projects } = useProjectList(workspaceId)
 
   const workspaceName = getWorkspaceName(workspaces, workspaceId)
+  const remoteWorkspaceId = activeWorkspace?.remoteServer?.remoteWorkspaceId
 
   const recentChats = React.useMemo(
-    () => Array.from(sessionMetaMap.values())
-      .filter((session) => session.workspaceId === workspaceId && !session.hidden)
+    () => getWorkspaceSessionMetas(sessionMetaMap.values(), workspaceId, remoteWorkspaceId)
       .sort((a, b) => (b.lastMessageAt ?? b.createdAt ?? 0) - (a.lastMessageAt ?? a.createdAt ?? 0))
       .slice(0, 5),
-    [sessionMetaMap, workspaceId]
+    [sessionMetaMap, workspaceId, remoteWorkspaceId]
   )
 
   const recentDocs = React.useMemo(

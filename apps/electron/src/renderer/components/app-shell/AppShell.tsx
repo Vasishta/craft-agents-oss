@@ -111,6 +111,8 @@ import { resolveEntityColor } from "@craft-agent/shared/colors"
 import * as storage from "@/lib/local-storage"
 import { toast } from "sonner"
 import { navigate, routes } from "@/lib/navigate"
+import { buildSidebarFocusItemIds } from "./sidebar-focus-order"
+import { buildSessionStatusCounts, getActiveWorkspaceSessionMetas, getWorkspaceSessionMetas } from "@/lib/session-meta-selectors"
 import {
   useNavigation,
   useNavigationState,
@@ -1327,17 +1329,13 @@ function AppShellContent({
   // so we match against both the local and remote workspace IDs.
   const remoteWorkspaceId = activeWorkspace?.remoteServer?.remoteWorkspaceId
   const workspaceSessionMetas = useMemo(() => {
-    const metas = Array.from(sessionMetaMap.values())
-    if (!activeWorkspaceId) return metas.filter(s => !s.hidden)
-    return metas.filter(s =>
-      !s.hidden && (s.workspaceId === activeWorkspaceId || (remoteWorkspaceId && s.workspaceId === remoteWorkspaceId))
-    )
+    return getWorkspaceSessionMetas(sessionMetaMap.values(), activeWorkspaceId, remoteWorkspaceId)
   }, [sessionMetaMap, activeWorkspaceId, remoteWorkspaceId])
 
   // Active sessions exclude archived - use this for all counts and filters except archived view
   const activeSessionMetas = useMemo(() => {
-    return workspaceSessionMetas.filter(s => !s.isArchived)
-  }, [workspaceSessionMetas])
+    return getActiveWorkspaceSessionMetas(sessionMetaMap.values(), activeWorkspaceId, remoteWorkspaceId)
+  }, [sessionMetaMap, activeWorkspaceId, remoteWorkspaceId])
 
   const refreshWorkspaceUnreadMap = useCallback(async () => {
     try {
@@ -1413,18 +1411,10 @@ function AppShellContent({
   // Count sessions by individual todo state (dynamic based on effectiveSessionStatuses)
   // Uses activeSessionMetas to exclude archived sessions from counts.
   const sessionStatusCounts = useMemo(() => {
-    const counts: Record<SessionStatusId, number> = {}
-    // Initialize counts for all dynamic statuses
-    for (const state of effectiveSessionStatuses) {
-      counts[state.id] = 0
-    }
-    // Count sessions
-    for (const s of activeSessionMetas) {
-      const state = (s.sessionStatus || 'todo') as SessionStatusId
-      // Increment count (initialize to 0 if status not in effectiveSessionStatuses yet)
-      counts[state] = (counts[state] || 0) + 1
-    }
-    return counts
+    return buildSessionStatusCounts(
+      activeSessionMetas,
+      effectiveSessionStatuses.map((state) => state.id)
+    ) as Record<SessionStatusId, number>
   }, [activeSessionMetas, effectiveSessionStatuses])
 
   // Count sources by type for the Sources dropdown subcategories
@@ -1977,58 +1967,58 @@ function AppShellContent({
   }
 
   const unifiedSidebarItems = React.useMemo((): SidebarItem[] => {
-    const result: SidebarItem[] = []
+    const actions = new Map<string, () => void>([
+      ['nav:home', handleHomeClick],
+      ['nav:search', handleSearchClick],
+      ['nav:projects', handleProjectsClick],
+      ['nav:library', handleLibraryClick],
+      ['nav:pages', handlePagesClick],
+      ['nav:outputs', handleOutputsClick],
+      ['nav:workQueue', handleWorkQueueClick],
+      ['nav:allSessions', handleAllSessionsClick],
+      ['nav:flagged', handleFlaggedClick],
+      ['nav:archived', handleArchivedClick],
+      ['nav:labels', () => handleLabelClick('__all__')],
+      ['nav:sources', handleSourcesClick],
+      ['nav:automations', handleAutomationsClick],
+      ['nav:skills', handleSkillsClick],
+      ['nav:settings', () => handleSettingsClick('app')],
+      ['nav:whats-new', handleWhatsNewClick],
+    ])
 
-    // 1. Primary workspace section: Home, Search, Projects, Library, Work Queue
-    result.push({ id: 'nav:home', type: 'nav', action: handleHomeClick })
-    result.push({ id: 'nav:search', type: 'nav', action: handleSearchClick })
-    result.push({ id: 'nav:projects', type: 'nav', action: handleProjectsClick })
-    if (isExpanded('nav:projects')) {
-      for (const project of projects.slice(0, 10)) {
-        result.push({ id: `nav:project:${project.id}`, type: 'nav', action: () => navigate(routes.view.project(project.id)) })
-      }
+    for (const project of projects.slice(0, 10)) {
+      actions.set(`nav:project:${project.id}`, () => navigate(routes.view.project(project.id)))
     }
-    result.push({ id: 'nav:library', type: 'nav', action: handleLibraryClick })
-    result.push({ id: 'nav:pages', type: 'nav', action: handlePagesClick })
-    if (isExpanded('nav:library') && isExpanded('nav:pages')) {
-      for (const p of pages.slice(0, 10)) {
-        result.push({ id: `nav:page:${p.id}`, type: 'nav', action: () => navigate(routes.view.savedPage(p.id)) })
-      }
+    for (const page of pages.slice(0, 10)) {
+      actions.set(`nav:page:${page.id}`, () => navigate(routes.view.savedPage(page.id)))
     }
-    result.push({ id: 'nav:outputs', type: 'nav', action: handleOutputsClick })
-    if (isExpanded('nav:library') && isExpanded('nav:outputs')) {
-      for (const output of outputs.slice(0, 10)) {
-        result.push({ id: `nav:output:${output.id}`, type: 'nav', action: () => navigate(routes.view.savedOutput(output.id)) })
-      }
+    for (const output of outputs.slice(0, 10)) {
+      actions.set(`nav:output:${output.id}`, () => navigate(routes.view.savedOutput(output.id)))
     }
-    result.push({ id: 'nav:workQueue', type: 'nav', action: handleWorkQueueClick })
-    result.push({ id: 'nav:allSessions', type: 'nav', action: handleAllSessionsClick })
-    if (isExpanded('nav:workQueue')) {
-      for (const state of effectiveSessionStatuses) {
-        result.push({ id: `nav:state:${state.id}`, type: 'nav', action: () => handleSessionStatusClick(state.id) })
-      }
-      result.push({ id: 'nav:flagged', type: 'nav', action: handleFlaggedClick })
-      result.push({ id: 'nav:archived', type: 'nav', action: handleArchivedClick })
-      result.push({ id: 'nav:labels', type: 'nav', action: () => handleLabelClick('__all__') })
-      const flattenTree = (nodes: LabelTreeNode[]) => {
-        for (const node of nodes) {
-          if (node.label) {
-            result.push({ id: `nav:label:${node.fullId}`, type: 'nav', action: () => handleLabelClick(node.fullId) })
-          }
-          if (node.children.length > 0) flattenTree(node.children)
+    for (const state of effectiveSessionStatuses) {
+      actions.set(`nav:state:${state.id}`, () => handleSessionStatusClick(state.id))
+    }
+
+    const setLabelActions = (nodes: LabelTreeNode[]) => {
+      for (const node of nodes) {
+        if (node.label) {
+          actions.set(`nav:label:${node.fullId}`, () => handleLabelClick(node.fullId))
+        }
+        if (node.children.length > 0) {
+          setLabelActions(node.children)
         }
       }
-      if (isExpanded('nav:labels')) flattenTree(labelTree)
     }
+    setLabelActions(labelTree)
 
-    // 3. Files/context, Skills, Settings
-    result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
-    result.push({ id: 'nav:automations', type: 'nav', action: handleAutomationsClick })
-    result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
-    result.push({ id: 'nav:settings', type: 'nav', action: () => handleSettingsClick('app') })
-    result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
-
-    return result
+    return buildSidebarFocusItemIds({
+      projectIds: projects.map((project) => project.id),
+      pageIds: pages.map((page) => page.id),
+      outputIds: outputs.map((output) => output.id),
+      statusIds: effectiveSessionStatuses.map((state) => state.id),
+      labelTree,
+      isExpanded,
+    }).map((id) => ({ id, type: 'nav', action: actions.get(id)! }))
   }, [handleHomeClick, handleSearchClick, handleProjectsClick, projects, isExpanded, handleLibraryClick, handlePagesClick, pages, handleOutputsClick, outputs, handleWorkQueueClick, handleAllSessionsClick, effectiveSessionStatuses, handleFlaggedClick, handleArchivedClick, handleLabelClick, labelTree, handleSessionStatusClick, handleSourcesClick, handleAutomationsClick, handleSkillsClick, handleSettingsClick, handleWhatsNewClick, navigate])
 
   // Toggle folder expanded state

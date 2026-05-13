@@ -81,6 +81,7 @@ import { isValidSettingsSubpage, type SettingsSubpage } from '../../shared/setti
 import { sessionMetaMapAtom, updateSessionMetaAtom, type SessionMeta } from '@/atoms/sessions'
 import { sourcesAtom } from '@/atoms/sources'
 import { skillsAtom } from '@/atoms/skills'
+import { getWorkspaceSessionMetas } from '@/lib/session-meta-selectors'
 import {
   panelStackAtom,
   pushPanelAtom,
@@ -539,10 +540,7 @@ export function NavigationProvider({
   // Always excludes hidden sessions - they should never appear in navigation
   const filterSessionsByFilter = useCallback(
     (filter: SessionFilter): SessionMeta[] => {
-      // First filter out hidden sessions - they should never appear in any view
-      const visibleSessions = sessionMetas.filter(
-        s => !s.hidden && (!workspaceId || s.workspaceId === workspaceId)
-      )
+      const visibleSessions = getWorkspaceSessionMetas(sessionMetas, workspaceId, remoteWorkspaceId)
 
       return visibleSessions.filter((session) => {
         switch (filter.kind) {
@@ -568,7 +566,7 @@ export function NavigationProvider({
         }
       })
     },
-    [sessionMetas, workspaceId]
+    [sessionMetas, workspaceId, remoteWorkspaceId]
   )
 
   const getFirstSessionId = useCallback(

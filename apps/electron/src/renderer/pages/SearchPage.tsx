@@ -4,11 +4,12 @@ import { Box, FileText, MessageSquareText, Search } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
 import { sessionMetaMapAtom, type SessionMeta } from '@/atoms/sessions'
 import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
 import { navigate } from '@/lib/navigate'
+import { getWorkspaceSessionMetas } from '@/lib/session-meta-selectors'
 import {
   buildChatSearchResults,
   buildDocSearchResults,
@@ -144,6 +145,7 @@ function SearchResultGroup({
 
 export default function SearchPage({ workspaceId }: SearchPageProps) {
   const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const activeWorkspace = useActiveWorkspace()
   const { pages } = usePageList(workspaceId)
   const { outputs } = useOutputList(workspaceId)
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
@@ -156,11 +158,11 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
   const [isLoadingDocContents, setIsLoadingDocContents] = React.useState(false)
   const [isLoadingOutputContents, setIsLoadingOutputContents] = React.useState(false)
 
+  const remoteWorkspaceId = activeWorkspace?.remoteServer?.remoteWorkspaceId
+
   const workspaceSessions = React.useMemo(
-    () => Array.from(sessionMetaMap.values()).filter(session =>
-      session.workspaceId === workspaceId && !session.hidden
-    ),
-    [sessionMetaMap, workspaceId]
+    () => getWorkspaceSessionMetas(sessionMetaMap.values(), workspaceId, remoteWorkspaceId),
+    [sessionMetaMap, workspaceId, remoteWorkspaceId]
   )
 
   const trimmedQuery = query.trim()

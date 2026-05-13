@@ -1,7 +1,6 @@
 import * as React from 'react'
-import { Box, FileText, GitBranch, NotebookTabs } from 'lucide-react'
+import { Box, ChevronRight, FileText, GitBranch, NotebookTabs } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { useOutputList } from '@/hooks/useOutputs'
@@ -22,21 +21,8 @@ interface LibraryRowProps {
 }
 
 function LibraryRow({ icon, title, description, count, actionLabel, onClick }: LibraryRowProps) {
-  return (
-    <div
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={onClick}
-      onKeyDown={(event) => {
-        if (!onClick) return
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          onClick()
-        }
-      }}
-      className="group grid min-h-[82px] w-full grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring data-[static=true]:cursor-default"
-      data-static={!onClick}
-    >
+  const content = (
+    <>
       <span className="flex h-9 w-9 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
         {icon}
       </span>
@@ -51,21 +37,32 @@ function LibraryRow({ icon, title, description, count, actionLabel, onClick }: L
           </span>
         )}
         {actionLabel && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            tabIndex={-1}
-            className="rounded-[7px]"
-            onClick={(event) => {
-              event.stopPropagation()
-              onClick?.()
-            }}
-          >
-            {actionLabel}
-          </Button>
+          <span className="inline-flex items-center gap-1 rounded-[7px] border border-border/55 px-2 py-1 text-xs font-medium text-muted-foreground">
+            <span>{actionLabel}</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </span>
         )}
       </span>
+    </>
+  )
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="group grid min-h-[82px] w-full grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <div
+      className="grid min-h-[82px] w-full grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left"
+    >
+      {content}
     </div>
   )
 }
