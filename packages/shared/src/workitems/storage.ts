@@ -11,6 +11,7 @@ import type {
   WorkItemDocument,
   WorkItemIndex,
   WorkItemIndexEntry,
+  WorkItemLinkCounts,
   WorkItemMutationResult,
 } from './types'
 
@@ -78,13 +79,38 @@ function toIndexEntry(workItem: WorkItemDocument): WorkItemIndexEntry {
     id: workItem.id,
     workspaceId: workItem.workspaceId,
     title: workItem.title,
+    description: workItem.description,
     status: workItem.status,
     priority: workItem.priority,
     type: workItem.type,
     area: workItem.area,
     createdAt: workItem.createdAt,
     updatedAt: workItem.updatedAt,
+    linkCounts: toLinkCounts(workItem),
   }
+}
+
+function toLinkCounts(workItem: Pick<WorkItemDocument, 'linkedSessionIds' | 'linkedDocIds' | 'linkedOutputIds'>): WorkItemLinkCounts {
+  return {
+    sessionCount: workItem.linkedSessionIds.length,
+    docCount: workItem.linkedDocIds.length,
+    outputCount: workItem.linkedOutputIds.length,
+  }
+}
+
+function isValidWorkItemIndex(index: WorkItemIndex): boolean {
+  return index.workItems.every((entry) =>
+    typeof entry.id === 'string' &&
+    typeof entry.workspaceId === 'string' &&
+    typeof entry.title === 'string' &&
+    typeof entry.status === 'string' &&
+    typeof entry.createdAt === 'number' &&
+    typeof entry.updatedAt === 'number' &&
+    !!entry.linkCounts &&
+    typeof entry.linkCounts.sessionCount === 'number' &&
+    typeof entry.linkCounts.docCount === 'number' &&
+    typeof entry.linkCounts.outputCount === 'number'
+  )
 }
 
 function readWorkItemFile(workspaceRootPath: string, workItemId: string): WorkItemDocument | null {
@@ -159,7 +185,7 @@ export function loadWorkItemIndex(workspaceRootPath: string): WorkItemIndex {
   }
   try {
     const index = readJsonFileSync<WorkItemIndex>(indexPath)
-    if (!index || typeof index !== 'object' || !Array.isArray(index.workItems)) {
+    if (!index || typeof index !== 'object' || !Array.isArray(index.workItems) || !isValidWorkItemIndex(index)) {
       return rebuildWorkItemIndex(workspaceRootPath)
     }
     // Handle version migrations here if needed

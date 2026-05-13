@@ -525,6 +525,14 @@ export interface ElectronAPI {
   unlinkProjectObjects(workspaceId: string, projectId: string, links: Partial<import("@craft-agent/shared/protocol").ProjectLinks>): Promise<import("@craft-agent/shared/protocol").ProjectDocument | null>
   onProjectsChanged(callback: (workspaceId: string, data: { projectId: string; changeType: "created" | "updated" | "deleted"; timestamp: number }) => void): () => void
 
+  // WorkItems (workspace-scoped)
+  listWorkItems(workspaceId: string): Promise<import("@craft-agent/shared/protocol").WorkItemIndexEntry[]>
+  getWorkItem(workspaceId: string, workItemId: string): Promise<import("@craft-agent/shared/protocol").WorkItemDocument | null>
+  createWorkItem(workspaceId: string, input: import("@craft-agent/shared/protocol").CreateWorkItemInput): Promise<import("@craft-agent/shared/protocol").WorkItemDocument | null>
+  updateWorkItem(workspaceId: string, workItemId: string, updates: import("@craft-agent/shared/protocol").UpdateWorkItemInput): Promise<import("@craft-agent/shared/protocol").WorkItemDocument | null>
+  deleteWorkItem(workspaceId: string, workItemId: string): Promise<void>
+  onWorkItemsChanged(callback: (workspaceId: string, data: { workItemId: string; changeType: "created" | "updated" | "deleted"; timestamp: number }) => void): () => void
+
   listViews(workspaceId: string): Promise<import('@craft-agent/shared/views').ViewConfig[]>
   saveViews(workspaceId: string, views: import('@craft-agent/shared/views').ViewConfig[]): Promise<void>
 

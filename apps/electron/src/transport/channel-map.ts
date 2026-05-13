@@ -271,6 +271,14 @@ export const CHANNEL_MAP = {
   unlinkProjectObjects: invoke(RPC_CHANNELS.projects.UNLINK_OBJECTS),
   onProjectsChanged: listener(RPC_CHANNELS.projects.CHANGED),
 
+  // WorkItems
+  listWorkItems: invoke(RPC_CHANNELS.workItems.LIST),
+  getWorkItem: invoke(RPC_CHANNELS.workItems.GET),
+  createWorkItem: invoke(RPC_CHANNELS.workItems.CREATE),
+  updateWorkItem: invoke(RPC_CHANNELS.workItems.UPDATE),
+  deleteWorkItem: invoke(RPC_CHANNELS.workItems.DELETE),
+  onWorkItemsChanged: listener(RPC_CHANNELS.workItems.CHANGED),
+
   // LLM connections change listener
   onLlmConnectionsChanged: listener(RPC_CHANNELS.llmConnections.CHANGED),
 

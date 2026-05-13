@@ -1,13 +1,40 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
-import { Archive, Flag, Inbox } from 'lucide-react'
+import { Archive, Flag, Inbox, Loader2, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
 import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { buildSessionStatusCounts, buildWorkQueueSummary } from '@/lib/session-meta-selectors'
+import {
+  buildWorkItemStatusCounts,
+  filterWorkItemsByStatus,
+  getWorkItemLinkSummary,
+  WORK_ITEM_STATUS_LABELS,
+  WORK_ITEM_STATUS_ORDER,
+  type WorkItemFilter,
+} from '@/lib/workitem-meta'
 import { navigate, routes } from '@/lib/navigate'
+import {
+  useCreateWorkItem,
+  useDeleteWorkItem,
+  useUpdateWorkItem,
+  useWorkItemList,
+} from '@/hooks/useWorkItems'
+import type {
+  CreateWorkItemInput,
+  WorkItemIndexEntry,
+  WorkItemPriority,
+  WorkItemStatus,
+  WorkItemType,
+} from '../../shared/types'
 
 interface WorkQueuePageProps {
   workspaceId: string
@@ -42,6 +69,130 @@ function QueueRow({ icon, title, description, count, onClick }: QueueRowProps) {
   )
 }
 
+function formatUpdatedTime(timestamp: number, now: number): string {
+  const diffMs = timestamp - now
+  const absMs = Math.abs(diffMs)
+  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+
+  if (absMs < 60_000) return 'just now'
+  if (absMs < 3_600_000) return rtf.format(Math.round(diffMs / 60_000), 'minute')
+  if (absMs < 86_400_000) return rtf.format(Math.round(diffMs / 3_600_000), 'hour')
+  if (absMs < 604_800_000) return rtf.format(Math.round(diffMs / 86_400_000), 'day')
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: new Date(timestamp).getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+  }).format(timestamp)
+}
+
+function getWorkItemTypeLabel(type: WorkItemType | undefined): string {
+  if (!type) return 'Task'
+  return type.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+}
+
+function StatusFilterButton({
+  active,
+  label,
+  count,
+  onClick,
+}: {
+  active: boolean
+  label: string
+  count: number
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'inline-flex h-8 items-center gap-2 rounded-[7px] border px-2.5 text-xs font-medium transition-colors',
+        active
+          ? 'border-foreground/15 bg-foreground text-background'
+          : 'border-border/55 bg-background text-muted-foreground hover:border-border hover:text-foreground',
+      ].join(' ')}
+    >
+      <span>{label}</span>
+      <span className={active ? 'text-background/75' : 'text-muted-foreground'}>{count}</span>
+    </button>
+  )
+}
+
+function WorkItemCard({
+  workItem,
+  now,
+  isUpdating,
+  isDeleting,
+  onStatusChange,
+  onDelete,
+}: {
+  workItem: WorkItemIndexEntry
+  now: number
+  isUpdating: boolean
+  isDeleting: boolean
+  onStatusChange: (status: WorkItemStatus) => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h2 className="truncate text-sm font-medium text-foreground">{workItem.title}</h2>
+          <span className="rounded-[4px] bg-foreground/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {WORK_ITEM_STATUS_LABELS[workItem.status]}
+          </span>
+          {workItem.priority && (
+            <span className="rounded-[4px] border border-border/55 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {workItem.priority}
+            </span>
+          )}
+          <span className="rounded-[4px] border border-border/55 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {getWorkItemTypeLabel(workItem.type)}
+          </span>
+          {workItem.area && (
+            <span className="rounded-[4px] border border-border/55 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {workItem.area}
+            </span>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>Updated {formatUpdatedTime(workItem.updatedAt, now)}</span>
+        </div>
+        {workItem.description && (
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{workItem.description}</p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Select value={workItem.status} onValueChange={(value) => onStatusChange(value as WorkItemStatus)} disabled={isUpdating || isDeleting}>
+          <SelectTrigger className="h-8 w-[148px] bg-background text-xs">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {WORK_ITEM_STATUS_ORDER.map((status) => (
+              <SelectItem key={status} value={status}>
+                {WORK_ITEM_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          aria-label={`Delete ${workItem.title}`}
+          disabled={isUpdating || isDeleting}
+          onClick={onDelete}
+        >
+          {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
   const { t } = useTranslation()
   const { leadingAction, rightSidebarButton, sessionStatuses } = useAppShellContext()
@@ -49,6 +200,23 @@ export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
   const effectiveSessionStatuses = sessionStatuses ?? []
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const remoteWorkspaceId = activeWorkspace?.remoteServer?.remoteWorkspaceId
+  const { workItems, isLoading, refresh } = useWorkItemList(workspaceId)
+  const createWorkItem = useCreateWorkItem(workspaceId)
+  const updateWorkItem = useUpdateWorkItem(workspaceId)
+  const deleteWorkItem = useDeleteWorkItem(workspaceId)
+  const [filter, setFilter] = React.useState<WorkItemFilter>('all')
+  const [isComposerOpen, setIsComposerOpen] = React.useState(false)
+  const [isCreating, setIsCreating] = React.useState(false)
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+  const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const [draft, setDraft] = React.useState<CreateWorkItemInput>({
+    title: '',
+    description: '',
+    status: 'backlog',
+    priority: 'P2',
+    type: 'task',
+    area: '',
+  })
 
   const { activeSessionMetas, flaggedCount, archivedCount } = React.useMemo(
     () => buildWorkQueueSummary(sessionMetaMap.values(), workspaceId, remoteWorkspaceId),
@@ -62,11 +230,103 @@ export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
     )
   }, [activeSessionMetas, effectiveSessionStatuses])
 
+  const workItemCounts = React.useMemo(() => buildWorkItemStatusCounts(workItems), [workItems])
+  const filteredWorkItems = React.useMemo(() => filterWorkItemsByStatus(workItems, filter), [workItems, filter])
+  const now = Date.now()
+
+  const handleDraftChange = React.useCallback((patch: Partial<CreateWorkItemInput>) => {
+    setDraft((current) => ({ ...current, ...patch }))
+  }, [])
+
+  const resetDraft = React.useCallback(() => {
+    setDraft({
+      title: '',
+      description: '',
+      status: 'backlog',
+      priority: 'P2',
+      type: 'task',
+      area: '',
+    })
+  }, [])
+
+  const handleCreate = React.useCallback(async () => {
+    const title = draft.title?.trim()
+    if (!workspaceId || !title) return
+
+    setIsCreating(true)
+    try {
+      const created = await createWorkItem({
+        title,
+        description: draft.description?.trim() || undefined,
+        status: draft.status,
+        priority: draft.priority,
+        type: draft.type,
+        area: draft.area?.trim() || undefined,
+      })
+
+      if (created) {
+        toast.success('Work item created')
+        resetDraft()
+        setIsComposerOpen(false)
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create work item')
+    } finally {
+      setIsCreating(false)
+    }
+  }, [createWorkItem, draft, resetDraft, workspaceId])
+
+  const handleStatusChange = React.useCallback(async (workItemId: string, status: WorkItemStatus) => {
+    setUpdatingId(workItemId)
+    try {
+      await updateWorkItem(workItemId, { status })
+      toast.success(`Moved to ${WORK_ITEM_STATUS_LABELS[status]}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update work item')
+    } finally {
+      setUpdatingId(null)
+    }
+  }, [updateWorkItem])
+
+  const handleDelete = React.useCallback(async (workItem: WorkItemIndexEntry) => {
+    const confirmed = window.confirm(`Delete "${workItem.title}"?`)
+    if (!confirmed) return
+
+    setDeletingId(workItem.id)
+    try {
+      await deleteWorkItem(workItem.id)
+      toast.success('Work item deleted')
+      await refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete work item')
+    } finally {
+      setDeletingId(null)
+    }
+  }, [deleteWorkItem, refresh])
+
+  const actions = (
+    <Button
+      type="button"
+      size="sm"
+      onClick={() => setIsComposerOpen((current) => !current)}
+      disabled={!workspaceId}
+    >
+      <Plus className="h-4 w-4" />
+      New Work Item
+    </Button>
+  )
+
   return (
     <div className="flex h-full flex-col bg-background">
       <PanelHeader
         title="Work Queue"
+        badge={(
+          <span className="ml-1 rounded-[4px] bg-foreground/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {workItems.length}
+          </span>
+        )}
         leadingAction={leadingAction}
+        actions={actions}
         rightSidebarButton={rightSidebarButton}
       />
 
@@ -75,43 +335,202 @@ export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
           <section className="mb-5">
             <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Work Queue</h1>
             <p className="mt-2 max-w-[640px] text-sm leading-6 text-muted-foreground">
-              Actionable work and transitional session-status views are grouped here while WorkItem-backed queues mature.
+              Work items are durable tasks independent of chat sessions. Legacy session-status views remain below during the transition.
             </p>
           </section>
 
-          <section aria-label="Work queue sections" className="flex flex-col gap-2">
-            <QueueRow
-              icon={<Inbox className="h-4 w-4" />}
-              title="All Sessions"
-              description="Compatibility view for all active chat sessions."
-              count={activeSessionMetas.length}
-              onClick={() => navigate(routes.view.allSessions())}
-            />
-            {effectiveSessionStatuses.map(status => (
-              <QueueRow
-                key={status.id}
-                icon={status.icon}
-                title={t(`status.${status.id}`, status.label)}
-                description="Legacy session-status filter."
-                count={statusCounts[status.id] || 0}
-                onClick={() => navigate(routes.view.state(status.id))}
-              />
-            ))}
-            <QueueRow
-              icon={<Flag className="h-4 w-4" />}
-              title="Flagged"
-              description="Sessions marked for follow-up."
-              count={flaggedCount}
-              onClick={() => navigate(routes.view.flagged())}
-            />
-            <QueueRow
-              icon={<Archive className="h-4 w-4" />}
-              title="Archived"
-              description="Hidden sessions kept for compatibility and recovery."
-              count={archivedCount}
-              onClick={() => navigate(routes.view.archived())}
-            />
-          </section>
+          {!workspaceId ? (
+            <section className="flex min-h-[280px] items-center justify-center text-center">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">No active workspace</h2>
+                <p className="mt-2 max-w-[420px] text-sm leading-6 text-muted-foreground">
+                  Select a workspace before creating or reviewing work items.
+                </p>
+              </div>
+            </section>
+          ) : (
+            <>
+              <section className="mb-6 flex flex-col gap-3 rounded-[8px] border border-border/55 bg-background p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusFilterButton
+                    active={filter === 'all'}
+                    label="All"
+                    count={workItems.length}
+                    onClick={() => setFilter('all')}
+                  />
+                  {WORK_ITEM_STATUS_ORDER.map((status) => (
+                    <StatusFilterButton
+                      key={status}
+                      active={filter === status}
+                      label={WORK_ITEM_STATUS_LABELS[status]}
+                      count={workItemCounts[status]}
+                      onClick={() => setFilter(status)}
+                    />
+                  ))}
+                </div>
+
+                {(isComposerOpen || workItems.length === 0) && (
+                  <div className="grid gap-3 rounded-[8px] border border-dashed border-border/70 bg-foreground/[0.02] p-4 lg:grid-cols-[minmax(0,1fr)_180px_140px]">
+                    <div className="lg:col-span-3">
+                      <Input
+                        value={draft.title || ''}
+                        placeholder="Work item title"
+                        onChange={(event) => handleDraftChange({ title: event.target.value })}
+                      />
+                    </div>
+                    <div className="lg:col-span-3">
+                      <Textarea
+                        value={draft.description || ''}
+                        placeholder="Description or acceptance notes"
+                        onChange={(event) => handleDraftChange({ description: event.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3 lg:col-span-3">
+                      <Select value={draft.status || 'backlog'} onValueChange={(value) => handleDraftChange({ status: value as WorkItemStatus })}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {WORK_ITEM_STATUS_ORDER.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {WORK_ITEM_STATUS_LABELS[status]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={draft.priority || 'none'} onValueChange={(value) => handleDraftChange({ priority: value === 'none' ? undefined : value as WorkItemPriority })}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No priority</SelectItem>
+                          <SelectItem value="P0">P0</SelectItem>
+                          <SelectItem value="P1">P1</SelectItem>
+                          <SelectItem value="P2">P2</SelectItem>
+                          <SelectItem value="P3">P3</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={draft.type || 'task'} onValueChange={(value) => handleDraftChange({ type: value as WorkItemType })}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="task">Task</SelectItem>
+                          <SelectItem value="bug">Bug</SelectItem>
+                          <SelectItem value="tech_debt">Tech Debt</SelectItem>
+                          <SelectItem value="spike">Spike</SelectItem>
+                          <SelectItem value="story">Story</SelectItem>
+                          <SelectItem value="epic">Epic</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="lg:col-span-2">
+                      <Input
+                        value={draft.area || ''}
+                        placeholder="Area or ownership"
+                        onChange={(event) => handleDraftChange({ area: event.target.value })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          resetDraft()
+                          setIsComposerOpen(false)
+                        }}
+                        disabled={isCreating}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="button" onClick={() => { void handleCreate() }} disabled={isCreating || !draft.title?.trim()}>
+                        {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                        Create
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <section aria-label="Work items" className="flex flex-col gap-2">
+                {isLoading && workItems.length === 0 ? (
+                  <div className="flex min-h-[180px] items-center justify-center text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                ) : filteredWorkItems.length === 0 ? (
+                  <div className="rounded-[8px] border border-border/55 bg-background px-4 py-8 text-center">
+                    <h2 className="text-sm font-medium text-foreground">No work items in this view</h2>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {filter === 'all'
+                        ? 'Create a work item to start tracking durable work outside chat sessions.'
+                        : `Move an item into ${WORK_ITEM_STATUS_LABELS[filter]} or switch filters.`}
+                    </p>
+                  </div>
+                ) : (
+                  filteredWorkItems.map((workItem) => (
+                    <div key={workItem.id} className="rounded-[8px] border border-border/55 bg-background px-4 py-3">
+                      <WorkItemCard
+                        workItem={workItem}
+                        now={now}
+                        isUpdating={updatingId === workItem.id}
+                        isDeleting={deletingId === workItem.id}
+                        onStatusChange={(status) => { void handleStatusChange(workItem.id, status) }}
+                        onDelete={() => { void handleDelete(workItem) }}
+                      />
+                      <div className="mt-3 text-xs text-muted-foreground">
+                        {getWorkItemLinkSummary(workItem)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </section>
+
+              <Separator className="my-6" />
+
+              <section className="mb-3">
+                <h2 className="text-sm font-medium text-foreground">Legacy session views</h2>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Session-status filters stay available while WorkItems replace status-as-task usage.
+                </p>
+              </section>
+
+              <section aria-label="Legacy session views" className="flex flex-col gap-2">
+                <QueueRow
+                  icon={<Inbox className="h-4 w-4" />}
+                  title="All Sessions"
+                  description="Compatibility view for all active chat sessions."
+                  count={activeSessionMetas.length}
+                  onClick={() => navigate(routes.view.allSessions())}
+                />
+                {effectiveSessionStatuses.map(status => (
+                  <QueueRow
+                    key={status.id}
+                    icon={status.icon}
+                    title={t(`status.${status.id}`, status.label)}
+                    description="Legacy session-status filter."
+                    count={statusCounts[status.id] || 0}
+                    onClick={() => navigate(routes.view.state(status.id))}
+                  />
+                ))}
+                <QueueRow
+                  icon={<Flag className="h-4 w-4" />}
+                  title="Flagged"
+                  description="Sessions marked for follow-up."
+                  count={flaggedCount}
+                  onClick={() => navigate(routes.view.flagged())}
+                />
+                <QueueRow
+                  icon={<Archive className="h-4 w-4" />}
+                  title="Archived"
+                  description="Archived sessions preserved during the migration."
+                  count={archivedCount}
+                  onClick={() => navigate(routes.view.archived())}
+                />
+              </section>
+            </>
+          )}
         </main>
       </ScrollArea>
     </div>

@@ -384,6 +384,15 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.pages.DELETE,
   RPC_CHANNELS.pages.CHANGED,
 
+  // outputs — workspace output storage
+  RPC_CHANNELS.outputs.LIST,
+  RPC_CHANNELS.outputs.GET,
+  RPC_CHANNELS.outputs.CREATE,
+  RPC_CHANNELS.outputs.UPDATE,
+  RPC_CHANNELS.outputs.DELETE,
+  RPC_CHANNELS.outputs.PROMOTE_TO_DOC,
+  RPC_CHANNELS.outputs.CHANGED,
+
   // projects — workspace project storage
   RPC_CHANNELS.projects.LIST,
   RPC_CHANNELS.projects.GET,
@@ -393,6 +402,14 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.projects.LINK_OBJECTS,
   RPC_CHANNELS.projects.UNLINK_OBJECTS,
   RPC_CHANNELS.projects.CHANGED,
+
+  // workItems - workspace durable task storage
+  RPC_CHANNELS.workItems.LIST,
+  RPC_CHANNELS.workItems.GET,
+  RPC_CHANNELS.workItems.CREATE,
+  RPC_CHANNELS.workItems.UPDATE,
+  RPC_CHANNELS.workItems.DELETE,
+  RPC_CHANNELS.workItems.CHANGED,
 
   // views — workspace UI views
   RPC_CHANNELS.views.LIST,

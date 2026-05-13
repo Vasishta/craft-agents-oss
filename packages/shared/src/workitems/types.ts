@@ -23,6 +23,12 @@ export type WorkItemType =
   | 'story'
   | 'epic';
 
+export interface WorkItemLinkCounts {
+  sessionCount: number;
+  docCount: number;
+  outputCount: number;
+}
+
 /**
  * Full WorkItem document stored on disk.
  */
@@ -54,12 +60,14 @@ export interface WorkItemIndexEntry {
   id: string;
   workspaceId: string;
   title: string;
+  description?: string;
   status: WorkItemStatus;
   priority?: WorkItemPriority;
   type?: WorkItemType;
   area?: string;
   createdAt: number;
   updatedAt: number;
+  linkCounts: WorkItemLinkCounts;
 }
 
 /**

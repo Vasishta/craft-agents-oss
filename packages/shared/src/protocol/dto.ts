@@ -632,3 +632,13 @@ export type {
   NotebookStatus,
   UpdateNotebookInput,
 } from '../notebooks/types'
+export type {
+  CreateWorkItemInput,
+  UpdateWorkItemInput,
+  WorkItemDocument,
+  WorkItemIndexEntry,
+  WorkItemLinkCounts,
+  WorkItemPriority,
+  WorkItemStatus,
+  WorkItemType,
+} from '../workitems/types'

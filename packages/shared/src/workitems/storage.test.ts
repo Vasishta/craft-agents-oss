@@ -36,6 +36,8 @@ describe('WorkItem Storage', () => {
       description: 'A test description',
       status: 'ready',
       priority: 'P1',
+      linkedSessionIds: ['session-a'],
+      linkedDocIds: ['doc-a'],
     })
 
     expect(result.success).toBe(true)
@@ -46,6 +48,7 @@ describe('WorkItem Storage', () => {
     const read = readWorkItemDocument(workspaceRootPath, workItemId)
     expect(read).not.toBeNull()
     expect(read!.title).toBe('Test Task')
+    expect(read!.description).toBe('A test description')
     expect(read!.status).toBe('ready')
     expect(read!.priority).toBe('P1')
     expect(read!.workspaceId).toBe(workspaceId)
@@ -96,8 +99,26 @@ describe('WorkItem Storage', () => {
 
     const entries = listWorkItemEntries(workspaceRootPath)
     expect(entries).toHaveLength(2)
-    expect(entries[0].title).toBe('Newest')
-    expect(entries[1].title).toBe('Oldest')
+    expect(entries[0]!.title).toBe('Newest')
+    expect(entries[1]!.title).toBe('Oldest')
+  })
+
+  it('should include description and link counts in index entries', () => {
+    createWorkItemDocument(workspaceRootPath, workspaceId, {
+      title: 'Linked Task',
+      description: 'Index metadata should stay useful',
+      linkedSessionIds: ['session-a', 'session-b'],
+      linkedDocIds: ['doc-a'],
+      linkedOutputIds: ['output-a'],
+    })
+
+    const [entry] = listWorkItemEntries(workspaceRootPath)
+    expect(entry!.description).toBe('Index metadata should stay useful')
+    expect(entry!.linkCounts).toEqual({
+      sessionCount: 2,
+      docCount: 1,
+      outputCount: 1,
+    })
   })
 
   it('should rebuild the index from files if missing', () => {
@@ -126,7 +147,7 @@ describe('WorkItem Storage', () => {
     // loadWorkItemIndex should trigger a rebuild
     const index = loadWorkItemIndex(workspaceRootPath)
     expect(index.workItems).toHaveLength(1)
-    expect(index.workItems[0].title).toBe('Safe Task')
+    expect(index.workItems[0]!.title).toBe('Safe Task')
   })
 
   it('should enforce workspace isolation for mutations', () => {

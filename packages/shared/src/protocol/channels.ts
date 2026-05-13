@@ -303,6 +303,14 @@ export const RPC_CHANNELS = {
     UNLINK_OBJECTS: 'projects:unlinkObjects',
     CHANGED: 'projects:changed',
   },
+  workItems: {
+    LIST: 'workItems:list',
+    GET: 'workItems:get',
+    CREATE: 'workItems:create',
+    UPDATE: 'workItems:update',
+    DELETE: 'workItems:delete',
+    CHANGED: 'workItems:changed',
+  },
   views: {
     LIST: 'views:list',
     SAVE: 'views:save',
