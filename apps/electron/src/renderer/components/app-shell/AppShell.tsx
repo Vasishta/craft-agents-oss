@@ -111,7 +111,8 @@ import { resolveEntityColor } from "@craft-agent/shared/colors"
 import * as storage from "@/lib/local-storage"
 import { toast } from "sonner"
 import { navigate, routes } from "@/lib/navigate"
-import { buildSidebarFocusItemIds } from "./sidebar-focus-order"
+import { buildAppSidebarLinks } from "./sidebar-links"
+import { flattenVisibleSidebarFocusableItems } from "./sidebar-focus-order"
 import { buildSessionStatusCounts, getActiveWorkspaceSessionMetas, getWorkspaceSessionMetas } from "@/lib/session-meta-selectors"
 import {
   useNavigation,
@@ -1959,67 +1960,92 @@ function AppShellContent({
     handleNewChat()
   }, [menuNewChatTrigger, handleNewChat])
 
-  // Unified sidebar items: nav buttons only (agents system removed)
-  type SidebarItem = {
-    id: string
-    type: 'nav'
-    action?: () => void
-  }
-
-  const unifiedSidebarItems = React.useMemo((): SidebarItem[] => {
-    const actions = new Map<string, () => void>([
-      ['nav:home', handleHomeClick],
-      ['nav:search', handleSearchClick],
-      ['nav:projects', handleProjectsClick],
-      ['nav:library', handleLibraryClick],
-      ['nav:pages', handlePagesClick],
-      ['nav:outputs', handleOutputsClick],
-      ['nav:workQueue', handleWorkQueueClick],
-      ['nav:allSessions', handleAllSessionsClick],
-      ['nav:flagged', handleFlaggedClick],
-      ['nav:archived', handleArchivedClick],
-      ['nav:labels', () => handleLabelClick('__all__')],
-      ['nav:sources', handleSourcesClick],
-      ['nav:automations', handleAutomationsClick],
-      ['nav:skills', handleSkillsClick],
-      ['nav:settings', () => handleSettingsClick('app')],
-      ['nav:whats-new', handleWhatsNewClick],
-    ])
-
-    for (const project of projects.slice(0, 10)) {
-      actions.set(`nav:project:${project.id}`, () => navigate(routes.view.project(project.id)))
-    }
-    for (const page of pages.slice(0, 10)) {
-      actions.set(`nav:page:${page.id}`, () => navigate(routes.view.savedPage(page.id)))
-    }
-    for (const output of outputs.slice(0, 10)) {
-      actions.set(`nav:output:${output.id}`, () => navigate(routes.view.savedOutput(output.id)))
-    }
-    for (const state of effectiveSessionStatuses) {
-      actions.set(`nav:state:${state.id}`, () => handleSessionStatusClick(state.id))
-    }
-
-    const setLabelActions = (nodes: LabelTreeNode[]) => {
-      for (const node of nodes) {
-        if (node.label) {
-          actions.set(`nav:label:${node.fullId}`, () => handleLabelClick(node.fullId))
-        }
-        if (node.children.length > 0) {
-          setLabelActions(node.children)
+  const handleMarkAllWorkQueueRead = useCallback(() => {
+    if (!activeWorkspaceId) return
+    setSessionMetaMap(prev => {
+      const next = new Map(prev)
+      for (const [id, meta] of next) {
+        if (meta.workspaceId === activeWorkspaceId && meta.hasUnread) {
+          next.set(id, { ...meta, hasUnread: false })
         }
       }
-    }
-    setLabelActions(labelTree)
+      return next
+    })
+    window.electronAPI.markAllSessionsRead(activeWorkspaceId)
+  }, [activeWorkspaceId, setSessionMetaMap])
 
-    return buildSidebarFocusItemIds({
-      projectIds: projects.map((project) => project.id),
-      pageIds: pages.map((page) => page.id),
-      outputIds: outputs.map((output) => output.id),
-      statusIds: effectiveSessionStatuses.map((state) => state.id),
-      labelTree,
-      isExpanded,
-    }).map((id) => ({ id, type: 'nav', action: actions.get(id)! }))
-  }, [handleHomeClick, handleSearchClick, handleProjectsClick, projects, isExpanded, handleLibraryClick, handlePagesClick, pages, handleOutputsClick, outputs, handleWorkQueueClick, handleAllSessionsClick, effectiveSessionStatuses, handleFlaggedClick, handleArchivedClick, handleLabelClick, labelTree, handleSessionStatusClick, handleSourcesClick, handleAutomationsClick, handleSkillsClick, handleSettingsClick, handleWhatsNewClick, navigate])
+  const sidebarLinks = React.useMemo(() => buildAppSidebarLinks({
+    t,
+    navState,
+    sessionFilter: sessionFilter ?? null,
+    sourceFilter: sourceFilter ?? undefined,
+    automationFilter: automationFilter ?? undefined,
+    projects,
+    pages,
+    outputs,
+    workspaceSessionCount: workspaceSessionMetas.length,
+    effectiveSessionStatuses,
+    sessionStatusCounts,
+    flaggedCount,
+    archivedCount,
+    labelTree,
+    labelCounts,
+    sourcesCount: sources.length,
+    sourceTypeCounts,
+    automationsCount: automations.length,
+    automationTypeCounts,
+    skillsCount: skills.length,
+    hasUnseenReleaseNotes,
+    activeWorkspaceHasId: !!activeWorkspace?.id,
+    renderLabelIcon: (label, hasChildren) => (
+      <LabelIcon label={label} size="sm" hasChildren={hasChildren} />
+    ),
+    renderLabelValueTypeBadge: (valueType) => (
+      <LabelValueTypeIcon valueType={valueType} size={10} />
+    ),
+    isExpanded,
+    toggleExpanded,
+    onHomeClick: handleHomeClick,
+    onSearchClick: handleSearchClick,
+    onProjectsClick: handleProjectsClick,
+    onProjectClick: (id) => navigate(routes.view.project(id)),
+    onLibraryClick: handleLibraryClick,
+    onPagesClick: handlePagesClick,
+    onSavedPageClick: (id) => navigate(routes.view.savedPage(id)),
+    onOutputsClick: handleOutputsClick,
+    onSavedOutputClick: (id) => navigate(routes.view.savedOutput(id)),
+    onWorkQueueClick: handleWorkQueueClick,
+    onMarkAllSessionsRead: handleMarkAllWorkQueueRead,
+    onConfigureStatuses: openConfigureStatuses,
+    onAllSessionsClick: handleAllSessionsClick,
+    onSessionStatusClick: handleSessionStatusClick,
+    onFlaggedClick: handleFlaggedClick,
+    onArchivedClick: handleArchivedClick,
+    onLabelsRootClick: () => handleLabelClick('__all__'),
+    onLabelClick: handleLabelClick,
+    onConfigureLabels: openConfigureLabels,
+    onAddLabel: handleAddLabel,
+    onDeleteLabel: handleDeleteLabel,
+    onStatusReorder: handleStatusReorder,
+    onSourcesClick: handleSourcesClick,
+    onSourcesApiClick: handleSourcesApiClick,
+    onSourcesMcpClick: handleSourcesMcpClick,
+    onSourcesLocalClick: handleSourcesLocalClick,
+    onAddSource: openAddSource,
+    onAutomationsClick: handleAutomationsClick,
+    onAutomationsScheduledClick: handleAutomationsScheduledClick,
+    onAutomationsEventClick: handleAutomationsEventClick,
+    onAutomationsAgenticClick: handleAutomationsAgenticClick,
+    onAddAutomation: openAddAutomation,
+    onSkillsClick: handleSkillsClick,
+    onAddSkill: openAddSkill,
+    onSettingsClick: () => handleSettingsClick('app'),
+    onWhatsNewClick: handleWhatsNewClick,
+  }), [t, navState, sessionFilter, sourceFilter, automationFilter, projects, pages, outputs, workspaceSessionMetas.length, effectiveSessionStatuses, sessionStatusCounts, flaggedCount, archivedCount, labelTree, labelCounts, sources.length, sourceTypeCounts, automations.length, automationTypeCounts, skills.length, hasUnseenReleaseNotes, activeWorkspace?.id, isExpanded, toggleExpanded, handleHomeClick, handleSearchClick, handleProjectsClick, navigate, handleLibraryClick, handlePagesClick, handleOutputsClick, handleWorkQueueClick, handleMarkAllWorkQueueRead, openConfigureStatuses, handleAllSessionsClick, handleSessionStatusClick, handleFlaggedClick, handleArchivedClick, handleLabelClick, openConfigureLabels, handleAddLabel, handleDeleteLabel, handleStatusReorder, handleSourcesClick, handleSourcesApiClick, handleSourcesMcpClick, handleSourcesLocalClick, openAddSource, handleAutomationsClick, handleAutomationsScheduledClick, handleAutomationsEventClick, handleAutomationsAgenticClick, openAddAutomation, handleSkillsClick, openAddSkill, handleSettingsClick, handleWhatsNewClick])
+
+  const unifiedSidebarItems = React.useMemo(() => {
+    return flattenVisibleSidebarFocusableItems(sidebarLinks)
+  }, [sidebarLinks])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2085,7 +2111,7 @@ function AppShellContent({
       case 'Enter':
       case ' ': {
         e.preventDefault()
-        if (currentItem?.type === 'nav' && currentItem.action) {
+        if (currentItem?.action) {
           currentItem.action()
         }
         break
@@ -2196,63 +2222,6 @@ function AppShellContent({
     return undefined
   }, [navState, t])
 
-
-  // Build recursive sidebar items from the shared display-sorted label tree.
-  // Each node renders with condensed height (compact: true) since many labels expected.
-  // Clicking any label navigates to its filter view; the chevron toggles expand/collapse.
-  const buildLabelSidebarItems = useCallback((nodes: LabelTreeNode[]): any[] => {
-    return nodes.map(node => {
-      const hasChildren = node.children.length > 0
-      const isActive = sessionFilter?.kind === 'label' && sessionFilter.labelId === node.fullId
-      const count = labelCounts[node.fullId] || 0
-
-      const item: any = {
-        id: `nav:label:${node.fullId}`,
-        title: node.label?.name || node.segment.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-        label: count > 0 ? String(count) : undefined,
-        // Show label type icon (Hash/Calendar/Type) right-aligned before count, with tooltip explaining the type
-        afterTitle: node.label?.valueType ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="flex items-center"><LabelValueTypeIcon valueType={node.label.valueType} size={10} /></span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              {t("sidebar.labelValueTypeTooltip", { valueType: t(`sidebar.labelValueType.${node.label.valueType}`) })}
-            </TooltipContent>
-          </Tooltip>
-        ) : undefined,
-        icon: node.label && activeWorkspace?.id ? (
-          <LabelIcon
-            label={node.label}
-            size="sm"
-            hasChildren={hasChildren}
-          />
-        ) : <Tag className="h-3.5 w-3.5" />,
-        variant: isActive ? "default" : "ghost",
-        compact: true, // Reduced height for label items (many labels expected)
-        // All labels navigate on click — parent and leaf alike
-        onClick: () => handleLabelClick(node.fullId),
-        contextMenu: {
-          type: 'labels' as const,
-          labelId: node.fullId,
-          onConfigureLabels: openConfigureLabels,
-          onAddLabel: handleAddLabel,
-          onDeleteLabel: handleDeleteLabel,
-        },
-      }
-
-      if (hasChildren) {
-        item.expandable = true
-        item.expanded = isExpanded(`nav:label:${node.fullId}`)
-        // Chevron toggles expand/collapse independently of navigation
-        item.onToggle = () => toggleExpanded(`nav:label:${node.fullId}`)
-        item.items = buildLabelSidebarItems(node.children)
-      }
-
-      return item
-    })
-  }, [sessionFilter, labelCounts, activeWorkspace?.id, handleLabelClick, isExpanded, toggleExpanded, openConfigureLabels, handleAddLabel, handleDeleteLabel])
-
   return (
     <AppShellProvider value={appShellContextValue}>
         {/* === TOP BAR === */}
@@ -2335,324 +2304,7 @@ function AppShellContent({
                   isCollapsed={false}
                   getItemProps={getSidebarItemProps}
                   focusedItemId={focusedSidebarItemId}
-                  links={[
-                    // --- Sessions Section ---
-                    {
-                      id: "nav:home",
-                      title: t("sidebar.home"),
-                      icon: House,
-                      variant: isHomeNavigation(navState) ? "default" : "ghost",
-                      onClick: handleHomeClick,
-                    },
-                    {
-                      id: "nav:search",
-                      title: t("sidebar.search"),
-                      icon: Search,
-                      variant: isSearchNavigation(navState) ? "default" : "ghost",
-                      onClick: handleSearchClick,
-                    },
-                    {
-                      id: "nav:projects",
-                      title: t("sidebar.projects", "Projects"),
-                      label: String(projects.length),
-                      icon: BriefcaseBusiness,
-                      variant: isProjectsNavigation(navState) ? "default" : "ghost",
-                      onClick: handleProjectsClick,
-                      expandable: projects.length > 0,
-                      expanded: isExpanded('nav:projects'),
-                      onToggle: () => toggleExpanded('nav:projects'),
-                      items: projects.slice(0, 10).map(project => ({
-                        id: `nav:project:${project.id}`,
-                        title: project.name || 'Untitled Project',
-                        icon: BriefcaseBusiness,
-                        variant: (isProjectsNavigation(navState) && navState.details?.type === 'project' && navState.details.projectId === project.id) ? "default" : "ghost",
-                        onClick: () => navigate(routes.view.project(project.id)),
-                      })),
-                    },
-                    {
-                      id: "nav:library",
-                      title: t("sidebar.library", "Library"),
-                      label: String(pages.length + outputs.length),
-                      icon: BookOpen,
-                      variant: (isLibraryNavigation(navState) || isPageCanvasNavigation(navState) || isOutputsNavigation(navState)) ? "default" : "ghost",
-                      onClick: handleLibraryClick,
-                      expandable: true,
-                      expanded: isExpanded('nav:library'),
-                      onToggle: () => toggleExpanded('nav:library'),
-                      items: [
-                        {
-                          id: "nav:pages",
-                          title: t("sidebar.pages"),
-                          label: String(pages.length),
-                          icon: FileText,
-                          variant: isPageCanvasNavigation(navState) ? "default" : "ghost",
-                          onClick: handlePagesClick,
-                          expandable: pages.length > 0,
-                          expanded: isExpanded('nav:pages'),
-                          onToggle: () => toggleExpanded('nav:pages'),
-                          items: pages.slice(0, 10).map(p => ({
-                            id: `nav:page:${p.id}`,
-                            title: p.title || 'Untitled Doc',
-                            icon: FileText,
-                            variant: (isPageCanvasNavigation(navState) && navState.details?.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
-                            onClick: () => navigate(routes.view.savedPage(p.id)),
-                          })),
-                        },
-                        {
-                          id: "nav:outputs",
-                          title: t("sidebar.outputs"),
-                          label: String(outputs.length),
-                          icon: Box,
-                          variant: isOutputsNavigation(navState) ? "default" : "ghost",
-                          onClick: handleOutputsClick,
-                          expandable: outputs.length > 0,
-                          expanded: isExpanded('nav:outputs'),
-                          onToggle: () => toggleExpanded('nav:outputs'),
-                          items: outputs.slice(0, 10).map(output => ({
-                            id: `nav:output:${output.id}`,
-                            title: output.title || 'Untitled Output',
-                            icon: Box,
-                            variant: (isOutputsNavigation(navState) && navState.details?.type === 'output' && navState.details.outputId === output.id) ? "default" : "ghost",
-                            onClick: () => navigate(routes.view.savedOutput(output.id)),
-                          })),
-                        },
-                      ],
-                    },
-                    // Work Queue: destination IA plus transitional session-status compatibility links
-                    {
-                      id: "nav:workQueue",
-                      title: t("sidebar.workQueue", "Work Queue"),
-                      label: String(workspaceSessionMetas.length),
-                      icon: ListTodo,
-                      variant: (isWorkQueueNavigation(navState) || isSessionsNavigation(navState)) ? "default" : "ghost",
-                      onClick: handleWorkQueueClick,
-                      expandable: true,
-                      expanded: isExpanded('nav:workQueue'),
-                      onToggle: () => toggleExpanded('nav:workQueue'),
-                      contextMenu: {
-                        type: 'allSessions',
-                        onConfigureStatuses: openConfigureStatuses,
-                        onMarkAllRead: () => {
-                          if (!activeWorkspaceId) return
-                          // Optimistic: clear hasUnread on all workspace session metas
-                          setSessionMetaMap(prev => {
-                            const next = new Map(prev)
-                            for (const [id, meta] of next) {
-                              if (meta.workspaceId === activeWorkspaceId && meta.hasUnread) {
-                                next.set(id, { ...meta, hasUnread: false })
-                              }
-                            }
-                            return next
-                          })
-                          window.electronAPI.markAllSessionsRead(activeWorkspaceId)
-                        },
-                      },
-                      // Enable flat DnD reorder for status items
-                      sortable: { onReorder: handleStatusReorder },
-                      items: [
-                        {
-                          id: "nav:allSessions",
-                          title: t("sidebar.allSessions"),
-                          label: String(workspaceSessionMetas.length),
-                          icon: Inbox,
-                          variant: sessionFilter?.kind === 'allSessions' ? "default" : "ghost",
-                          onClick: handleAllSessionsClick,
-                        },
-                        // Status items (sortable via SortableStatusList)
-                        ...effectiveSessionStatuses.map(state => ({
-                          id: `nav:state:${state.id}`,
-                          title: t(`status.${state.id}`, state.label),
-                          label: String(sessionStatusCounts[state.id] || 0),
-                          icon: state.icon,
-                          iconColor: state.resolvedColor,
-                          iconColorable: state.iconColorable,
-                          variant: (sessionFilter?.kind === 'state' && sessionFilter.stateId === state.id ? "default" : "ghost") as "default" | "ghost",
-                          onClick: () => handleSessionStatusClick(state.id),
-                          contextMenu: {
-                            type: 'status' as const,
-                            statusId: state.id,
-                            onConfigureStatuses: openConfigureStatuses,
-                          },
-                        })),
-                        // Separator: SortableStatusList splits here — items after become non-sortable trailingItems
-                        { id: 'separator:states-flagged', type: 'separator' as const },
-                        // Flagged (trailing, non-sortable)
-                        {
-                          id: "nav:flagged",
-                          title: t("sidebar.flagged"),
-                          label: String(flaggedCount),
-                          icon: <Flag className="h-3.5 w-3.5" />,
-                          variant: (sessionFilter?.kind === 'flagged' ? "default" : "ghost") as "default" | "ghost",
-                          onClick: handleFlaggedClick,
-                        },
-                        // Archived (trailing, non-sortable)
-                        {
-                          id: "nav:archived",
-                          title: t("sidebar.archived"),
-                          label: archivedCount > 0 ? String(archivedCount) : undefined,
-                          icon: Archive,
-                          variant: (sessionFilter?.kind === 'archived' ? "default" : "ghost") as "default" | "ghost",
-                          onClick: handleArchivedClick,
-                        },
-                        { id: 'separator:queue-labels', type: 'separator' as const },
-                        {
-                          id: "nav:labels",
-                          title: t("sidebar.labels"),
-                          icon: Tag,
-                          variant: (sessionFilter?.kind === 'label' && sessionFilter.labelId === '__all__') ? "default" as const : "ghost" as const,
-                          onClick: () => handleLabelClick('__all__'),
-                          expandable: true,
-                          expanded: isExpanded('nav:labels'),
-                          onToggle: () => toggleExpanded('nav:labels'),
-                          contextMenu: {
-                            type: 'labels' as const,
-                            onConfigureLabels: openConfigureLabels,
-                            onAddLabel: handleAddLabel,
-                          },
-                          items: buildLabelSidebarItems(labelTree),
-                        },
-                      ],
-                    },
-                    // --- Separator ---
-                    { id: "separator:chats-sources", type: "separator" },
-                    // --- Files, Skills & Automations Section ---
-                    {
-                      id: "nav:sources",
-                      title: t("sidebar.filesAndContext", "Files & Context"),
-                      label: String(sources.length),
-                      icon: DatabaseZap,
-                      variant: (isSourcesNavigation(navState) && !sourceFilter) ? "default" : "ghost",
-                      onClick: handleSourcesClick,
-                      dataTutorial: "sources-nav",
-                      expandable: true,
-                      expanded: isExpanded('nav:sources'),
-                      onToggle: () => toggleExpanded('nav:sources'),
-                      contextMenu: {
-                        type: 'sources',
-                        onAddSource: () => openAddSource(),
-                      },
-                      items: [
-                        {
-                          id: "nav:sources:api",
-                          title: t("sidebar.apis"),
-                          label: String(sourceTypeCounts.api),
-                          icon: Globe,
-                          variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api') ? "default" : "ghost",
-                          onClick: handleSourcesApiClick,
-                          contextMenu: {
-                            type: 'sources' as const,
-                            onAddSource: () => openAddSource('api'),
-                            sourceType: 'api',
-                          },
-                        },
-                        {
-                          id: "nav:sources:mcp",
-                          title: t("sidebar.mcps"),
-                          label: String(sourceTypeCounts.mcp),
-                          icon: <McpIcon className="h-3.5 w-3.5" />,
-                          variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp') ? "default" : "ghost",
-                          onClick: handleSourcesMcpClick,
-                          contextMenu: {
-                            type: 'sources' as const,
-                            onAddSource: () => openAddSource('mcp'),
-                            sourceType: 'mcp',
-                          },
-                        },
-                        {
-                          id: "nav:sources:local",
-                          title: t("sidebar.localFolders"),
-                          label: String(sourceTypeCounts.local),
-                          icon: FolderOpen,
-                          variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local') ? "default" : "ghost",
-                          onClick: handleSourcesLocalClick,
-                          contextMenu: {
-                            type: 'sources' as const,
-                            onAddSource: () => openAddSource('local'),
-                            sourceType: 'local',
-                          },
-                        },
-                      ],
-                    },
-                    {
-                      id: "nav:automations",
-                      title: t("sidebar.automations"),
-                      label: String(automations.length),
-                      icon: ListTodo,
-                      variant: (isAutomationsNavigation(navState) && !automationFilter) ? "default" : "ghost",
-                      onClick: handleAutomationsClick,
-                      expandable: true,
-                      expanded: isExpanded('nav:automations'),
-                      onToggle: () => toggleExpanded('nav:automations'),
-                      contextMenu: {
-                        type: 'automations' as const,
-                        onAddAutomation: openAddAutomation,
-                      },
-                      items: [
-                        {
-                          id: "nav:automations:scheduled",
-                          title: t("sidebar.scheduled"),
-                          label: String(automationTypeCounts.scheduled),
-                          icon: Clock,
-                          variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled') ? "default" : "ghost",
-                          onClick: handleAutomationsScheduledClick,
-                          contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
-                        },
-                        {
-                          id: "nav:automations:event",
-                          title: t("sidebar.eventBased"),
-                          label: String(automationTypeCounts.event),
-                          icon: Radio,
-                          variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'event') ? "default" : "ghost",
-                          onClick: handleAutomationsEventClick,
-                          contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
-                        },
-                        {
-                          id: "nav:automations:agentic",
-                          title: t("sidebar.agentic"),
-                          label: String(automationTypeCounts.agentic),
-                          icon: Bot,
-                          variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'agentic') ? "default" : "ghost",
-                          onClick: handleAutomationsAgenticClick,
-                          contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
-                        },
-                      ],
-                    },
-                    {
-                      id: "nav:skills",
-                      title: t("sidebar.skills"),
-                      label: String(skills.length),
-                      icon: Zap,
-                      variant: isSkillsNavigation(navState) ? "default" : "ghost",
-                      onClick: handleSkillsClick,
-                      contextMenu: {
-                        type: 'skills',
-                        onAddSkill: openAddSkill,
-                      },
-                    },
-                    // --- Separator ---
-                    { id: "separator:skills-settings", type: "separator" },
-                    // --- Settings ---
-                    {
-                      id: "nav:settings",
-                      title: t("sidebar.settings"),
-                      icon: Settings,
-                      variant: isSettingsNavigation(navState) ? "default" : "ghost",
-                      onClick: () => handleSettingsClick('app'),
-                    },
-                    // --- What's New ---
-                    {
-                      id: "nav:whats-new",
-                      title: t("sidebar.whatsNew"),
-                      icon: hasUnseenReleaseNotes ? (
-                        <span className="relative">
-                          <Cake className="h-3.5 w-3.5" />
-                          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-accent" />
-                        </span>
-                      ) : Cake,
-                      variant: "ghost" as const,
-                      onClick: handleWhatsNewClick,
-                    },
-                  ]}
+                  links={sidebarLinks}
                 />
                 {/* Agent Tree: Hierarchical list of agents */}
                 {/* Agents section removed */}
