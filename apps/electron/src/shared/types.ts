@@ -868,6 +868,24 @@ export interface HomeNavigationState {
 }
 
 /**
+ * Durable knowledge library overview.
+ */
+export interface LibraryNavigationState {
+  navigator: 'library'
+  details: null
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
+ * Work Queue overview for actionable work and compatibility session filters.
+ */
+export interface WorkQueueNavigationState {
+  navigator: 'workQueue'
+  details: null
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
  * Unified navigation state
  */
 export type NavigationState =
@@ -881,6 +899,8 @@ export type NavigationState =
   | OutputsNavigationState
   | ProjectsNavigationState
   | HomeNavigationState
+  | LibraryNavigationState
+  | WorkQueueNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -921,6 +941,14 @@ export const isProjectsNavigation = (
 export const isHomeNavigation = (
   state: NavigationState
 ): state is HomeNavigationState => state.navigator === 'home'
+
+export const isLibraryNavigation = (
+  state: NavigationState
+): state is LibraryNavigationState => state.navigator === 'library'
+
+export const isWorkQueueNavigation = (
+  state: NavigationState
+): state is WorkQueueNavigationState => state.navigator === 'workQueue'
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
   navigator: 'home',
@@ -975,6 +1003,12 @@ export const getNavigationStateKey = (state: NavigationState): string => {
   }
   if (state.navigator === 'home') {
     return 'home'
+  }
+  if (state.navigator === 'library') {
+    return 'library'
+  }
+  if (state.navigator === 'workQueue') {
+    return 'workQueue'
   }
   // Chats
   const f = state.filter
@@ -1075,6 +1109,10 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
 
   // Handle home
   if (key === 'home') return { navigator: 'home', details: null }
+
+  // Handle Library and Work Queue overview routes
+  if (key === 'library') return { navigator: 'library', details: null }
+  if (key === 'workQueue') return { navigator: 'workQueue', details: null }
 
   // Handle sessions
   const parseSessionsKey = (filterKey: string, sessionId?: string): NavigationState | null => {

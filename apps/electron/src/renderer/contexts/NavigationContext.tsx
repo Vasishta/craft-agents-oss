@@ -73,6 +73,8 @@ import {
   isOutputsNavigation,
   isProjectsNavigation,
   isHomeNavigation,
+  isLibraryNavigation,
+  isWorkQueueNavigation,
   DEFAULT_NAVIGATION_STATE,
 } from '../../shared/types'
 import { isValidSettingsSubpage, type SettingsSubpage } from '../../shared/settings-registry'
@@ -96,7 +98,7 @@ export type { Route }
 
 // Re-export navigation state types for consumers
 export type { NavigationState, SessionFilter }
-export { isSessionsNavigation, isSourcesNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation, isPageCanvasNavigation, isSearchNavigation, isOutputsNavigation, isProjectsNavigation, isHomeNavigation }
+export { isSessionsNavigation, isSourcesNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation, isPageCanvasNavigation, isSearchNavigation, isOutputsNavigation, isProjectsNavigation, isHomeNavigation, isLibraryNavigation, isWorkQueueNavigation }
 
 // =============================================================================
 // Context

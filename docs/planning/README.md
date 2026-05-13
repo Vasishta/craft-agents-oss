@@ -4,6 +4,8 @@ This folder turns the product direction into executable work without losing the 
 
 Use it when a task is too important to live only in chat, but not yet formal enough to require a full external project-management system.
 
+Current execution state lives in GitHub Issues on `Vasishta/craft-agents-oss`. Keep this folder focused on durable reasoning and handoffs; use `CURRENT-STATE.md` as the bridge when issue status has moved ahead of older markdown plans.
+
 ## Hierarchy
 
 ```text
@@ -123,3 +125,5 @@ git diff --check
 ## Keep docs useful
 
 Prefer short, durable planning documents over long transcripts. If a task becomes too big, split it before implementation rather than after the PR becomes hard to review.
+
+Do not create a repo-local `TASK-*` file for every GitHub issue. Add one only when the next implementation agent needs a durable, detailed handoff that should survive outside GitHub issue comments.

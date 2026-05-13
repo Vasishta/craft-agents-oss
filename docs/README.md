@@ -46,8 +46,11 @@ docs/WIREFRAMES-001-craft-agents-workspace-surfaces.md
 docs/planning/EPIC-001-durable-knowledge-workspace.md
   First major product epic that translates the PRD/ARB into stories and milestone tasks.
 
+docs/planning/CURRENT-STATE.md
+  Short execution snapshot that reconciles durable docs with the live GitHub issue queue.
+
 docs/planning/TASK-008-output-polish-and-provenance-hardening.md
-  Next executable task after Outputs v0.
+  Historical task handoff for Output polish/provenance; GitHub issue #8 is the execution source.
 ```
 
 ## Folder policy
@@ -102,6 +105,8 @@ For implementation tasks, also include:
 
 ## Relationship to GitHub Issues/Projects
 
-These markdown docs are the durable product memory. GitHub Issues/Projects can later track execution state.
+These markdown docs are the durable product memory. GitHub Issues are the live execution tracker for concrete tasks.
 
 Do not duplicate every tiny issue as a markdown file. Write markdown for durable reasoning, epic/story/task definitions, and complex implementation handoffs that need to survive context switches.
+
+When a GitHub issue and a markdown planning document disagree, treat the issue as the fresher execution state and update the markdown docs with a short reconciliation note instead of rewriting the north-star product model.

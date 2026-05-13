@@ -36,12 +36,14 @@ import {
   isOutputsNavigation,
   isProjectsNavigation,
   isHomeNavigation,
+  isLibraryNavigation,
+  isWorkQueueNavigation,
 } from '@/contexts/NavigationContext'
 import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelectionCount } from '@/hooks/useSession'
 import { sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
 import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
-import { SourceInfoPage, ChatPage, DocsHome, OutputDetailPage, OutputsPage, PageCanvas, ProjectDetailPage, ProjectsPage, SearchPage, WorkspaceHome } from '@/pages'
+import { SourceInfoPage, ChatPage, DocsHome, LibraryPage, OutputDetailPage, OutputsPage, PageCanvas, ProjectDetailPage, ProjectsPage, SearchPage, WorkspaceHome, WorkQueuePage } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
@@ -240,6 +242,24 @@ export function MainContentPanel({
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
         <WorkspaceHome workspaceId={activeWorkspaceId || ''} />
+      </Panel>
+    )
+  }
+
+  // Library consolidates durable workspace artifacts while preserving doc/output routes.
+  if (isLibraryNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        <LibraryPage workspaceId={activeWorkspaceId || ''} />
+      </Panel>
+    )
+  }
+
+  // Work Queue consolidates actionable task/review states and legacy session filters.
+  if (isWorkQueueNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        <WorkQueuePage workspaceId={activeWorkspaceId || ''} />
       </Panel>
     )
   }

@@ -212,7 +212,7 @@ TASK-013 Project Home and project-scoped filters
 
 ## 6. Milestone sequence
 
-Completed / in review:
+Completed:
 
 ```text
 1. Rename Pages -> Docs in visible UI
@@ -222,20 +222,35 @@ Completed / in review:
 5. Rename Sources -> Files & Context in visible UI
 6. Add Workspace Home
 7. Add Outputs v0
+8. Output polish and provenance hardening (#8)
+9. Search result model cleanup (#16)
+10. Files & Context clarification (#17)
+11. WorkItem v0 model separate from session status (#18)
+12. Project v0 model with optional links (#19)
+13. Project Home and project filters (#20)
+14. Decision v0 model (#26)
+15. Notebook v0 model (#27)
+16. Serialized local index mutation helper (#28)
 ```
 
-Recommended next:
+In progress:
 
 ```text
-8. Output polish and provenance hardening
-9. Search result model cleanup
-10. Files & Context clarification
-11. WorkItem v0
-12. Project v0
-13. Project Home and project filters
-14. Decisions v0
-15. Notebook v0
+17. Workspace navigation IA consolidation (#35)
 ```
+
+Recommended next after #35:
+
+```text
+18. Decision and Notebook UI surfaces (#29)
+19. Library v0 durable-object surface (#30)
+20. Work Queue v0 backed by WorkItems (#31)
+21. Project linked-object navigation polish (#32)
+22. Cross-object Search expansion (#33)
+23. Explicit cross-object linking actions (#34)
+```
+
+Note: this epic is durable product memory. GitHub Issues on `Vasishta/craft-agents-oss` are the live execution tracker and may be ahead of older prose in this file.
 
 ## 7. Success criteria
 

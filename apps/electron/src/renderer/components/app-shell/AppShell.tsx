@@ -35,6 +35,7 @@ import {
   Info,
   Box,
   BriefcaseBusiness,
+  BookOpen,
 } from "lucide-react"
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
 import { SourceAvatar } from "@/components/ui/source-avatar"
@@ -123,6 +124,8 @@ import {
   isOutputsNavigation,
   isProjectsNavigation,
   isHomeNavigation,
+  isLibraryNavigation,
+  isWorkQueueNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
@@ -597,7 +600,7 @@ function AppShellContent({
   // UNIFIED NAVIGATION STATE - single source of truth from NavigationContext
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
-  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isOutputsNavigation(navState) && !isProjectsNavigation(navState) && !isHomeNavigation(navState)
+  const shouldShowNavigator = !effectiveSidebarAndNavigatorHidden && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isOutputsNavigation(navState) && !isProjectsNavigation(navState) && !isHomeNavigation(navState) && !isLibraryNavigation(navState) && !isWorkQueueNavigation(navState)
 
   const store = useStore()
   const panelStack = useAtomValue(panelStackAtom)
@@ -1749,6 +1752,14 @@ function AppShellContent({
     navigate(routes.view.projects())
   }, [navigate])
 
+  const handleLibraryClick = useCallback(() => {
+    navigate(routes.view.library())
+  }, [navigate])
+
+  const handleWorkQueueClick = useCallback(() => {
+    navigate(routes.view.workQueue())
+  }, [navigate])
+
   // Handler for settings view
   const handleSettingsClick = useCallback((subpage: SettingsSubpage = 'app') => {
     navigate(routes.view.settings(subpage))
@@ -1968,56 +1979,57 @@ function AppShellContent({
   const unifiedSidebarItems = React.useMemo((): SidebarItem[] => {
     const result: SidebarItem[] = []
 
-    // 1. Primary workspace section: Home, Search, Docs, Outputs, All Sessions
+    // 1. Primary workspace section: Home, Search, Projects, Library, Work Queue
     result.push({ id: 'nav:home', type: 'nav', action: handleHomeClick })
     result.push({ id: 'nav:search', type: 'nav', action: handleSearchClick })
-    result.push({ id: 'nav:pages', type: 'nav', action: handlePagesClick })
-    if (isExpanded('nav:pages')) {
-      for (const p of pages.slice(0, 10)) {
-        result.push({ id: `nav:page:${p.id}`, type: 'nav', action: () => navigate(routes.view.savedPage(p.id)) })
-      }
-    }
-    result.push({ id: 'nav:outputs', type: 'nav', action: handleOutputsClick })
-    if (isExpanded('nav:outputs')) {
-      for (const output of outputs.slice(0, 10)) {
-        result.push({ id: `nav:output:${output.id}`, type: 'nav', action: () => navigate(routes.view.savedOutput(output.id)) })
-      }
-    }
     result.push({ id: 'nav:projects', type: 'nav', action: handleProjectsClick })
     if (isExpanded('nav:projects')) {
       for (const project of projects.slice(0, 10)) {
         result.push({ id: `nav:project:${project.id}`, type: 'nav', action: () => navigate(routes.view.project(project.id)) })
       }
     }
-    result.push({ id: 'nav:allSessions', type: 'nav', action: handleAllSessionsClick })
-    for (const state of effectiveSessionStatuses) {
-      result.push({ id: `nav:state:${state.id}`, type: 'nav', action: () => handleSessionStatusClick(state.id) })
-    }
-    result.push({ id: 'nav:flagged', type: 'nav', action: handleFlaggedClick })
-    result.push({ id: 'nav:archived', type: 'nav', action: handleArchivedClick })
-
-    // 2. Labels section header + regular label tree for keyboard nav
-    result.push({ id: 'nav:labels', type: 'nav', action: () => handleLabelClick('__all__') })
-    // Flatten regular label tree for keyboard navigation (depth-first)
-    const flattenTree = (nodes: LabelTreeNode[]) => {
-      for (const node of nodes) {
-        if (node.label) {
-          result.push({ id: `nav:label:${node.fullId}`, type: 'nav', action: () => handleLabelClick(node.fullId) })
-        }
-        if (node.children.length > 0) flattenTree(node.children)
+    result.push({ id: 'nav:library', type: 'nav', action: handleLibraryClick })
+    result.push({ id: 'nav:pages', type: 'nav', action: handlePagesClick })
+    if (isExpanded('nav:library') && isExpanded('nav:pages')) {
+      for (const p of pages.slice(0, 10)) {
+        result.push({ id: `nav:page:${p.id}`, type: 'nav', action: () => navigate(routes.view.savedPage(p.id)) })
       }
     }
-    flattenTree(labelTree)
+    result.push({ id: 'nav:outputs', type: 'nav', action: handleOutputsClick })
+    if (isExpanded('nav:library') && isExpanded('nav:outputs')) {
+      for (const output of outputs.slice(0, 10)) {
+        result.push({ id: `nav:output:${output.id}`, type: 'nav', action: () => navigate(routes.view.savedOutput(output.id)) })
+      }
+    }
+    result.push({ id: 'nav:workQueue', type: 'nav', action: handleWorkQueueClick })
+    result.push({ id: 'nav:allSessions', type: 'nav', action: handleAllSessionsClick })
+    if (isExpanded('nav:workQueue')) {
+      for (const state of effectiveSessionStatuses) {
+        result.push({ id: `nav:state:${state.id}`, type: 'nav', action: () => handleSessionStatusClick(state.id) })
+      }
+      result.push({ id: 'nav:flagged', type: 'nav', action: handleFlaggedClick })
+      result.push({ id: 'nav:archived', type: 'nav', action: handleArchivedClick })
+      result.push({ id: 'nav:labels', type: 'nav', action: () => handleLabelClick('__all__') })
+      const flattenTree = (nodes: LabelTreeNode[]) => {
+        for (const node of nodes) {
+          if (node.label) {
+            result.push({ id: `nav:label:${node.fullId}`, type: 'nav', action: () => handleLabelClick(node.fullId) })
+          }
+          if (node.children.length > 0) flattenTree(node.children)
+        }
+      }
+      if (isExpanded('nav:labels')) flattenTree(labelTree)
+    }
 
     // 3. Files/context, Skills, Settings
     result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
-    result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
     result.push({ id: 'nav:automations', type: 'nav', action: handleAutomationsClick })
+    result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
     result.push({ id: 'nav:settings', type: 'nav', action: () => handleSettingsClick('app') })
     result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
 
     return result
-  }, [handleHomeClick, handleSearchClick, handlePagesClick, pages, handleOutputsClick, outputs, handleProjectsClick, projects, isExpanded, handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick, navigate])
+  }, [handleHomeClick, handleSearchClick, handleProjectsClick, projects, isExpanded, handleLibraryClick, handlePagesClick, pages, handleOutputsClick, outputs, handleWorkQueueClick, handleAllSessionsClick, effectiveSessionStatuses, handleFlaggedClick, handleArchivedClick, handleLabelClick, labelTree, handleSessionStatusClick, handleSourcesClick, handleAutomationsClick, handleSkillsClick, handleSettingsClick, handleWhatsNewClick, navigate])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2128,7 +2140,13 @@ function AppShellContent({
   const listTitle = React.useMemo(() => {
     // Sources navigator
     if (isSourcesNavigation(navState)) {
-      return t("sidebar.sources")
+      return t("sidebar.filesAndContext", "Files & Context")
+    }
+    if (isLibraryNavigation(navState)) {
+      return t("sidebar.library", "Library")
+    }
+    if (isWorkQueueNavigation(navState)) {
+      return t("sidebar.workQueue", "Work Queue")
     }
     if (isPageCanvasNavigation(navState)) {
       return t("sidebar.pages")
@@ -2344,42 +2362,6 @@ function AppShellContent({
                       onClick: handleSearchClick,
                     },
                     {
-                      id: "nav:pages",
-                      title: t("sidebar.pages"),
-                      label: String(pages.length),
-                      icon: FileText,
-                      variant: isPageCanvasNavigation(navState) ? "default" : "ghost",
-                      onClick: handlePagesClick,
-                      expandable: pages.length > 0,
-                      expanded: isExpanded('nav:pages'),
-                      onToggle: () => toggleExpanded('nav:pages'),
-                      items: pages.slice(0, 10).map(p => ({
-                        id: `nav:page:${p.id}`,
-                        title: p.title || 'Untitled Doc',
-                        icon: FileText,
-                        variant: (isPageCanvasNavigation(navState) && navState.details?.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
-                        onClick: () => navigate(routes.view.savedPage(p.id)),
-                      })),
-                    },
-                    {
-                      id: "nav:outputs",
-                      title: t("sidebar.outputs"),
-                      label: String(outputs.length),
-                      icon: Box,
-                      variant: isOutputsNavigation(navState) ? "default" : "ghost",
-                      onClick: handleOutputsClick,
-                      expandable: outputs.length > 0,
-                      expanded: isExpanded('nav:outputs'),
-                      onToggle: () => toggleExpanded('nav:outputs'),
-                      items: outputs.slice(0, 10).map(output => ({
-                        id: `nav:output:${output.id}`,
-                        title: output.title || 'Untitled Output',
-                        icon: Box,
-                        variant: (isOutputsNavigation(navState) && navState.details?.type === 'output' && navState.details.outputId === output.id) ? "default" : "ghost",
-                        onClick: () => navigate(routes.view.savedOutput(output.id)),
-                      })),
-                    },
-                    {
                       id: "nav:projects",
                       title: t("sidebar.projects", "Projects"),
                       label: String(projects.length),
@@ -2397,17 +2379,66 @@ function AppShellContent({
                         onClick: () => navigate(routes.view.project(project.id)),
                       })),
                     },
-                    // All Sessions: expandable with status children (sortable) + Flagged & Archived as trailing items
                     {
-                      id: "nav:allSessions",
-                      title: t("sidebar.allSessions"),
-                      label: String(workspaceSessionMetas.length),
-                      icon: Inbox,
-                      variant: sessionFilter?.kind === 'allSessions' ? "default" : "ghost",
-                      onClick: handleAllSessionsClick,
+                      id: "nav:library",
+                      title: t("sidebar.library", "Library"),
+                      label: String(pages.length + outputs.length),
+                      icon: BookOpen,
+                      variant: (isLibraryNavigation(navState) || isPageCanvasNavigation(navState) || isOutputsNavigation(navState)) ? "default" : "ghost",
+                      onClick: handleLibraryClick,
                       expandable: true,
-                      expanded: isExpanded('nav:allSessions'),
-                      onToggle: () => toggleExpanded('nav:allSessions'),
+                      expanded: isExpanded('nav:library'),
+                      onToggle: () => toggleExpanded('nav:library'),
+                      items: [
+                        {
+                          id: "nav:pages",
+                          title: t("sidebar.pages"),
+                          label: String(pages.length),
+                          icon: FileText,
+                          variant: isPageCanvasNavigation(navState) ? "default" : "ghost",
+                          onClick: handlePagesClick,
+                          expandable: pages.length > 0,
+                          expanded: isExpanded('nav:pages'),
+                          onToggle: () => toggleExpanded('nav:pages'),
+                          items: pages.slice(0, 10).map(p => ({
+                            id: `nav:page:${p.id}`,
+                            title: p.title || 'Untitled Doc',
+                            icon: FileText,
+                            variant: (isPageCanvasNavigation(navState) && navState.details?.type === 'savedPage' && navState.details.pageId === p.id) ? "default" : "ghost",
+                            onClick: () => navigate(routes.view.savedPage(p.id)),
+                          })),
+                        },
+                        {
+                          id: "nav:outputs",
+                          title: t("sidebar.outputs"),
+                          label: String(outputs.length),
+                          icon: Box,
+                          variant: isOutputsNavigation(navState) ? "default" : "ghost",
+                          onClick: handleOutputsClick,
+                          expandable: outputs.length > 0,
+                          expanded: isExpanded('nav:outputs'),
+                          onToggle: () => toggleExpanded('nav:outputs'),
+                          items: outputs.slice(0, 10).map(output => ({
+                            id: `nav:output:${output.id}`,
+                            title: output.title || 'Untitled Output',
+                            icon: Box,
+                            variant: (isOutputsNavigation(navState) && navState.details?.type === 'output' && navState.details.outputId === output.id) ? "default" : "ghost",
+                            onClick: () => navigate(routes.view.savedOutput(output.id)),
+                          })),
+                        },
+                      ],
+                    },
+                    // Work Queue: destination IA plus transitional session-status compatibility links
+                    {
+                      id: "nav:workQueue",
+                      title: t("sidebar.workQueue", "Work Queue"),
+                      label: String(workspaceSessionMetas.length),
+                      icon: ListTodo,
+                      variant: (isWorkQueueNavigation(navState) || isSessionsNavigation(navState)) ? "default" : "ghost",
+                      onClick: handleWorkQueueClick,
+                      expandable: true,
+                      expanded: isExpanded('nav:workQueue'),
+                      onToggle: () => toggleExpanded('nav:workQueue'),
                       contextMenu: {
                         type: 'allSessions',
                         onConfigureStatuses: openConfigureStatuses,
@@ -2429,6 +2460,14 @@ function AppShellContent({
                       // Enable flat DnD reorder for status items
                       sortable: { onReorder: handleStatusReorder },
                       items: [
+                        {
+                          id: "nav:allSessions",
+                          title: t("sidebar.allSessions"),
+                          label: String(workspaceSessionMetas.length),
+                          icon: Inbox,
+                          variant: sessionFilter?.kind === 'allSessions' ? "default" : "ghost",
+                          onClick: handleAllSessionsClick,
+                        },
                         // Status items (sortable via SortableStatusList)
                         ...effectiveSessionStatuses.map(state => ({
                           id: `nav:state:${state.id}`,
@@ -2465,33 +2504,31 @@ function AppShellContent({
                           variant: (sessionFilter?.kind === 'archived' ? "default" : "ghost") as "default" | "ghost",
                           onClick: handleArchivedClick,
                         },
+                        { id: 'separator:queue-labels', type: 'separator' as const },
+                        {
+                          id: "nav:labels",
+                          title: t("sidebar.labels"),
+                          icon: Tag,
+                          variant: (sessionFilter?.kind === 'label' && sessionFilter.labelId === '__all__') ? "default" as const : "ghost" as const,
+                          onClick: () => handleLabelClick('__all__'),
+                          expandable: true,
+                          expanded: isExpanded('nav:labels'),
+                          onToggle: () => toggleExpanded('nav:labels'),
+                          contextMenu: {
+                            type: 'labels' as const,
+                            onConfigureLabels: openConfigureLabels,
+                            onAddLabel: handleAddLabel,
+                          },
+                          items: buildLabelSidebarItems(labelTree),
+                        },
                       ],
-                    },
-                    // Labels: navigable header (shows all labeled sessions) + hierarchical tree (drag-and-drop reorder + re-parent)
-                    {
-                      id: "nav:labels",
-                      title: t("sidebar.labels"),
-                      icon: Tag,
-                      // Only highlighted when "Labels" itself is selected (not sub-labels)
-                      variant: (sessionFilter?.kind === 'label' && sessionFilter.labelId === '__all__') ? "default" as const : "ghost" as const,
-                      // Clicking navigates to "all labeled sessions" view
-                      onClick: () => handleLabelClick('__all__'),
-                      expandable: true,
-                      expanded: isExpanded('nav:labels'),
-                      onToggle: () => toggleExpanded('nav:labels'),
-                      contextMenu: {
-                        type: 'labels' as const,
-                        onConfigureLabels: openConfigureLabels,
-                        onAddLabel: handleAddLabel,
-                      },
-                      items: buildLabelSidebarItems(labelTree),
                     },
                     // --- Separator ---
                     { id: "separator:chats-sources", type: "separator" },
                     // --- Files, Skills & Automations Section ---
                     {
                       id: "nav:sources",
-                      title: t("sidebar.sources"),
+                      title: t("sidebar.filesAndContext", "Files & Context"),
                       label: String(sources.length),
                       icon: DatabaseZap,
                       variant: (isSourcesNavigation(navState) && !sourceFilter) ? "default" : "ghost",
@@ -2547,18 +2584,6 @@ function AppShellContent({
                       ],
                     },
                     {
-                      id: "nav:skills",
-                      title: t("sidebar.skills"),
-                      label: String(skills.length),
-                      icon: Zap,
-                      variant: isSkillsNavigation(navState) ? "default" : "ghost",
-                      onClick: handleSkillsClick,
-                      contextMenu: {
-                        type: 'skills',
-                        onAddSkill: openAddSkill,
-                      },
-                    },
-                    {
                       id: "nav:automations",
                       title: t("sidebar.automations"),
                       label: String(automations.length),
@@ -2601,6 +2626,18 @@ function AppShellContent({
                           contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
                         },
                       ],
+                    },
+                    {
+                      id: "nav:skills",
+                      title: t("sidebar.skills"),
+                      label: String(skills.length),
+                      icon: Zap,
+                      variant: isSkillsNavigation(navState) ? "default" : "ghost",
+                      onClick: handleSkillsClick,
+                      contextMenu: {
+                        type: 'skills',
+                        onAddSkill: openAddSkill,
+                      },
                     },
                     // --- Separator ---
                     { id: "separator:skills-settings", type: "separator" },
@@ -3370,7 +3407,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isOutputsNavigation(navState) && !isProjectsNavigation(navState) && !isHomeNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
+          navigatorWidth={isAutoCompact && !isPageCanvasNavigation(navState) && !isSearchNavigation(navState) && !isOutputsNavigation(navState) && !isProjectsNavigation(navState) && !isHomeNavigation(navState) && !isLibraryNavigation(navState) && !isWorkQueueNavigation(navState) ? sessionListWidth : (shouldShowNavigator ? sessionListWidth : 0)}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}

@@ -6,6 +6,7 @@
 
 export { default as ChatPage } from './ChatPage'
 export { default as DocsHome } from './DocsHome'
+export { default as LibraryPage } from './LibraryPage'
 export { default as OutputDetailPage } from './OutputDetailPage'
 export { default as OutputsPage } from './OutputsPage'
 export { default as PageCanvas } from './PageCanvas'
@@ -14,6 +15,7 @@ export { default as ProjectsPage } from './ProjectsPage'
 export { default as SearchPage } from './SearchPage'
 export { default as SourceInfoPage } from './SourceInfoPage'
 export { default as WorkspaceHome } from './WorkspaceHome'
+export { default as WorkQueuePage } from './WorkQueuePage'
 // Settings pages
 export {
   SettingsNavigator,

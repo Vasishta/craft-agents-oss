@@ -1,10 +1,12 @@
 # TASK-008: Output Polish and Provenance Hardening
 
-Status: Proposed  
+Status: Done in GitHub issue #8
 Base branch: `feature/dev` after PR #5 is merged  
 Expected branch: `codex/output-polish-provenance`  
 Related epic: `docs/planning/EPIC-001-durable-knowledge-workspace.md`  
 Depends on: Outputs v0 from PR #5
+
+Execution note: this file is retained as the durable implementation handoff. The live task was tracked as GitHub issue `#8`, which is closed in `Vasishta/craft-agents-oss`.
 
 ## 1. Goal
 

@@ -80,12 +80,19 @@ Search          as a first-class surface
 ### Add later
 
 ```text
-Projects
-Library
-Work Queue
 Decisions
 Notebooks
 ```
+
+### In transition now
+
+```text
+Projects
+Library
+Work Queue
+```
+
+These can be exposed in navigation before their full object browsers are complete. Treat them as stable destinations for follow-up work, not proof that the internal model has become project-first.
 
 ### Avoid for now
 
@@ -313,7 +320,7 @@ without treating these as separate apps.
 
 ## 12. Migration sequence
 
-Completed or in progress:
+Completed:
 
 ```text
 1. Rename user-facing Pages -> Docs
@@ -323,20 +330,35 @@ Completed or in progress:
 5. Rename Sources -> Files & Context in UI
 6. Add Workspace Home
 7. Add Outputs v0
+8. Output polish and provenance hardening (#8)
+9. Search result model cleanup (#16)
+10. Files & Context v0 clarification (#17)
+11. WorkItem v0 model separate from session status (#18)
+12. Project v0 model with optional links (#19)
+13. Project Home and project-scoped filters (#20)
+14. Decision v0 model (#26)
+15. Notebook v0 model (#27)
+16. Serialized local index mutation helper (#28)
 ```
 
-Recommended next tasks:
+In progress:
 
 ```text
-8. Output polish and provenance hardening
-9. Search indexing boundary and result model cleanup
-10. Files & Context v0 clarification screen
-11. WorkItem v0 model separate from session status
-12. Project v0 model with optional links
-13. Project Home and project-scoped filters
-14. Decisions v0 from Output/Chat
-15. Notebook v0 as collection/view over Docs/Outputs/Files & Context
+17. Workspace navigation IA consolidation (#35)
 ```
+
+Recommended next tasks after #35:
+
+```text
+18. Decision and Notebook UI surfaces (#29)
+19. Library v0 durable-object surface (#30)
+20. Work Queue v0 backed by WorkItems (#31)
+21. Project linked-object navigation polish (#32)
+22. Cross-object Search expansion (#33)
+23. Explicit cross-object linking actions (#34)
+```
+
+Current-state rule: GitHub Issues on `Vasishta/craft-agents-oss` are the live execution tracker. This ARB captures the migration rationale and should be updated when issue execution materially changes the product posture.
 
 ## 13. Task 8 candidate: Output polish and provenance hardening
 

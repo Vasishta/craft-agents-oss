@@ -99,6 +99,12 @@ export const routes = {
     /** Workspace home/start surface */
     home: () => 'home' as const,
 
+    /** Library overview for durable workspace knowledge */
+    library: () => 'library' as const,
+
+    /** Work Queue overview for actionable work and compatibility session filters */
+    workQueue: () => 'workQueue' as const,
+
     /** Flagged view (sessions navigator, flagged filter) */
     flagged: (sessionId?: string) =>
       sessionId ? `flagged/session/${sessionId}` as const : 'flagged' as const,

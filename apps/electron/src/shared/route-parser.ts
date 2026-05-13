@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas' | 'search' | 'outputs' | 'projects' | 'home'
+export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings' | 'pageCanvas' | 'search' | 'outputs' | 'projects' | 'home' | 'library' | 'workQueue'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -90,7 +90,7 @@ function isSafeProjectRouteId(projectId: string): boolean {
  */
 const COMPOUND_ROUTE_PREFIX_SET = new Set([
   'allSessions', 'flagged', 'archived', 'state', 'label', 'view',
-  'sources', 'skills', 'automations', 'settings', 'pages', 'search', 'outputs', 'projects'
+  'sources', 'skills', 'automations', 'settings', 'pages', 'search', 'outputs', 'projects', 'library', 'workQueue'
 ])
 
 /**
@@ -99,7 +99,7 @@ const COMPOUND_ROUTE_PREFIX_SET = new Set([
 const COMPOUND_ROUTE_PREFIX_MAP: Record<string, true> = {
   allSessions: true, flagged: true, archived: true,
   state: true, label: true, view: true, search: true,
-  sources: true, skills: true, automations: true, settings: true, pages: true, outputs: true, projects: true
+  sources: true, skills: true, automations: true, settings: true, pages: true, outputs: true, projects: true, library: true, workQueue: true
 }
 
 /**
@@ -145,7 +145,9 @@ export function isCompoundRoute(route: string): boolean {
     case 118: // 'v' - view
       return route === 'view' || route.startsWith('view/')
     case 108: // 'l' - label
-      return route === 'label' || route.startsWith('label/')
+      return route === 'label' || route.startsWith('label/') || route === 'library'
+    case 119: // 'w' - workQueue
+      return route === 'workQueue'
   }
 
   // Fallback for other prefixes
@@ -186,6 +188,22 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
   if (first === 'search' && segments.length === 1) {
     return {
       navigator: 'search',
+      details: null,
+    }
+  }
+
+  // Library overview navigator
+  if (first === 'library' && segments.length === 1) {
+    return {
+      navigator: 'library',
+      details: null,
+    }
+  }
+
+  // Work Queue overview navigator
+  if (first === 'workQueue' && segments.length === 1) {
+    return {
+      navigator: 'workQueue',
       details: null,
     }
   }
@@ -474,6 +492,14 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
     return 'search'
   }
 
+  if (parsed.navigator === 'library') {
+    return 'library'
+  }
+
+  if (parsed.navigator === 'workQueue') {
+    return 'workQueue'
+  }
+
   if (parsed.navigator === 'outputs') {
     if (!parsed.details) return 'outputs'
     return `outputs/output/${encodeURIComponent(parsed.details.id)}`
@@ -564,6 +590,14 @@ export function parseRoute(route: string): ParsedRoute | null {
       return { type: 'view', name: 'home', params: {} }
     }
 
+    if (route === 'library') {
+      return { type: 'view', name: 'library', params: {} }
+    }
+
+    if (route === 'workQueue') {
+      return { type: 'view', name: 'workQueue', params: {} }
+    }
+
     // Check if this is a compound route (preferred format)
     if (isCompoundRoute(route)) {
       const compound = parseCompoundRoute(route)
@@ -640,6 +674,14 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
 
   if (compound.navigator === 'search') {
     return { type: 'view', name: 'search', params: {} }
+  }
+
+  if (compound.navigator === 'library') {
+    return { type: 'view', name: 'library', params: {} }
+  }
+
+  if (compound.navigator === 'workQueue') {
+    return { type: 'view', name: 'workQueue', params: {} }
   }
 
   if (compound.navigator === 'outputs') {
@@ -737,6 +779,18 @@ export function parseRouteToNavigationState(
     return rightSidebar ? { ...state, rightSidebar } : state
   }
 
+  if (route === 'library') {
+    const rightSidebar = parseRightSidebarParam(sidebarParam)
+    const state: NavigationState = { navigator: 'library', details: null }
+    return rightSidebar ? { ...state, rightSidebar } : state
+  }
+
+  if (route === 'workQueue') {
+    const rightSidebar = parseRightSidebarParam(sidebarParam)
+    const state: NavigationState = { navigator: 'workQueue', details: null }
+    return rightSidebar ? { ...state, rightSidebar } : state
+  }
+
   // Parse compound routes
   if (isCompoundRoute(route)) {
     const compound = parseCompoundRoute(route)
@@ -800,6 +854,14 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
 
   if (compound.navigator === 'search') {
     return { navigator: 'search', details: null }
+  }
+
+  if (compound.navigator === 'library') {
+    return { navigator: 'library', details: null }
+  }
+
+  if (compound.navigator === 'workQueue') {
+    return { navigator: 'workQueue', details: null }
   }
 
   if (compound.navigator === 'outputs') {
@@ -939,6 +1001,10 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
       return { navigator: 'pageCanvas', details: null }
     case 'search':
       return { navigator: 'search', details: null }
+    case 'library':
+      return { navigator: 'library', details: null }
+    case 'workQueue':
+      return { navigator: 'workQueue', details: null }
     case 'outputs':
       return { navigator: 'outputs', details: null }
     case 'savedOutput':
@@ -1102,6 +1168,20 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
   if (state.navigator === 'search') {
     return {
       navigator: 'search',
+      details: null,
+    }
+  }
+
+  if (state.navigator === 'library') {
+    return {
+      navigator: 'library',
+      details: null,
+    }
+  }
+
+  if (state.navigator === 'workQueue') {
+    return {
+      navigator: 'workQueue',
       details: null,
     }
   }

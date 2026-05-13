@@ -1,7 +1,7 @@
 # PRD-001: Craft Agents as a Local-First AI Workspace
 
 Status: Draft  
-Branch context: `feature/dev` plus early Docs, Search, Workspace Home, and Outputs work  
+Branch context: `feature/dev` plus Docs, Search, Workspace Home, Outputs, project/work item/decision/notebook models, and the first Library/Work Queue navigation shell
 Audience: product/design/implementation agents working on Craft Agents OSS  
 
 ## 1. One-line ambition
@@ -277,4 +277,14 @@ Then: add durable docs, outputs, search, and home surfaces.
 Then: add optional project links.
 Then: add WorkItems and Decisions.
 Then: make Project and Library first-class navigation.
+```
+
+Current implementation note:
+
+```text
+The UI has started exposing some mid-term IA earlier than the underlying models are complete.
+Projects, Library, and Work Queue can appear in navigation, but this does not mean the app is fully project-first.
+Library currently remains strongest around Docs and Outputs.
+Work Queue is transitional until WorkItem-backed task/review flows replace session status as the primary work model.
+Decisions and Notebooks have model groundwork, but their full user-facing surfaces remain follow-up work.
 ```
