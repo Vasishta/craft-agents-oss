@@ -102,7 +102,6 @@ export function AddWorkspaceStep_ConnectRemote({
     setTestError(null)
     try {
       const result = await window.electronAPI.testRemoteConnection(serverUrl, token)
-      console.log('[ConnectRemote] testRemoteConnection result:', JSON.stringify(result, null, 2))
       if (result.ok) {
         setTestState('ok')
         setServerVersion(result.serverVersion ?? null)

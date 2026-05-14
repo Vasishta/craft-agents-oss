@@ -128,6 +128,8 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     if (session && isWindowFocused && isFocusedPanel !== false) {
       onSetActiveViewingSession(session.id)
     }
+  // Deliberately keyed by session id rather than the full session object so unread tracking
+  // only reacts to view-target changes, not to every message append while streaming.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id, isWindowFocused, isFocusedPanel, onSetActiveViewingSession])
 

@@ -47,6 +47,8 @@ export function WhatsAppConnectDialog({ open, onOpenChange, onConnected }: Whats
       handleEvent(event)
     })
     return off
+    // handleEvent is intentionally omitted because this subscription must stay stable for the
+    // lifetime of the open dialog and its logic is fully derived from current state updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, activeWorkspaceId])
 
@@ -56,6 +58,7 @@ export function WhatsAppConnectDialog({ open, onOpenChange, onConnected }: Whats
     window.electronAPI
       .startWhatsAppConnect()
       .catch((err) => setPhase({ kind: 'error', message: errorMsg(err) }))
+    // startWhatsAppConnect should fire once per open cycle while the dialog is idle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 

@@ -115,6 +115,7 @@ import { resolveEntityColor } from "@craft-agent/shared/colors"
 import * as storage from "@/lib/local-storage"
 import { toast } from "sonner"
 import { navigate, routes } from "@/lib/navigate"
+import { migrateStoredViewFilters, type ViewFilterEntry, type ViewFilterMode, type ViewFiltersMap } from "@/lib/view-filters"
 import { buildAppSidebarLinks } from "./sidebar-links"
 import { flattenVisibleSidebarFocusableItems } from "./sidebar-focus-order"
 import { buildSessionStatusCounts, getActiveWorkspaceSessionMetas, getWorkspaceSessionMetas } from "@/lib/session-meta-selectors"
@@ -184,7 +185,7 @@ interface AppShellProps {
 }
 
 /** Filter mode for tri-state filtering: include shows only matching, exclude hides matching */
-type FilterMode = 'include' | 'exclude'
+  type FilterMode = ViewFilterMode
 
 const altClickTooltipLabel = isMac ? '⌥ click to exclude' : 'Alt click to exclude'
 
@@ -652,8 +653,7 @@ function AppShellContent({
   // Per-view filter storage: each session list view (allSessions, flagged, state:X, label:X, view:X)
   // has its own independent set of status and label filters.
   // Each filter entry stores a mode ('include' or 'exclude') for tri-state filtering.
-  type FilterEntry = Record<string, FilterMode> // id → mode
-  type ViewFiltersMap = Record<string, { statuses: FilterEntry, labels: FilterEntry, groupingMode?: ChatGroupingMode }>
+  type FilterEntry = ViewFilterEntry // id → mode
 
   // Compute a stable key for the current chat filter view
   const sessionFilterKey = useMemo(() => {
@@ -670,21 +670,7 @@ function AppShellContent({
   }, [sessionFilter])
 
   const [viewFiltersMap, setViewFiltersMap] = React.useState<ViewFiltersMap>(() => {
-    const saved = storage.get<ViewFiltersMap>(storage.KEYS.viewFilters, {})
-    // Backward compat: migrate old format (arrays) into new format (Record<string, FilterMode>)
-    if (saved.allSessions && Array.isArray((saved.allSessions as any).statuses)) {
-      // Old format: { statuses: string[], labels: string[] } → new: { statuses: Record, labels: Record }
-      for (const key of Object.keys(saved)) {
-        const entry = saved[key] as any
-        if (Array.isArray(entry.statuses)) {
-          const newStatuses: FilterEntry = {}
-          for (const id of entry.statuses) newStatuses[id] = 'include'
-          const newLabels: FilterEntry = {}
-          for (const id of entry.labels) newLabels[id] = 'include'
-          saved[key] = { statuses: newStatuses, labels: newLabels }
-        }
-      }
-    }
+    const saved = migrateStoredViewFilters(storage.get(storage.KEYS.viewFilters, {}))
     // Also migrate legacy global filters if no allSessions entry exists
     if (!saved.allSessions) {
       const oldStatuses = storage.get<SessionStatusId[]>(storage.KEYS.listFilter, [])

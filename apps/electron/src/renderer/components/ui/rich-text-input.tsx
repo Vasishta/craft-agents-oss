@@ -712,7 +712,7 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
       const html = textToHTML(safeValue, skills, sources, workspaceId)
       divRef.current.innerHTML = html || '<br>'
       lastValueRef.current = safeValue
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps -- this is a one-time DOM bootstrap; subsequent value updates are handled by dedicated sync effects.
 
     // Handle selection changes to highlight badges when selected
     React.useEffect(() => {

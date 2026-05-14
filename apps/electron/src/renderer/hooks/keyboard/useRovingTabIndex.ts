@@ -97,7 +97,7 @@ export function useRovingTabIndex<T>({
       const newIndex = Math.max(0, items.length - 1)
       setActiveIndexState(newIndex)
     }
-  }, [items.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [items.length]) // eslint-disable-line react-hooks/exhaustive-deps -- only the list length matters here; re-running on item identity changes would reset cursor position unnecessarily.
 
   // Programmatic index setter - only syncs state, no callbacks
   // Callbacks are only for user-initiated keyboard navigation

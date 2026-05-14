@@ -152,6 +152,7 @@ export function ThemeProvider({
     }).catch(() => {
       // Keep default on error
     })
+  // Safe mount-only initialization: re-running on state changes would overwrite a user override.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount
 

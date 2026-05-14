@@ -42,13 +42,9 @@ import { BrowserTabStrip } from "../browser/BrowserTabStrip"
 import type { Workspace } from "../../../shared/types"
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher"
 import { getDocUrl } from "@craft-agent/shared/docs/doc-links"
+import type { MenuActionHandlers } from "../menu-action-handlers"
 
 // --- Menu rendering (moved from AppMenu) ---
-
-type MenuActionHandlers = {
-  toggleFocusMode?: () => void
-  toggleSidebar?: () => void
-}
 
 const roleHandlers: Record<string, () => void> = {
   undo: () => window.electronAPI.menuUndo(),

@@ -28,12 +28,7 @@ import {
 import type { MenuItem, MenuSection, SettingsMenuItem } from "../../shared/menu-schema"
 import { SETTINGS_ICONS } from "./icons/SettingsIcons"
 import { getDocUrl } from '@craft-agent/shared/docs/doc-links'
-
-// Map of action handlers for menu items that need custom behavior
-type MenuActionHandlers = {
-  toggleFocusMode?: () => void
-  toggleSidebar?: () => void
-}
+import type { MenuActionHandlers } from "./menu-action-handlers"
 
 // Map of IPC handlers for role-based menu items
 const roleHandlers: Record<string, () => void> = {

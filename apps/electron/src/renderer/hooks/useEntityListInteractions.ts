@@ -128,7 +128,7 @@ export function useEntityListInteractions<T>({
   const items = useMemo(() => {
     if (!search || !search.query.trim()) return rawItems
     return rawItems.filter(item => search.fn(item, search.query))
-  }, [rawItems, search?.query, search?.fn]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rawItems, search?.query, search?.fn]) // eslint-disable-line react-hooks/exhaustive-deps -- search is intentionally treated as its primitive query/fn parts to avoid unstable object identity churn.
 
   // ---- Multi-select state ----
   // Use external store (e.g. Jotai atom) when provided, otherwise local useState
@@ -176,7 +176,7 @@ export function useEntityListInteractions<T>({
     setSelectionState(MultiSelect.singleSelect(id, index))
 
     keyboardOpts?.onNavigate?.(item, index)
-  }, [getId, multiSelectEnabled, isMultiSelectActive, clearSelection, keyboardOpts?.onNavigate]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [getId, multiSelectEnabled, isMultiSelectActive, clearSelection, keyboardOpts?.onNavigate]) // eslint-disable-line react-hooks/exhaustive-deps -- keyboard options are consumed via their concrete callbacks to avoid recreating handlers when the wrapper object identity changes.
 
   const handleActivate = useCallback((item: T, index: number) => {
     if (multiSelectEnabled && !isMultiSelectActive) {
@@ -184,7 +184,7 @@ export function useEntityListInteractions<T>({
       setSelectionState(MultiSelect.singleSelect(getId(item), index))
     }
     keyboardOpts?.onActivate?.(item, index)
-  }, [multiSelectEnabled, isMultiSelectActive, getId, keyboardOpts?.onActivate]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [multiSelectEnabled, isMultiSelectActive, getId, keyboardOpts?.onActivate]) // eslint-disable-line react-hooks/exhaustive-deps -- keyboard options are consumed via their concrete callbacks to avoid recreating handlers when the wrapper object identity changes.
 
   const handleExtendSelection = useCallback((toIndex: number) => {
     if (multiSelectEnabled) {
