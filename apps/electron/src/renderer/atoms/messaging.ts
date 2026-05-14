@@ -6,6 +6,7 @@
  */
 
 import { atom } from 'jotai'
+import { atomFamily } from 'jotai-family'
 
 export interface MessagingBinding {
   id: string
@@ -33,6 +34,10 @@ export const messagingBindingsBySessionAtom = atom((get) => {
   }
   return map
 })
+
+export const messagingBindingsForSessionAtomFamily = atomFamily((sessionId: string) =>
+  atom((get) => get(messagingBindingsAtom).filter((binding) => binding.enabled && binding.sessionId === sessionId)),
+)
 
 export const setMessagingBindingsAtom = atom(
   null,

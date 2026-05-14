@@ -84,78 +84,54 @@ function isSafeProjectRouteId(projectId: string): boolean {
 // Compound Route Parsing
 // =============================================================================
 
-/**
- * Known prefixes that indicate a compound route
- * Using Set for O(1) lookups
- */
-const COMPOUND_ROUTE_PREFIX_SET = new Set([
-  'allSessions', 'flagged', 'archived', 'state', 'label', 'view',
-  'sources', 'skills', 'automations', 'settings', 'pages', 'search', 'outputs', 'decisions', 'notebooks', 'projects', 'library', 'workQueue'
+const COMPOUND_ROUTE_EXACT = new Set([
+  'allSessions',
+  'flagged',
+  'archived',
+  'search',
+  'sources',
+  'skills',
+  'automations',
+  'settings',
+  'pages',
+  'outputs',
+  'decisions',
+  'notebooks',
+  'projects',
+  'state',
+  'view',
+  'label',
+  'library',
+  'workQueue',
 ])
 
-/**
- * Fast lookup map for exact route matches
- */
-const COMPOUND_ROUTE_PREFIX_MAP: Record<string, true> = {
-  allSessions: true, flagged: true, archived: true,
-  state: true, label: true, view: true, search: true,
-  sources: true, skills: true, automations: true, settings: true, pages: true, outputs: true, decisions: true, notebooks: true, projects: true, library: true, workQueue: true
-}
+const COMPOUND_ROUTE_PREFIXES = [
+  'artifact/session/',
+  'allSessions/',
+  'archived/',
+  'automations/',
+  'decisions/decision/',
+  'flagged/',
+  'label/',
+  'notebooks/notebook/',
+  'outputs/output/',
+  'pages/from-message/',
+  'pages/page/',
+  'projects/project/',
+  'settings/',
+  'skills/',
+  'sources/',
+  'state/',
+  'view/',
+]
 
 /**
  * Check if a route is a compound route (new format)
  * Uses zero-allocation prefix checks instead of split()
  */
 export function isCompoundRoute(route: string): boolean {
-  // Fast path: check prefixes without allocation
-  const firstChar = route.charCodeAt(0)
-
-  // Check 'a' (97) - artifact (legacy), allSessions, archived, automations
-  if (firstChar === 97) { // 'a'
-    return route.startsWith('artifact/session/') ||
-           route === 'archived' ||
-           route.startsWith('archived/') ||
-           route === 'allSessions' ||
-           route.startsWith('allSessions/') ||
-           route === 'automations' ||
-           route.startsWith('automations/')
-  }
-
-  switch (firstChar) {
-    case 115: // 's' - sources, settings, skills, state
-      return route === 'sources' ||
-             route.startsWith('sources/') ||
-             route === 'search' ||
-             route === 'settings' ||
-             route.startsWith('settings/') ||
-             route === 'skills' ||
-             route.startsWith('skills/') ||
-             route === 'state' ||
-             route.startsWith('state/')
-    case 112: // 'p' - pages, projects
-      return route === 'pages' ||
-             route.startsWith('pages/from-message/') ||
-             route.startsWith('pages/page/') ||
-             route === 'projects' ||
-             route.startsWith('projects/project/')
-    case 111: // 'o' - outputs
-      return route === 'outputs' || route.startsWith('outputs/output/')
-    case 100: // 'd' - decisions
-      return route === 'decisions' || route.startsWith('decisions/decision/')
-    case 110: // 'n' - notebooks
-      return route === 'notebooks' || route.startsWith('notebooks/notebook/')
-    case 102: // 'f' - flagged
-      return route === 'flagged' || route.startsWith('flagged/')
-    case 118: // 'v' - view
-      return route === 'view' || route.startsWith('view/')
-    case 108: // 'l' - label
-      return route === 'label' || route.startsWith('label/') || route === 'library'
-    case 119: // 'w' - workQueue
-      return route === 'workQueue'
-  }
-
-  // Fallback for other prefixes
-  return COMPOUND_ROUTE_PREFIX_MAP[route] === true
+  if (COMPOUND_ROUTE_EXACT.has(route)) return true
+  return COMPOUND_ROUTE_PREFIXES.some((prefix) => route.startsWith(prefix))
 }
 
 /**

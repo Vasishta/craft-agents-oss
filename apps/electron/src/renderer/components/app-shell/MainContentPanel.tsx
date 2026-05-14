@@ -192,34 +192,30 @@ export function MainContentPanel({
   }, [selectedMetas])
 
   // Batch operations for multi-select
-  const handleBatchSetStatus = useCallback((status: SessionStatusId) => {
-    selectedIds.forEach(sessionId => {
-      onSessionStatusChange(sessionId, status)
-    })
+  const handleBatchSetStatus = useCallback(async (status: SessionStatusId) => {
+    await Promise.all([...selectedIds].map((sessionId) => onSessionStatusChange(sessionId, status)))
   }, [selectedIds, onSessionStatusChange])
 
-  const handleBatchArchive = useCallback(() => {
-    selectedIds.forEach(sessionId => {
-      onArchiveSession(sessionId)
-    })
+  const handleBatchArchive = useCallback(async () => {
+    await Promise.all([...selectedIds].map((sessionId) => onArchiveSession(sessionId)))
     clearMultiSelect()
   }, [selectedIds, onArchiveSession, clearMultiSelect])
 
-  const handleBatchToggleLabel = useCallback((labelId: string) => {
+  const handleBatchToggleLabel = useCallback(async (labelId: string) => {
     if (!onSessionLabelsChange) return
     const allHaveLabel = selectedMetas.every(meta =>
       (meta.labels || []).some(entry => extractLabelId(entry) === labelId)
     )
 
-    selectedMetas.forEach(meta => {
+    await Promise.all(selectedMetas.map(async (meta) => {
       const labels = meta.labels || []
       const hasLabel = labels.some(entry => extractLabelId(entry) === labelId)
       const filtered = labels.filter(entry => extractLabelId(entry) !== labelId)
       const nextLabels = allHaveLabel
         ? filtered
         : (hasLabel ? labels : [...labels, labelId])
-      onSessionLabelsChange(meta.id, nextLabels)
-    })
+      await onSessionLabelsChange(meta.id, nextLabels)
+    }))
   }, [selectedMetas, onSessionLabelsChange])
 
   // Wrap content with StoplightProvider so PanelHeaders auto-compensate in focused mode.

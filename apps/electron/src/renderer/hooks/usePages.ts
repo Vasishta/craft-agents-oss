@@ -37,12 +37,26 @@ export function usePageList(workspaceId: string | null) {
   const initializeList = useSetAtom(initializePageListAtom)
   const clearPageWorkspace = useSetAtom(clearPageWorkspaceAtom)
   const handlePageChanged = useSetAtom(handlePageChangedAtom)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    if (workspaceId) {
-      initializeList(workspaceId)
-    } else {
+    let cancelled = false
+
+    if (!workspaceId) {
+      setIsLoading(false)
       clearPageWorkspace()
+      return
+    }
+
+    setIsLoading(true)
+    void initializeList(workspaceId).finally(() => {
+      if (!cancelled) {
+        setIsLoading(false)
+      }
+    })
+
+    return () => {
+      cancelled = true
     }
   }, [workspaceId, initializeList, clearPageWorkspace])
 
@@ -58,6 +72,7 @@ export function usePageList(workspaceId: string | null) {
 
   return {
     pages,
+    isLoading,
     refresh: useCallback(() => {
       if (workspaceId) {
         initializeList(workspaceId)

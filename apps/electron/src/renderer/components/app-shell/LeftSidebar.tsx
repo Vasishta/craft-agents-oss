@@ -12,6 +12,7 @@ import {
 import { ContextMenuProvider } from '@/components/ui/menu-context'
 import { SidebarMenu, type SidebarMenuType } from './SidebarMenu'
 import { SortableList, type SortableItemData } from '@/components/ui/sortable-list'
+import { extractSortableSidebarEntityId } from './sidebar-sortable'
 
 /** Context menu configuration for sidebar items */
 export interface SidebarContextMenuConfig {
@@ -106,6 +107,8 @@ interface LeftSidebarProps {
   focusedItemId?: string | null
   /** Whether this is a nested sidebar (child of expandable item) */
   isNested?: boolean
+  /** Accessible label for nested navigation groups */
+  ariaLabel?: string
 }
 
 // Stagger animation for child items
@@ -165,7 +168,7 @@ const itemVariants: Variants = {
  * - Uses @dnd-kit with DragOverlay portaled to document.body (no clipping)
  * - Two-phase drop animation: overlay fades out, ghost fades in
  */
-export function LeftSidebar({ links, isCollapsed, getItemProps, focusedItemId, isNested }: LeftSidebarProps) {
+export function LeftSidebar({ links, isCollapsed, getItemProps, focusedItemId, isNested, ariaLabel }: LeftSidebarProps) {
   // For nested sidebars, wrap in motion container for stagger effect
   const NavWrapper = isNested ? motion.nav : 'nav'
   const navProps = isNested ? {
@@ -183,7 +186,7 @@ export function LeftSidebar({ links, isCollapsed, getItemProps, focusedItemId, i
           isNested ? "pl-5 pr-0 relative" : "px-2"
         )}
         role="navigation"
-        aria-label={isNested ? "Sub navigation" : "Main navigation"}
+        aria-label={isNested ? `${ariaLabel || 'Sub'} navigation` : "Main navigation"}
         {...navProps}
       >
         {/* Vertical line for nested items - 4px left of chevron center */}
@@ -327,6 +330,7 @@ function renderExpandedContent(
     <LeftSidebar
       isCollapsed={false}
       isNested={true}
+      ariaLabel={link.title}
       getItemProps={getItemProps}
       focusedItemId={focusedItemId}
       links={link.items!}
@@ -358,12 +362,7 @@ function SortableStatusList({ items, onReorder, getItemProps, focusedItemId, tra
   }))
 
   const handleReorder = React.useCallback((newItems: (LinkItem & SortableItemData)[]) => {
-    // Extract the raw IDs (strip 'nav:state:' prefix) for the IPC call
-    const orderedIds = newItems.map(item => {
-      // Strip navigation prefix to get the actual status/label ID
-      const parts = item.id.split(':')
-      return parts[parts.length - 1]
-    })
+    const orderedIds = newItems.map((item) => extractSortableSidebarEntityId(item.id))
     onReorder(orderedIds)
   }, [onReorder])
 
@@ -464,17 +463,23 @@ interface SidebarButtonProps {
   isOverlay?: boolean
 }
 
+function getSidebarButtonItemProps(
+  itemProps?: SidebarButtonProps['itemProps']
+): Omit<NonNullable<SidebarButtonProps['itemProps']>, 'ref'> | undefined {
+  if (!itemProps) return undefined
+  const { ref: _itemRef, ...rest } = itemProps
+  return rest
+}
+
 // forwardRef is required so Radix's ContextMenuTrigger (asChild) can attach its ref
 // and pass props like data-state="open" directly onto this button element.
 const SidebarButton = React.forwardRef<HTMLButtonElement, SidebarButtonProps & React.ButtonHTMLAttributes<HTMLButtonElement>>(
   ({ link, itemProps, isOverlay, className: extraClassName, ...radixProps }, forwardedRef) => {
+    const mergedItemProps = isOverlay ? undefined : getSidebarButtonItemProps(itemProps)
+
     return (
       <button
-        {...(isOverlay ? {} : (() => {
-          // Separate ref from itemProps so we can merge it with forwardedRef
-          const { ref: _itemRef, ...rest } = itemProps || { ref: undefined }
-          return rest
-        })())}
+        {...mergedItemProps}
         // Spread Radix props (data-state, onContextMenu, onPointerDown, etc.)
         {...radixProps}
         ref={(el) => {
@@ -510,6 +515,9 @@ const SidebarButton = React.forwardRef<HTMLButtonElement, SidebarButtonProps & R
               <span
                 className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer"
                 data-no-dnd="true"
+                role="button"
+                aria-label={link.expanded ? `Collapse ${link.title}` : `Expand ${link.title}`}
+                aria-expanded={link.expanded}
                 onClick={(e) => {
                   e.stopPropagation()
                   link.onToggle?.()

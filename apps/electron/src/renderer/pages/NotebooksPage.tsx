@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useCreateNotebook, useDeleteNotebook, useNotebookList } from '@/hooks/useNotebooks'
+import { useRelativeNow } from '@/hooks/useRelativeNow'
 import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -32,7 +33,7 @@ export default function NotebooksPage({ workspaceId }: NotebooksPageProps) {
   const deleteNotebook = useDeleteNotebook(workspaceId)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [isCreating, setIsCreating] = React.useState(false)
-  const now = Date.now()
+  const now = useRelativeNow()
 
   const handleCreate = React.useCallback(async () => {
     const title = window.prompt('Notebook title')

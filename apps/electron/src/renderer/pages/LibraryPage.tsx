@@ -7,6 +7,7 @@ import { useDecisionList } from '@/hooks/useDecisions'
 import { useNotebookList } from '@/hooks/useNotebooks'
 import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
+import { useRelativeNow } from '@/hooks/useRelativeNow'
 import {
   buildLibraryCounts,
   filterLibraryItems,
@@ -122,12 +123,12 @@ function openLibraryItem(item: LibraryItem) {
 
 export default function LibraryPage({ workspaceId }: LibraryPageProps) {
   const { leadingAction, rightSidebarButton } = usePanelChrome()
-  const { pages } = usePageList(workspaceId)
+  const { pages, isLoading: pagesLoading } = usePageList(workspaceId)
   const { outputs, isLoading: outputsLoading } = useOutputList(workspaceId)
   const { decisions, isLoading: decisionsLoading } = useDecisionList(workspaceId)
   const { notebooks, isLoading: notebooksLoading } = useNotebookList(workspaceId)
   const [filter, setFilter] = React.useState<LibraryFilter>('all')
-  const now = Date.now()
+  const now = useRelativeNow()
 
   const items = React.useMemo(() => normalizeLibraryItems({
     pages,
@@ -137,7 +138,7 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
   }), [decisions, notebooks, outputs, pages])
   const counts = React.useMemo(() => buildLibraryCounts(items), [items])
   const filteredItems = React.useMemo(() => filterLibraryItems(items, filter), [filter, items])
-  const isLoading = outputsLoading || decisionsLoading || notebooksLoading
+  const isLoading = pagesLoading || outputsLoading || decisionsLoading || notebooksLoading
 
   return (
     <div className="flex h-full flex-col bg-background">

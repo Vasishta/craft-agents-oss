@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
+import { useRelativeNow } from '@/hooks/useRelativeNow'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { buildSessionStatusCounts, buildWorkQueueSummary } from '@/lib/session-meta-selectors'
 import {
@@ -218,7 +219,7 @@ export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
 
   const workItemCounts = React.useMemo(() => buildWorkItemStatusCounts(workItems), [workItems])
   const filteredWorkItems = React.useMemo(() => filterWorkItemsByStatus(workItems, filter), [workItems, filter])
-  const now = Date.now()
+  const now = useRelativeNow()
 
   const handleDraftChange = React.useCallback((patch: Partial<CreateWorkItemInput>) => {
     setDraft((current) => ({ ...current, ...patch }))

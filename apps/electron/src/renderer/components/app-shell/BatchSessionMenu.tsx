@@ -93,27 +93,25 @@ export function BatchSessionMenu({ onSendToWorkspace }: BatchSessionMenuProps = 
   )
 
   // Batch status change
-  const handleBatchSetStatus = useCallback((status: SessionStatusId) => {
-    selectedIds.forEach(sessionId => {
-      onSessionStatusChange(sessionId, status)
-    })
+  const handleBatchSetStatus = useCallback(async (status: SessionStatusId) => {
+    await Promise.all([...selectedIds].map((sessionId) => onSessionStatusChange(sessionId, status)))
   }, [selectedIds, onSessionStatusChange])
 
   // Batch label toggle (all-or-nothing semantics, same as MainContentPanel)
-  const handleBatchToggleLabel = useCallback((labelId: string) => {
+  const handleBatchToggleLabel = useCallback(async (labelId: string) => {
     if (!onSessionLabelsChange) return
     const allHaveLabel = selectedMetas.every(meta =>
       (meta.labels || []).some(entry => extractLabelId(entry) === labelId)
     )
-    selectedMetas.forEach(meta => {
+    await Promise.all(selectedMetas.map(async (meta) => {
       const currentLabels = meta.labels || []
       const hasLabel = currentLabels.some(entry => extractLabelId(entry) === labelId)
       const filtered = currentLabels.filter(entry => extractLabelId(entry) !== labelId)
       const nextLabels = allHaveLabel
         ? filtered
         : (hasLabel ? currentLabels : [...currentLabels, labelId])
-      onSessionLabelsChange(meta.id, nextLabels)
-    })
+      await onSessionLabelsChange(meta.id, nextLabels)
+    }))
   }, [selectedMetas, onSessionLabelsChange])
 
   // Batch flag/unflag
@@ -128,8 +126,8 @@ export function BatchSessionMenu({ onSendToWorkspace }: BatchSessionMenuProps = 
   }, [selectedIds, onUnflagSession])
 
   // Batch archive
-  const handleBatchArchive = useCallback(() => {
-    selectedIds.forEach(id => onArchiveSession(id))
+  const handleBatchArchive = useCallback(async () => {
+    await Promise.all([...selectedIds].map((id) => onArchiveSession(id)))
     clearMultiSelect()
     toast(`${selectedIds.size} ${selectedIds.size === 1 ? 'session' : 'sessions'} archived`)
   }, [selectedIds, onArchiveSession, clearMultiSelect])

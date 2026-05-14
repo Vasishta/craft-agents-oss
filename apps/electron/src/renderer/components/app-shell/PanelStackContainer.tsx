@@ -122,7 +122,12 @@ export function PanelStackContainer({
         initial={false}
         animate={{ paddingLeft: !hasSidebar ? PANEL_EDGE_INSET : 0 }}
         transition={transition}
-        style={{ gap: PANEL_GAP, flexGrow: 1, minWidth: 0 }}
+        style={{
+          gap: PANEL_GAP,
+          flexGrow: 1,
+          minWidth: 0,
+          willChange: isResizing ? 'auto' : 'padding-left',
+        }}
       >
         {/* === SIDEBAR SLOT === */}
         <motion.div
@@ -135,7 +140,11 @@ export function PanelStackContainer({
           }}
           transition={transition}
           className="h-full relative shrink-0"
-          style={{ overflowX: 'clip', overflowY: 'visible' }}
+          style={{
+            overflowX: 'clip',
+            overflowY: 'visible',
+            willChange: isResizing ? 'auto' : 'width, opacity',
+          }}
         >
           <div className="h-full" style={{ width: sidebarWidth }}>
             {sidebarSlot}
@@ -163,6 +172,7 @@ export function PanelStackContainer({
             borderBottomLeftRadius: !hasSidebar ? RADIUS_EDGE : RADIUS_INNER,
             borderTopRightRadius: RADIUS_INNER,
             borderBottomRightRadius: RADIUS_INNER,
+            willChange: isResizing ? 'auto' : 'width, opacity',
           }}
         >
           <div className="h-full" style={{ width: isCompact && hasNavigator && !hasSelectedContent ? '100%' : navigatorWidth }}>

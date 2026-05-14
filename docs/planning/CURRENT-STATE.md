@@ -62,14 +62,13 @@ Current implementation state:
 - #31 is complete: Work Queue is backed by durable WorkItems with compatibility session-status views preserved below it.
 - #29 is complete: Decisions and Notebooks now support visible create/list/detail/update/delete flows from the polished shell surfaces.
 - #39 is partially addressed: shared workspace-resource hook plumbing, panel-local chrome context, and shared linked-count UI have landed, reducing duplication without freezing the full page abstraction too early.
-- #41 is open: the next measured pass should target renderer/runtime costs such as relative-time churn, sidebar recompute boundaries, broad row subscriptions, and batch mutation fan-out.
-- #42 is open: navigation/sidebar hardening still owns NavigationContext decomposition, navigation entry-point cleanup, sortable deep-ID correctness, and shell infrastructure cleanup.
+- #41 is complete: the measured renderer pass removed per-render relative-time churn, narrowed sidebar label recomputation, parallelized batch session mutations, scoped messaging subscriptions per session row, and cleaned up route-parser and shell animation hotspots without destabilizing routing.
+- #42 is open: navigation/sidebar hardening is now narrower and still owns NavigationContext decomposition, navigation entry-point cleanup, and the remaining shell infrastructure cleanup beyond the safe a11y/sortable/listener fixes already landed.
 ```
 
 ## Next Queue
 
 ```text
-#41 TASK: Renderer performance and recompute hardening
 #42 TASK: Navigation and sidebar infrastructure hardening
 #32 TASK-020 Project linked-object navigation polish
 #33 TASK-021 Cross-object Search expansion

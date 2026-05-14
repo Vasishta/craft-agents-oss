@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import type { LabelTreeNode } from '@craft-agent/shared/labels'
 import type { AutomationFilter, NavigationState, SessionFilter } from '../../../../shared/types'
 import { buildAppSidebarLinks } from '../sidebar-links'
+import { extractSortableSidebarEntityId } from '../sidebar-sortable'
 
 function t(key: string, fallbackOrOptions?: string | Record<string, unknown>) {
   if (typeof fallbackOrOptions === 'string') return fallbackOrOptions
@@ -156,5 +157,13 @@ describe('buildAppSidebarLinks', () => {
 
     expect(workQueue && 'variant' in workQueue ? workQueue.variant : null).toBe('default')
     expect(statusItem && 'variant' in statusItem ? statusItem.variant : null).toBe('default')
+  })
+})
+
+describe('extractSortableSidebarEntityId', () => {
+  it('preserves nested label ids when removing known sortable prefixes', () => {
+    expect(extractSortableSidebarEntityId('nav:label:priority:urgent')).toBe('priority:urgent')
+    expect(extractSortableSidebarEntityId('nav:state:todo')).toBe('todo')
+    expect(extractSortableSidebarEntityId('nav:view:custom')).toBe('nav:view:custom')
   })
 })

@@ -103,6 +103,7 @@ interface SidebarLinksParams {
   skillsCount: number
   hasUnseenReleaseNotes: boolean
   activeWorkspaceHasId: boolean
+  labelSidebarItems?: SidebarItem[]
   renderLabelIcon?: (label: LabelConfig, hasChildren: boolean) => React.ReactNode
   renderLabelValueTypeBadge?: (valueType: LabelValueType) => React.ReactNode
   isExpanded: (id: string) => boolean
@@ -145,7 +146,7 @@ interface SidebarLinksParams {
   onWhatsNewClick: () => void
 }
 
-function buildLabelSidebarLinks({
+export function buildLabelSidebarLinks({
   nodes,
   t,
   sessionFilter,
@@ -258,6 +259,7 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
     skillsCount,
     hasUnseenReleaseNotes,
     activeWorkspaceHasId,
+    labelSidebarItems,
     renderLabelIcon,
     renderLabelValueTypeBadge,
     isExpanded,
@@ -469,7 +471,7 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
                 onConfigureLabels,
                 onAddLabel,
               },
-              items: buildLabelSidebarLinks({
+              items: labelSidebarItems ?? buildLabelSidebarLinks({
                 nodes: labelTree,
                 t,
                 sessionFilter,

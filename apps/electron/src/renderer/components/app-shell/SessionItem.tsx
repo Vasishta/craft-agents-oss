@@ -1,4 +1,4 @@
-import { formatDistanceToNowStrict } from "date-fns"
+import { formatDistanceStrict } from "date-fns"
 import type { Locale } from "date-fns"
 import { Flag, ShieldAlert } from "lucide-react"
 import { useActionLabel } from "@/actions"
@@ -14,9 +14,10 @@ import { SessionBadges } from "./SessionBadges"
 import { getSessionTitle, getSessionPreviewText, highlightMatch, hasUnreadMeta, shortTimeLocale } from "@/utils/session"
 import { useSessionListContext } from "@/context/SessionListContext"
 import { useAppShellContext } from "@/context/AppShellContext"
+import { useRelativeNow } from "@/hooks/useRelativeNow"
 import { navigate, routes } from "@/lib/navigate"
 import type { SessionMeta } from "@/atoms/sessions"
-import { messagingBindingsBySessionAtom } from "@/atoms/messaging"
+import { messagingBindingsForSessionAtomFamily } from "@/atoms/messaging"
 import { useAtomValue } from "jotai"
 import { extractLabelId } from "@craft-agent/shared/labels"
 
@@ -71,8 +72,8 @@ export function SessionItem({
   }))
   const hasPendingPrompt = ctx.hasPendingPrompt?.(item.id) ?? false
   const previewText = isCompactMode ? getSessionPreviewText(item) : null
-  const messagingBindingsBySession = useAtomValue(messagingBindingsBySessionAtom)
-  const sessionBindings = messagingBindingsBySession.get(item.id) ?? []
+  const now = useRelativeNow()
+  const sessionBindings = useAtomValue(messagingBindingsForSessionAtomFamily(item.id))
   const hasMessagingBinding = sessionBindings.length > 0
 
   const handleClick = (e: React.MouseEvent) => {
@@ -209,7 +210,10 @@ export function SessionItem({
         </div>
       ) : item.lastMessageAt ? (
         <span className="text-[11px] text-foreground/40 whitespace-nowrap">
-          {formatDistanceToNowStrict(new Date(item.lastMessageAt), { locale: shortTimeLocale as Locale, roundingMethod: 'floor' })}
+          {formatDistanceStrict(new Date(item.lastMessageAt), new Date(now), {
+            locale: shortTimeLocale as Locale,
+            roundingMethod: 'floor',
+          })}
         </span>
       ) : undefined}
       badges={hasLabels ? <SessionBadges item={item} /> : undefined}

@@ -355,12 +355,11 @@ Completed since the shell consolidation milestone:
 Recommended next tasks:
 
 ```text
-23. Renderer performance and recompute hardening (#41)
-24. Navigation and sidebar infrastructure hardening (#42)
-25. Project linked-object navigation polish (#32)
-26. Cross-object Search expansion (#33)
-27. Explicit cross-object linking actions (#34)
-28. Consolidate remaining durable entity UI scaffolds (#39)
+23. Navigation and sidebar infrastructure hardening (#42)
+24. Project linked-object navigation polish (#32)
+25. Cross-object Search expansion (#33)
+26. Explicit cross-object linking actions (#34)
+27. Consolidate remaining durable entity UI scaffolds (#39)
 ```
 
 Current-state rule: GitHub Issues on `Vasishta/craft-agents-oss` are the live execution tracker. This ARB captures the migration rationale and should be updated when issue execution materially changes the product posture.

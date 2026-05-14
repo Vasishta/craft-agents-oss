@@ -116,7 +116,7 @@ import * as storage from "@/lib/local-storage"
 import { toast } from "sonner"
 import { navigate, routes } from "@/lib/navigate"
 import { migrateStoredViewFilters, type ViewFilterEntry, type ViewFilterMode, type ViewFiltersMap } from "@/lib/view-filters"
-import { buildAppSidebarLinks } from "./sidebar-links"
+import { buildAppSidebarLinks, buildLabelSidebarLinks } from "./sidebar-links"
 import { flattenVisibleSidebarFocusableItems } from "./sidebar-focus-order"
 import { buildSessionStatusCounts, getActiveWorkspaceSessionMetas, getWorkspaceSessionMetas } from "@/lib/session-meta-selectors"
 import {
@@ -1225,7 +1225,7 @@ function AppShellContent({
       }))
     }
 
-    document.addEventListener('paste', handleGlobalPaste)
+    document.addEventListener('paste', handleGlobalPaste, { passive: false })
     return () => document.removeEventListener('paste', handleGlobalPaste)
   }, [focusedSessionId, session.selected])
 
@@ -1263,7 +1263,7 @@ function AppShellContent({
       setIsResizing(null)
     }
 
-    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mousemove', handleMouseMove, { passive: true })
     document.addEventListener('mouseup', handleMouseUp)
 
     return () => {
@@ -1974,6 +1974,38 @@ function AppShellContent({
     window.electronAPI.markAllSessionsRead(activeWorkspaceId)
   }, [activeWorkspaceId, setSessionMetaMap])
 
+  const labelSidebarItems = useMemo(() => buildLabelSidebarLinks({
+    nodes: labelTree,
+    t,
+    sessionFilter: sessionFilter ?? null,
+    labelCounts,
+    activeWorkspaceHasId: !!activeWorkspace?.id,
+    renderLabelIcon: (label, hasChildren) => (
+      <LabelIcon label={label} size="sm" hasChildren={hasChildren} />
+    ),
+    renderLabelValueTypeBadge: (valueType) => (
+      <LabelValueTypeIcon valueType={valueType} size={10} />
+    ),
+    isExpanded,
+    toggleExpanded,
+    onLabelClick: handleLabelClick,
+    onConfigureLabels: openConfigureLabels,
+    onAddLabel: handleAddLabel,
+    onDeleteLabel: handleDeleteLabel,
+  }), [
+    labelTree,
+    t,
+    sessionFilter,
+    labelCounts,
+    activeWorkspace?.id,
+    isExpanded,
+    toggleExpanded,
+    handleLabelClick,
+    openConfigureLabels,
+    handleAddLabel,
+    handleDeleteLabel,
+  ])
+
   const sidebarLinks = React.useMemo(() => buildAppSidebarLinks({
     t,
     navState,
@@ -1991,8 +2023,9 @@ function AppShellContent({
     sessionStatusCounts,
     flaggedCount,
     archivedCount,
-    labelTree,
     labelCounts,
+    labelTree,
+    labelSidebarItems,
     sourcesCount: sources.length,
     sourceTypeCounts,
     automationsCount: automations.length,
@@ -2044,7 +2077,7 @@ function AppShellContent({
     onAddSkill: openAddSkill,
     onSettingsClick: () => handleSettingsClick('app'),
     onWhatsNewClick: handleWhatsNewClick,
-  }), [t, navState, sessionFilter, sourceFilter, automationFilter, projects, pages, outputs, decisions, notebooks, workItems.length, workspaceSessionMetas.length, effectiveSessionStatuses, sessionStatusCounts, flaggedCount, archivedCount, labelTree, labelCounts, sources.length, sourceTypeCounts, automations.length, automationTypeCounts, skills.length, hasUnseenReleaseNotes, activeWorkspace?.id, isExpanded, toggleExpanded, handleHomeClick, handleSearchClick, handleProjectsClick, navigate, handleLibraryClick, handlePagesClick, handleOutputsClick, handleDecisionsClick, handleNotebooksClick, handleWorkQueueClick, handleMarkAllWorkQueueRead, openConfigureStatuses, handleAllSessionsClick, handleSessionStatusClick, handleFlaggedClick, handleArchivedClick, handleLabelClick, openConfigureLabels, handleAddLabel, handleDeleteLabel, handleStatusReorder, handleSourcesClick, handleSourcesApiClick, handleSourcesMcpClick, handleSourcesLocalClick, openAddSource, handleAutomationsClick, handleAutomationsScheduledClick, handleAutomationsEventClick, handleAutomationsAgenticClick, openAddAutomation, handleSkillsClick, openAddSkill, handleSettingsClick, handleWhatsNewClick])
+  }), [t, navState, sessionFilter, sourceFilter, automationFilter, projects, pages, outputs, decisions, notebooks, workItems.length, workspaceSessionMetas.length, effectiveSessionStatuses, sessionStatusCounts, flaggedCount, archivedCount, labelTree, labelCounts, labelSidebarItems, sources.length, sourceTypeCounts, automations.length, automationTypeCounts, skills.length, hasUnseenReleaseNotes, activeWorkspace?.id, isExpanded, toggleExpanded, handleHomeClick, handleSearchClick, handleProjectsClick, navigate, handleLibraryClick, handlePagesClick, handleOutputsClick, handleDecisionsClick, handleNotebooksClick, handleWorkQueueClick, handleMarkAllWorkQueueRead, openConfigureStatuses, handleAllSessionsClick, handleSessionStatusClick, handleFlaggedClick, handleArchivedClick, handleLabelClick, openConfigureLabels, handleAddLabel, handleDeleteLabel, handleStatusReorder, handleSourcesClick, handleSourcesApiClick, handleSourcesMcpClick, handleSourcesLocalClick, openAddSource, handleAutomationsClick, handleAutomationsScheduledClick, handleAutomationsEventClick, handleAutomationsAgenticClick, openAddAutomation, handleSkillsClick, openAddSkill, handleSettingsClick, handleWhatsNewClick])
 
   const unifiedSidebarItems = React.useMemo(() => {
     return flattenVisibleSidebarFocusableItems(sidebarLinks)
