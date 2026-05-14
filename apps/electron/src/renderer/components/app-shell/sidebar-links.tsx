@@ -13,6 +13,7 @@ import {
   Flag,
   FolderOpen,
   Globe,
+  GitBranch,
   House,
   Inbox,
   ListTodo,
@@ -34,6 +35,8 @@ import {
   isAutomationsNavigation,
   isHomeNavigation,
   isLibraryNavigation,
+  isDecisionsNavigation,
+  isNotebooksNavigation,
   isOutputsNavigation,
   isPageCanvasNavigation,
   isProjectsNavigation,
@@ -64,6 +67,16 @@ interface OutputNavItem {
   title?: string
 }
 
+interface DecisionNavItem {
+  id: string
+  title?: string
+}
+
+interface NotebookNavItem {
+  id: string
+  title?: string
+}
+
 interface SidebarLinksParams {
   t: TFunction
   navState: NavigationState
@@ -73,6 +86,9 @@ interface SidebarLinksParams {
   projects: ProjectNavItem[]
   pages: PageNavItem[]
   outputs: OutputNavItem[]
+  decisions: DecisionNavItem[]
+  notebooks: NotebookNavItem[]
+  workItemsCount: number
   workspaceSessionCount: number
   effectiveSessionStatuses: SessionStatus[]
   sessionStatusCounts: Record<string, number>
@@ -97,9 +113,9 @@ interface SidebarLinksParams {
   onProjectClick: (id: string) => void
   onLibraryClick: () => void
   onPagesClick: () => void
-  onSavedPageClick: (id: string) => void
   onOutputsClick: () => void
-  onSavedOutputClick: (id: string) => void
+  onDecisionsClick: () => void
+  onNotebooksClick: () => void
   onWorkQueueClick: () => void
   onMarkAllSessionsRead?: () => void
   onConfigureStatuses?: () => void
@@ -225,6 +241,9 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
     projects,
     pages,
     outputs,
+    decisions,
+    notebooks,
+    workItemsCount,
     workspaceSessionCount,
     effectiveSessionStatuses,
     sessionStatusCounts,
@@ -249,9 +268,9 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
     onProjectClick,
     onLibraryClick,
     onPagesClick,
-    onSavedPageClick,
     onOutputsClick,
-    onSavedOutputClick,
+    onDecisionsClick,
+    onNotebooksClick,
     onWorkQueueClick,
     onMarkAllSessionsRead,
     onConfigureStatuses,
@@ -317,9 +336,9 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
     {
       id: 'nav:library',
       title: t('sidebar.library', 'Library'),
-      label: String(pages.length + outputs.length),
+      label: String(pages.length + outputs.length + decisions.length + notebooks.length),
       icon: BookOpen,
-      variant: (isLibraryNavigation(navState) || isPageCanvasNavigation(navState) || isOutputsNavigation(navState)) ? 'default' : 'ghost',
+      variant: (isLibraryNavigation(navState) || isPageCanvasNavigation(navState) || isOutputsNavigation(navState) || isDecisionsNavigation(navState) || isNotebooksNavigation(navState)) ? 'default' : 'ghost',
       onClick: onLibraryClick,
       expandable: true,
       expanded: isExpanded('nav:library'),
@@ -332,16 +351,6 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
           icon: FileText,
           variant: isPageCanvasNavigation(navState) ? 'default' : 'ghost',
           onClick: onPagesClick,
-          expandable: pages.length > 0,
-          expanded: isExpanded('nav:pages'),
-          onToggle: () => toggleExpanded('nav:pages'),
-          items: pages.slice(0, 10).map((page) => ({
-            id: `nav:page:${page.id}`,
-            title: page.title || 'Untitled Doc',
-            icon: FileText,
-            variant: isPageCanvasNavigation(navState) && navState.details?.type === 'savedPage' && navState.details.pageId === page.id ? 'default' : 'ghost',
-            onClick: () => onSavedPageClick(page.id),
-          })),
         },
         {
           id: 'nav:outputs',
@@ -350,23 +359,29 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
           icon: Box,
           variant: isOutputsNavigation(navState) ? 'default' : 'ghost',
           onClick: onOutputsClick,
-          expandable: outputs.length > 0,
-          expanded: isExpanded('nav:outputs'),
-          onToggle: () => toggleExpanded('nav:outputs'),
-          items: outputs.slice(0, 10).map((output) => ({
-            id: `nav:output:${output.id}`,
-            title: output.title || 'Untitled Output',
-            icon: Box,
-            variant: isOutputsNavigation(navState) && navState.details?.type === 'output' && navState.details.outputId === output.id ? 'default' : 'ghost',
-            onClick: () => onSavedOutputClick(output.id),
-          })),
+        },
+        {
+          id: 'nav:decisions',
+          title: 'Decisions',
+          label: String(decisions.length),
+          icon: GitBranch,
+          variant: isDecisionsNavigation(navState) ? 'default' : 'ghost',
+          onClick: onDecisionsClick,
+        },
+        {
+          id: 'nav:notebooks',
+          title: 'Notebooks',
+          label: String(notebooks.length),
+          icon: BookOpen,
+          variant: isNotebooksNavigation(navState) ? 'default' : 'ghost',
+          onClick: onNotebooksClick,
         },
       ],
     },
     {
       id: 'nav:workQueue',
       title: t('sidebar.workQueue', 'Work Queue'),
-      label: String(workspaceSessionCount),
+      label: String(workItemsCount),
       icon: ListTodo,
       variant: (isWorkQueueNavigation(navState) || isSessionsNavigation(navState)) ? 'default' : 'ghost',
       onClick: onWorkQueueClick,
@@ -378,78 +393,100 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
         onConfigureStatuses,
         onMarkAllRead: onMarkAllSessionsRead,
       },
-      sortable: { onReorder: onStatusReorder },
       items: [
         {
-          id: 'nav:allSessions',
-          title: t('sidebar.allSessions'),
+          id: 'nav:workItems',
+          title: 'Work Items',
+          label: String(workItemsCount),
+          icon: ListTodo,
+          variant: isWorkQueueNavigation(navState) ? 'default' : 'ghost',
+          onClick: onWorkQueueClick,
+        },
+        { id: 'separator:queue-legacy', type: 'separator' as const },
+        {
+          id: 'nav:legacySessions',
+          title: 'Legacy Sessions',
           label: String(workspaceSessionCount),
           icon: Inbox,
-          variant: sessionFilter?.kind === 'allSessions' ? 'default' : 'ghost',
+          variant: isSessionsNavigation(navState) ? 'default' : 'ghost',
           onClick: onAllSessionsClick,
-        },
-        ...effectiveSessionStatuses.map((state) => ({
-          id: `nav:state:${state.id}`,
-          title: t(`status.${state.id}`, state.label),
-          label: String(sessionStatusCounts[state.id] || 0),
-          icon: state.icon,
-          iconColor: state.resolvedColor,
-          iconColorable: state.iconColorable,
-          variant: (sessionFilter?.kind === 'state' && sessionFilter.stateId === state.id ? 'default' : 'ghost') as 'default' | 'ghost',
-          onClick: () => onSessionStatusClick(state.id),
-          contextMenu: {
-            type: 'status' as const,
-            statusId: state.id,
-            onConfigureStatuses,
-          },
-        })),
-        { id: 'separator:states-flagged', type: 'separator' as const },
-        {
-          id: 'nav:flagged',
-          title: t('sidebar.flagged'),
-          label: String(flaggedCount),
-          icon: <Flag className="h-3.5 w-3.5" />,
-          variant: (sessionFilter?.kind === 'flagged' ? 'default' : 'ghost') as 'default' | 'ghost',
-          onClick: onFlaggedClick,
-        },
-        {
-          id: 'nav:archived',
-          title: t('sidebar.archived'),
-          label: archivedCount > 0 ? String(archivedCount) : undefined,
-          icon: Archive,
-          variant: (sessionFilter?.kind === 'archived' ? 'default' : 'ghost') as 'default' | 'ghost',
-          onClick: onArchivedClick,
-        },
-        { id: 'separator:queue-labels', type: 'separator' as const },
-        {
-          id: 'nav:labels',
-          title: t('sidebar.labels'),
-          icon: Tag,
-          variant: (sessionFilter?.kind === 'label' && sessionFilter.labelId === '__all__') ? 'default' : 'ghost',
-          onClick: onLabelsRootClick,
           expandable: true,
-          expanded: isExpanded('nav:labels'),
-          onToggle: () => toggleExpanded('nav:labels'),
-          contextMenu: {
-            type: 'labels',
-            onConfigureLabels,
-            onAddLabel,
-          },
-          items: buildLabelSidebarLinks({
-            nodes: labelTree,
-            t,
-            sessionFilter,
-            labelCounts,
-            activeWorkspaceHasId,
-            renderLabelIcon,
-            renderLabelValueTypeBadge,
-            isExpanded,
-            toggleExpanded,
-            onLabelClick,
-            onConfigureLabels,
-            onAddLabel,
-            onDeleteLabel,
-          }),
+          expanded: isExpanded('nav:legacySessions'),
+          onToggle: () => toggleExpanded('nav:legacySessions'),
+          items: [
+            {
+              id: 'nav:allSessions',
+              title: t('sidebar.allSessions'),
+              label: String(workspaceSessionCount),
+              icon: Inbox,
+              variant: sessionFilter?.kind === 'allSessions' ? 'default' : 'ghost',
+              onClick: onAllSessionsClick,
+            },
+            ...effectiveSessionStatuses.map((state) => ({
+              id: `nav:state:${state.id}`,
+              title: t(`status.${state.id}`, state.label),
+              label: String(sessionStatusCounts[state.id] || 0),
+              icon: state.icon,
+              iconColor: state.resolvedColor,
+              iconColorable: state.iconColorable,
+              variant: (sessionFilter?.kind === 'state' && sessionFilter.stateId === state.id ? 'default' : 'ghost') as 'default' | 'ghost',
+              onClick: () => onSessionStatusClick(state.id),
+              contextMenu: {
+                type: 'status' as const,
+                statusId: state.id,
+                onConfigureStatuses,
+              },
+            })),
+            { id: 'separator:states-flagged', type: 'separator' as const },
+            {
+              id: 'nav:flagged',
+              title: t('sidebar.flagged'),
+              label: String(flaggedCount),
+              icon: <Flag className="h-3.5 w-3.5" />,
+              variant: (sessionFilter?.kind === 'flagged' ? 'default' : 'ghost') as 'default' | 'ghost',
+              onClick: onFlaggedClick,
+            },
+            {
+              id: 'nav:archived',
+              title: t('sidebar.archived'),
+              label: archivedCount > 0 ? String(archivedCount) : undefined,
+              icon: Archive,
+              variant: (sessionFilter?.kind === 'archived' ? 'default' : 'ghost') as 'default' | 'ghost',
+              onClick: onArchivedClick,
+            },
+            { id: 'separator:queue-labels', type: 'separator' as const },
+            {
+              id: 'nav:labels',
+              title: t('sidebar.labels'),
+              icon: Tag,
+              variant: (sessionFilter?.kind === 'label' && sessionFilter.labelId === '__all__') ? 'default' : 'ghost',
+              onClick: onLabelsRootClick,
+              expandable: true,
+              expanded: isExpanded('nav:labels'),
+              onToggle: () => toggleExpanded('nav:labels'),
+              contextMenu: {
+                type: 'labels',
+                onConfigureLabels,
+                onAddLabel,
+              },
+              items: buildLabelSidebarLinks({
+                nodes: labelTree,
+                t,
+                sessionFilter,
+                labelCounts,
+                activeWorkspaceHasId,
+                renderLabelIcon,
+                renderLabelValueTypeBadge,
+                isExpanded,
+                toggleExpanded,
+                onLabelClick,
+                onConfigureLabels,
+                onAddLabel,
+                onDeleteLabel,
+              }),
+            },
+          ],
+          sortable: { onReorder: onStatusReorder },
         },
       ],
     },

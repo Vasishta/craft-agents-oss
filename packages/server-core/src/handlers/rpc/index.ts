@@ -25,6 +25,8 @@ import { registerWorkspaceCoreHandlers } from './workspace'
 import { registerMessagingHandlers } from './messaging'
 import { registerPagesHandlers } from './pages'
 import { registerOutputsHandlers } from './outputs'
+import { registerDecisionsHandlers } from './decisions'
+import { registerNotebooksHandlers } from './notebooks'
 import { registerProjectsHandlers } from './projects'
 import { registerWorkItemsHandlers } from './workitems'
 
@@ -53,6 +55,8 @@ export function registerCoreRpcHandlers(
   registerMessagingHandlers(server, deps)
   registerPagesHandlers(server, deps)
   registerOutputsHandlers(server, deps)
+  registerDecisionsHandlers(server, deps)
+  registerNotebooksHandlers(server, deps)
   registerProjectsHandlers(server, deps)
   registerWorkItemsHandlers(server, deps)
 }

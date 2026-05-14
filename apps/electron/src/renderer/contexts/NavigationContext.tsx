@@ -71,6 +71,8 @@ import {
   isPageCanvasNavigation,
   isSearchNavigation,
   isOutputsNavigation,
+  isDecisionsNavigation,
+  isNotebooksNavigation,
   isProjectsNavigation,
   isHomeNavigation,
   isLibraryNavigation,
@@ -99,7 +101,7 @@ export type { Route }
 
 // Re-export navigation state types for consumers
 export type { NavigationState, SessionFilter }
-export { isSessionsNavigation, isSourcesNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation, isPageCanvasNavigation, isSearchNavigation, isOutputsNavigation, isProjectsNavigation, isHomeNavigation, isLibraryNavigation, isWorkQueueNavigation }
+export { isSessionsNavigation, isSourcesNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation, isPageCanvasNavigation, isSearchNavigation, isOutputsNavigation, isDecisionsNavigation, isNotebooksNavigation, isProjectsNavigation, isHomeNavigation, isLibraryNavigation, isWorkQueueNavigation }
 
 // =============================================================================
 // Context

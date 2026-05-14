@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
-import { Box, BriefcaseBusiness, DatabaseZap, FileText, MessageSquareText, Search, SquarePen } from 'lucide-react'
+import { BookOpen, Box, BriefcaseBusiness, DatabaseZap, FileText, GitBranch, ListTodo, MessageSquareText, Search, SquarePen } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -11,6 +11,9 @@ import { sourcesAtom } from '@/atoms/sources'
 import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
 import { useProjectList } from '@/hooks/useProjects'
+import { useDecisionList } from '@/hooks/useDecisions'
+import { useNotebookList } from '@/hooks/useNotebooks'
+import { useWorkItemList } from '@/hooks/useWorkItems'
 import { navigate, routes } from '@/lib/navigate'
 import { getWorkspaceSessionMetas } from '@/lib/session-meta-selectors'
 import { cn } from '@/lib/utils'
@@ -62,6 +65,37 @@ function ActionButton({
       {icon}
       {label}
     </Button>
+  )
+}
+
+function SnapshotCard({
+  label,
+  value,
+  detail,
+  icon,
+  onClick,
+}: {
+  label: string
+  value: string
+  detail: string
+  icon: React.ReactNode
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-[10px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    >
+      <span className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{label}</span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
+          {icon}
+        </span>
+      </span>
+      <span className="mt-3 block text-2xl font-semibold tracking-normal text-foreground">{value}</span>
+      <span className="mt-1 block text-xs text-muted-foreground">{detail}</span>
+    </button>
   )
 }
 
@@ -128,6 +162,9 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
   const { pages } = usePageList(workspaceId)
   const { outputs } = useOutputList(workspaceId)
   const { projects } = useProjectList(workspaceId)
+  const { decisions } = useDecisionList(workspaceId)
+  const { notebooks } = useNotebookList(workspaceId)
+  const { workItems } = useWorkItemList(workspaceId)
 
   const workspaceName = getWorkspaceName(workspaces, workspaceId)
   const remoteWorkspaceId = activeWorkspace?.remoteServer?.remoteWorkspaceId
@@ -152,6 +189,11 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
   const recentProjects = React.useMemo(
     () => [...projects].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
     [projects]
+  )
+
+  const recentDecisions = React.useMemo(
+    () => [...decisions].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
+    [decisions]
   )
 
   const recentSources = React.useMemo(
@@ -197,6 +239,43 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
           <section>
             <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">Workspace</p>
             <h1 className="mt-1 text-[26px] font-semibold tracking-normal text-foreground">{workspaceName}</h1>
+            <p className="mt-3 max-w-[680px] text-sm leading-6 text-muted-foreground">
+              Durable work now lives across docs, outputs, decisions, notebooks, and work items. Use Home as the quickest way to orient, resume, and jump into the right surface.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-sm font-medium text-foreground">At a glance</h2>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <SnapshotCard
+                label="Library"
+                value={String(pages.length + outputs.length + decisions.length + notebooks.length)}
+                detail={`${pages.length} docs, ${outputs.length} outputs, ${decisions.length} decisions, ${notebooks.length} notebooks`}
+                icon={<BookOpen className="h-4 w-4" />}
+                onClick={() => navigate(routes.view.library())}
+              />
+              <SnapshotCard
+                label="Work Queue"
+                value={String(workItems.length)}
+                detail={`${workItems.filter((item) => item.status !== 'done').length} active durable items`}
+                icon={<ListTodo className="h-4 w-4" />}
+                onClick={() => navigate(routes.view.workQueue())}
+              />
+              <SnapshotCard
+                label="Chats"
+                value={String(recentChats.length)}
+                detail={`${workspaceName} sessions with recent activity`}
+                icon={<MessageSquareText className="h-4 w-4" />}
+                onClick={() => navigate(routes.view.allSessions())}
+              />
+              <SnapshotCard
+                label="Context"
+                value={String(sources.length)}
+                detail="Connected files, APIs, MCPs, and local folders"
+                icon={<DatabaseZap className="h-4 w-4" />}
+                onClick={() => navigate(routes.view.sources())}
+              />
+            </div>
           </section>
 
           <section>
@@ -218,6 +297,16 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                 onClick={() => navigate(routes.view.outputs())}
               />
               <ActionButton
+                icon={<GitBranch className="h-4 w-4" />}
+                label="Review decisions"
+                onClick={() => navigate(routes.view.decisions())}
+              />
+              <ActionButton
+                icon={<ListTodo className="h-4 w-4" />}
+                label="Open work queue"
+                onClick={() => navigate(routes.view.workQueue())}
+              />
+              <ActionButton
                 icon={<BriefcaseBusiness className="h-4 w-4" />}
                 label="Open projects"
                 onClick={() => navigate(routes.view.projects())}
@@ -237,7 +326,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
 
           <section>
             <h2 className="mb-3 text-sm font-medium text-foreground">Recent</h2>
-            <div className="grid gap-4 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <RecentSection title="Recent chats" empty="No recent chats">
                 {recentChats.map((session) => (
                   <RecentRow
@@ -272,6 +361,19 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                     meta={formatUpdatedTime(output.updatedAt)}
                     detail={output.sourceSessionId || output.sourceMessageId ? 'From assistant response' : 'Saved manually'}
                     onClick={() => navigate(routes.view.savedOutput(output.id))}
+                  />
+                ))}
+              </RecentSection>
+
+              <RecentSection title="Recent decisions" empty="No recent decisions">
+                {recentDecisions.map((decision) => (
+                  <RecentRow
+                    key={decision.id}
+                    icon={<GitBranch className="h-4 w-4" />}
+                    title={decision.title}
+                    meta={formatUpdatedTime(decision.updatedAt)}
+                    detail={decision.status}
+                    onClick={() => navigate(routes.view.decision(decision.id))}
                   />
                 ))}
               </RecentSection>

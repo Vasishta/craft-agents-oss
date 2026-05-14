@@ -195,6 +195,12 @@ export const routes = {
     /** Outputs list/detail view */
     outputs: () => 'outputs' as const,
 
+    /** Decisions list/detail view */
+    decisions: () => 'decisions' as const,
+
+    /** Notebooks list/detail view */
+    notebooks: () => 'notebooks' as const,
+
     /** Projects list/detail view */
     projects: () => 'projects' as const,
 
@@ -205,6 +211,14 @@ export const routes = {
     /** Project detail view */
     project: (projectId: string) =>
       `projects/project/${encodeURIComponent(projectId)}` as const,
+
+    /** Decision detail view */
+    decision: (decisionId: string) =>
+      `decisions/decision/${encodeURIComponent(decisionId)}` as const,
+
+    /** Notebook detail view */
+    notebook: (notebookId: string) =>
+      `notebooks/notebook/${encodeURIComponent(notebookId)}` as const,
 
     /** Page canvas view for a session message */
     pageCanvas: (params: { sessionId: string; messageId: string }) =>

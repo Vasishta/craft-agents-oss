@@ -5,8 +5,12 @@
  */
 
 export { default as ChatPage } from './ChatPage'
+export { default as DecisionDetailPage } from './DecisionDetailPage'
+export { default as DecisionsPage } from './DecisionsPage'
 export { default as DocsHome } from './DocsHome'
 export { default as LibraryPage } from './LibraryPage'
+export { default as NotebookDetailPage } from './NotebookDetailPage'
+export { default as NotebooksPage } from './NotebooksPage'
 export { default as OutputDetailPage } from './OutputDetailPage'
 export { default as OutputsPage } from './OutputsPage'
 export { default as PageCanvas } from './PageCanvas'

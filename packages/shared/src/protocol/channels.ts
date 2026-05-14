@@ -293,6 +293,22 @@ export const RPC_CHANNELS = {
     PROMOTE_TO_DOC: 'outputs:promoteToDoc',
     CHANGED: 'outputs:changed',
   },
+  decisions: {
+    LIST: 'decisions:list',
+    GET: 'decisions:get',
+    CREATE: 'decisions:create',
+    UPDATE: 'decisions:update',
+    DELETE: 'decisions:delete',
+    CHANGED: 'decisions:changed',
+  },
+  notebooks: {
+    LIST: 'notebooks:list',
+    GET: 'notebooks:get',
+    CREATE: 'notebooks:create',
+    UPDATE: 'notebooks:update',
+    DELETE: 'notebooks:delete',
+    CHANGED: 'notebooks:changed',
+  },
   projects: {
     LIST: 'projects:list',
     GET: 'projects:get',

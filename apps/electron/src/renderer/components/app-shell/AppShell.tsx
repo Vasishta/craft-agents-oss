@@ -96,6 +96,9 @@ import { skillsAtom } from "@/atoms/skills"
 import { usePageList } from "@/hooks/usePages"
 import { useOutputList } from "@/hooks/useOutputs"
 import { useProjectList } from "@/hooks/useProjects"
+import { useDecisionList } from "@/hooks/useDecisions"
+import { useNotebookList } from "@/hooks/useNotebooks"
+import { useWorkItemList } from "@/hooks/useWorkItems"
 import { panelStackAtom, panelCountAtom, focusedPanelIdAtom, focusedSessionIdAtom, focusNextPanelAtom, focusPrevPanelAtom, parseSessionIdFromRoute } from "@/atoms/panel-stack"
 import { type SessionStatusId, type SessionStatus, statusConfigsToSessionStatuses } from "@/config/session-status-config"
 import { useStatuses } from "@/hooks/useStatuses"
@@ -1302,6 +1305,9 @@ function AppShellContent({
   const { pages } = usePageList(activeWorkspaceId ?? null)
   const { outputs } = useOutputList(activeWorkspaceId ?? null)
   const { projects } = useProjectList(activeWorkspaceId ?? null)
+  const { decisions } = useDecisionList(activeWorkspaceId ?? null)
+  const { notebooks } = useNotebookList(activeWorkspaceId ?? null)
+  const { workItems } = useWorkItemList(activeWorkspaceId ?? null)
 
   const hasPendingPrompt = React.useCallback((sessionId: string) => {
     return (pendingPermissions.get(sessionId)?.length ?? 0) > 0
@@ -1739,6 +1745,14 @@ function AppShellContent({
     navigate(routes.view.outputs())
   }, [navigate])
 
+  const handleDecisionsClick = useCallback(() => {
+    navigate(routes.view.decisions())
+  }, [navigate])
+
+  const handleNotebooksClick = useCallback(() => {
+    navigate(routes.view.notebooks())
+  }, [navigate])
+
   const handleProjectsClick = useCallback(() => {
     navigate(routes.view.projects())
   }, [navigate])
@@ -1980,10 +1994,13 @@ function AppShellContent({
     sessionFilter: sessionFilter ?? null,
     sourceFilter: sourceFilter ?? undefined,
     automationFilter: automationFilter ?? undefined,
-    projects,
-    pages,
-    outputs,
-    workspaceSessionCount: workspaceSessionMetas.length,
+      projects,
+      pages,
+      outputs,
+      decisions,
+      notebooks,
+      workItemsCount: workItems.length,
+      workspaceSessionCount: workspaceSessionMetas.length,
     effectiveSessionStatuses,
     sessionStatusCounts,
     flaggedCount,
@@ -2008,13 +2025,13 @@ function AppShellContent({
     onHomeClick: handleHomeClick,
     onSearchClick: handleSearchClick,
     onProjectsClick: handleProjectsClick,
-    onProjectClick: (id) => navigate(routes.view.project(id)),
-    onLibraryClick: handleLibraryClick,
-    onPagesClick: handlePagesClick,
-    onSavedPageClick: (id) => navigate(routes.view.savedPage(id)),
-    onOutputsClick: handleOutputsClick,
-    onSavedOutputClick: (id) => navigate(routes.view.savedOutput(id)),
-    onWorkQueueClick: handleWorkQueueClick,
+      onProjectClick: (id) => navigate(routes.view.project(id)),
+      onLibraryClick: handleLibraryClick,
+      onPagesClick: handlePagesClick,
+      onOutputsClick: handleOutputsClick,
+      onDecisionsClick: handleDecisionsClick,
+      onNotebooksClick: handleNotebooksClick,
+      onWorkQueueClick: handleWorkQueueClick,
     onMarkAllSessionsRead: handleMarkAllWorkQueueRead,
     onConfigureStatuses: openConfigureStatuses,
     onAllSessionsClick: handleAllSessionsClick,
@@ -2041,7 +2058,7 @@ function AppShellContent({
     onAddSkill: openAddSkill,
     onSettingsClick: () => handleSettingsClick('app'),
     onWhatsNewClick: handleWhatsNewClick,
-  }), [t, navState, sessionFilter, sourceFilter, automationFilter, projects, pages, outputs, workspaceSessionMetas.length, effectiveSessionStatuses, sessionStatusCounts, flaggedCount, archivedCount, labelTree, labelCounts, sources.length, sourceTypeCounts, automations.length, automationTypeCounts, skills.length, hasUnseenReleaseNotes, activeWorkspace?.id, isExpanded, toggleExpanded, handleHomeClick, handleSearchClick, handleProjectsClick, navigate, handleLibraryClick, handlePagesClick, handleOutputsClick, handleWorkQueueClick, handleMarkAllWorkQueueRead, openConfigureStatuses, handleAllSessionsClick, handleSessionStatusClick, handleFlaggedClick, handleArchivedClick, handleLabelClick, openConfigureLabels, handleAddLabel, handleDeleteLabel, handleStatusReorder, handleSourcesClick, handleSourcesApiClick, handleSourcesMcpClick, handleSourcesLocalClick, openAddSource, handleAutomationsClick, handleAutomationsScheduledClick, handleAutomationsEventClick, handleAutomationsAgenticClick, openAddAutomation, handleSkillsClick, openAddSkill, handleSettingsClick, handleWhatsNewClick])
+  }), [t, navState, sessionFilter, sourceFilter, automationFilter, projects, pages, outputs, decisions, notebooks, workItems.length, workspaceSessionMetas.length, effectiveSessionStatuses, sessionStatusCounts, flaggedCount, archivedCount, labelTree, labelCounts, sources.length, sourceTypeCounts, automations.length, automationTypeCounts, skills.length, hasUnseenReleaseNotes, activeWorkspace?.id, isExpanded, toggleExpanded, handleHomeClick, handleSearchClick, handleProjectsClick, navigate, handleLibraryClick, handlePagesClick, handleOutputsClick, handleDecisionsClick, handleNotebooksClick, handleWorkQueueClick, handleMarkAllWorkQueueRead, openConfigureStatuses, handleAllSessionsClick, handleSessionStatusClick, handleFlaggedClick, handleArchivedClick, handleLabelClick, openConfigureLabels, handleAddLabel, handleDeleteLabel, handleStatusReorder, handleSourcesClick, handleSourcesApiClick, handleSourcesMcpClick, handleSourcesLocalClick, openAddSource, handleAutomationsClick, handleAutomationsScheduledClick, handleAutomationsEventClick, handleAutomationsAgenticClick, openAddAutomation, handleSkillsClick, openAddSkill, handleSettingsClick, handleWhatsNewClick])
 
   const unifiedSidebarItems = React.useMemo(() => {
     return flattenVisibleSidebarFocusableItems(sidebarLinks)

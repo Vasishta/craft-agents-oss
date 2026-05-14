@@ -515,6 +515,22 @@ export interface ElectronAPI {
   promoteOutputToDoc(workspaceId: string, outputId: string): Promise<import("@craft-agent/shared/protocol").PageDocument | null>
   onOutputsChanged(callback: (workspaceId: string, data: { outputId: string; changeType: "created" | "updated" | "deleted" | "promoted"; timestamp: number }) => void): () => void
 
+  // Decisions (workspace-scoped)
+  listDecisions(workspaceId: string): Promise<import("@craft-agent/shared/protocol").DecisionIndexEntry[]>
+  getDecision(workspaceId: string, decisionId: string): Promise<import("@craft-agent/shared/protocol").DecisionDocument | null>
+  createDecision(workspaceId: string, input: import("@craft-agent/shared/protocol").CreateDecisionInput): Promise<import("@craft-agent/shared/protocol").DecisionDocument | null>
+  updateDecision(workspaceId: string, decisionId: string, updates: import("@craft-agent/shared/protocol").UpdateDecisionInput): Promise<import("@craft-agent/shared/protocol").DecisionDocument | null>
+  deleteDecision(workspaceId: string, decisionId: string): Promise<void>
+  onDecisionsChanged(callback: (workspaceId: string, data: { decisionId: string; changeType: "created" | "updated" | "deleted"; timestamp: number }) => void): () => void
+
+  // Notebooks (workspace-scoped)
+  listNotebooks(workspaceId: string): Promise<import("@craft-agent/shared/protocol").NotebookIndexEntry[]>
+  getNotebook(workspaceId: string, notebookId: string): Promise<import("@craft-agent/shared/protocol").NotebookDocument | null>
+  createNotebook(workspaceId: string, input: import("@craft-agent/shared/protocol").CreateNotebookInput): Promise<import("@craft-agent/shared/protocol").NotebookDocument | null>
+  updateNotebook(workspaceId: string, notebookId: string, updates: import("@craft-agent/shared/protocol").UpdateNotebookInput): Promise<import("@craft-agent/shared/protocol").NotebookDocument | null>
+  deleteNotebook(workspaceId: string, notebookId: string): Promise<void>
+  onNotebooksChanged(callback: (workspaceId: string, data: { notebookId: string; changeType: "created" | "updated" | "deleted"; timestamp: number }) => void): () => void
+
   // Projects (workspace-scoped)
   listProjects(workspaceId: string): Promise<import("@craft-agent/shared/protocol").ProjectIndexEntry[]>
   getProject(workspaceId: string, projectId: string): Promise<import("@craft-agent/shared/protocol").ProjectDocument | null>
@@ -858,6 +874,24 @@ export interface OutputsNavigationState {
 }
 
 /**
+ * Decisions navigation state.
+ */
+export interface DecisionsNavigationState {
+  navigator: 'decisions'
+  details: null | { type: 'decision'; decisionId: string }
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
+ * Notebooks navigation state.
+ */
+export interface NotebooksNavigationState {
+  navigator: 'notebooks'
+  details: null | { type: 'notebook'; notebookId: string }
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
  * Projects navigation state.
  */
 export interface ProjectsNavigationState {
@@ -905,6 +939,8 @@ export type NavigationState =
   | PageCanvasNavigationState
   | SearchNavigationState
   | OutputsNavigationState
+  | DecisionsNavigationState
+  | NotebooksNavigationState
   | ProjectsNavigationState
   | HomeNavigationState
   | LibraryNavigationState
@@ -941,6 +977,14 @@ export const isSearchNavigation = (
 export const isOutputsNavigation = (
   state: NavigationState
 ): state is OutputsNavigationState => state.navigator === 'outputs'
+
+export const isDecisionsNavigation = (
+  state: NavigationState
+): state is DecisionsNavigationState => state.navigator === 'decisions'
+
+export const isNotebooksNavigation = (
+  state: NavigationState
+): state is NotebooksNavigationState => state.navigator === 'notebooks'
 
 export const isProjectsNavigation = (
   state: NavigationState
@@ -1002,6 +1046,18 @@ export const getNavigationStateKey = (state: NavigationState): string => {
       return `outputs/output/${state.details.outputId}`
     }
     return 'outputs'
+  }
+  if (state.navigator === 'decisions') {
+    if (state.details?.type === 'decision') {
+      return `decisions/decision/${state.details.decisionId}`
+    }
+    return 'decisions'
+  }
+  if (state.navigator === 'notebooks') {
+    if (state.details?.type === 'notebook') {
+      return `notebooks/notebook/${state.details.notebookId}`
+    }
+    return 'notebooks'
   }
   if (state.navigator === 'projects') {
     if (state.details?.type === 'project') {
@@ -1103,6 +1159,26 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
       return { navigator: 'outputs', details: { type: 'output', outputId } }
     }
     return { navigator: 'outputs', details: null }
+  }
+
+  // Handle decisions
+  if (key === 'decisions') return { navigator: 'decisions', details: null }
+  if (key.startsWith('decisions/decision/')) {
+    const decisionId = key.slice(19)
+    if (decisionId) {
+      return { navigator: 'decisions', details: { type: 'decision', decisionId } }
+    }
+    return { navigator: 'decisions', details: null }
+  }
+
+  // Handle notebooks
+  if (key === 'notebooks') return { navigator: 'notebooks', details: null }
+  if (key.startsWith('notebooks/notebook/')) {
+    const notebookId = key.slice(19)
+    if (notebookId) {
+      return { navigator: 'notebooks', details: { type: 'notebook', notebookId } }
+    }
+    return { navigator: 'notebooks', details: null }
   }
 
   // Handle projects

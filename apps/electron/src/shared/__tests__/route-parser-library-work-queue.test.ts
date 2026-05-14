@@ -53,4 +53,41 @@ describe('library and work queue route parsing', () => {
     expect(buildRouteFromNavigationState(state)).toBe('workQueue')
     expect(parseNavigationStateKey(getNavigationStateKey(state))).toEqual(state)
   })
+
+  it('parses decisions and notebooks detail routes as navigation-safe surfaces', () => {
+    expect(parseRoute('decisions/decision/decision-123')).toEqual({
+      type: 'view',
+      name: 'decision',
+      id: 'decision-123',
+      params: {},
+    })
+    expect(parseRouteToNavigationState('decisions/decision/decision-123')).toEqual({
+      navigator: 'decisions',
+      details: { type: 'decision', decisionId: 'decision-123' },
+    })
+
+    expect(parseRoute('notebooks/notebook/notebook-456')).toEqual({
+      type: 'view',
+      name: 'notebook',
+      id: 'notebook-456',
+      params: {},
+    })
+    expect(parseRouteToNavigationState('notebooks/notebook/notebook-456')).toEqual({
+      navigator: 'notebooks',
+      details: { type: 'notebook', notebookId: 'notebook-456' },
+    })
+  })
+
+  it('builds decisions and notebooks routes from helpers and navigation state keys', () => {
+    const decisionState = { navigator: 'decisions' as const, details: { type: 'decision' as const, decisionId: 'decision-123' } }
+    const notebookState = { navigator: 'notebooks' as const, details: { type: 'notebook' as const, notebookId: 'notebook-456' } }
+
+    expect(routes.view.decision('decision-123')).toBe('decisions/decision/decision-123')
+    expect(buildRouteFromNavigationState(decisionState)).toBe('decisions/decision/decision-123')
+    expect(parseNavigationStateKey(getNavigationStateKey(decisionState))).toEqual(decisionState)
+
+    expect(routes.view.notebook('notebook-456')).toBe('notebooks/notebook/notebook-456')
+    expect(buildRouteFromNavigationState(notebookState)).toBe('notebooks/notebook/notebook-456')
+    expect(parseNavigationStateKey(getNavigationStateKey(notebookState))).toEqual(notebookState)
+  })
 })

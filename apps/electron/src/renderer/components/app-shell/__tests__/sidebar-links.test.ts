@@ -42,6 +42,9 @@ function buildLinks({
     projects: [{ id: 'project-1', name: 'Project One' }],
     pages: [{ id: 'page-1', title: 'Doc One' }],
     outputs: [{ id: 'output-1', title: 'Output One' }],
+    decisions: [{ id: 'decision-1', title: 'Decision One' }],
+    notebooks: [{ id: 'notebook-1', title: 'Notebook One' }],
+    workItemsCount: 4,
     workspaceSessionCount: 3,
     effectiveSessionStatuses: [{
       id: 'todo',
@@ -64,7 +67,7 @@ function buildLinks({
     activeWorkspaceHasId: true,
     renderLabelIcon: () => 'L',
     renderLabelValueTypeBadge: () => '#',
-    isExpanded: (id) => new Set(['nav:projects', 'nav:library', 'nav:pages', 'nav:workQueue', 'nav:labels', 'nav:sources', 'nav:automations']).has(id),
+    isExpanded: (id) => new Set(['nav:projects', 'nav:library', 'nav:workQueue', 'nav:legacySessions', 'nav:labels', 'nav:sources', 'nav:automations']).has(id),
     toggleExpanded: () => undefined,
     onHomeClick: () => undefined,
     onSearchClick: () => undefined,
@@ -72,9 +75,9 @@ function buildLinks({
     onProjectClick: () => undefined,
     onLibraryClick: () => undefined,
     onPagesClick: () => undefined,
-    onSavedPageClick: () => undefined,
     onOutputsClick: () => undefined,
-    onSavedOutputClick: () => undefined,
+    onDecisionsClick: () => undefined,
+    onNotebooksClick: () => undefined,
     onWorkQueueClick: () => undefined,
     onMarkAllSessionsRead: () => undefined,
     onConfigureStatuses: () => undefined,
@@ -111,12 +114,22 @@ describe('buildAppSidebarLinks', () => {
 
     const library = links.find((item) => 'title' in item && item.id === 'nav:library')
     const workQueue = links.find((item) => 'title' in item && item.id === 'nav:workQueue')
+    const legacySessions = workQueue && 'items' in workQueue
+      ? workQueue.items?.find((item) => 'title' in item && item.id === 'nav:legacySessions')
+      : null
 
     expect(library && 'items' in library ? library.items?.map((item) => item.id) : []).toEqual([
       'nav:pages',
       'nav:outputs',
+      'nav:decisions',
+      'nav:notebooks',
     ])
     expect(workQueue && 'items' in workQueue ? workQueue.items?.map((item) => item.id) : []).toEqual([
+      'nav:workItems',
+      'separator:queue-legacy',
+      'nav:legacySessions',
+    ])
+    expect(legacySessions && 'items' in legacySessions ? legacySessions.items?.map((item) => item.id) : []).toEqual([
       'nav:allSessions',
       'nav:state:todo',
       'separator:states-flagged',
@@ -134,8 +147,11 @@ describe('buildAppSidebarLinks', () => {
     })
 
     const workQueue = links.find((item) => 'title' in item && item.id === 'nav:workQueue')
-    const statusItem = workQueue && 'items' in workQueue
-      ? workQueue.items?.find((item) => 'title' in item && item.id === 'nav:state:todo')
+    const legacySessions = workQueue && 'items' in workQueue
+      ? workQueue.items?.find((item) => 'title' in item && item.id === 'nav:legacySessions')
+      : null
+    const statusItem = legacySessions && 'items' in legacySessions
+      ? legacySessions.items?.find((item) => 'title' in item && item.id === 'nav:state:todo')
       : null
 
     expect(workQueue && 'variant' in workQueue ? workQueue.variant : null).toBe('default')

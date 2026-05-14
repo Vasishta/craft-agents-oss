@@ -261,6 +261,22 @@ export const CHANNEL_MAP = {
   promoteOutputToDoc: invoke(RPC_CHANNELS.outputs.PROMOTE_TO_DOC),
   onOutputsChanged: listener(RPC_CHANNELS.outputs.CHANGED),
 
+  // Decisions
+  listDecisions: invoke(RPC_CHANNELS.decisions.LIST),
+  getDecision: invoke(RPC_CHANNELS.decisions.GET),
+  createDecision: invoke(RPC_CHANNELS.decisions.CREATE),
+  updateDecision: invoke(RPC_CHANNELS.decisions.UPDATE),
+  deleteDecision: invoke(RPC_CHANNELS.decisions.DELETE),
+  onDecisionsChanged: listener(RPC_CHANNELS.decisions.CHANGED),
+
+  // Notebooks
+  listNotebooks: invoke(RPC_CHANNELS.notebooks.LIST),
+  getNotebook: invoke(RPC_CHANNELS.notebooks.GET),
+  createNotebook: invoke(RPC_CHANNELS.notebooks.CREATE),
+  updateNotebook: invoke(RPC_CHANNELS.notebooks.UPDATE),
+  deleteNotebook: invoke(RPC_CHANNELS.notebooks.DELETE),
+  onNotebooksChanged: listener(RPC_CHANNELS.notebooks.CHANGED),
+
   // Projects
   listProjects: invoke(RPC_CHANNELS.projects.LIST),
   getProject: invoke(RPC_CHANNELS.projects.GET),

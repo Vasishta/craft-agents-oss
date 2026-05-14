@@ -77,6 +77,12 @@ export interface BroadcastEventMap {
   // Output events (workspace-scoped)
   [RPC_CHANNELS.outputs.CHANGED]: [workspaceId: string, data: { outputId: string; changeType: 'created' | 'updated' | 'deleted' | 'promoted'; timestamp: number }]
 
+  // Decision events (workspace-scoped)
+  [RPC_CHANNELS.decisions.CHANGED]: [workspaceId: string, data: { decisionId: string; changeType: 'created' | 'updated' | 'deleted'; timestamp: number }]
+
+  // Notebook events (workspace-scoped)
+  [RPC_CHANNELS.notebooks.CHANGED]: [workspaceId: string, data: { notebookId: string; changeType: 'created' | 'updated' | 'deleted'; timestamp: number }]
+
   // Project events (workspace-scoped)
   [RPC_CHANNELS.projects.CHANGED]: [workspaceId: string, data: { projectId: string; changeType: 'created' | 'updated' | 'deleted'; timestamp: number }]
 

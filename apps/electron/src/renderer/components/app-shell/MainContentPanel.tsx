@@ -34,6 +34,8 @@ import {
   isPageCanvasNavigation,
   isSearchNavigation,
   isOutputsNavigation,
+  isDecisionsNavigation,
+  isNotebooksNavigation,
   isProjectsNavigation,
   isHomeNavigation,
   isLibraryNavigation,
@@ -43,7 +45,7 @@ import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelecti
 import { sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
 import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
-import { SourceInfoPage, ChatPage, DocsHome, LibraryPage, OutputDetailPage, OutputsPage, PageCanvas, ProjectDetailPage, ProjectsPage, SearchPage, WorkspaceHome, WorkQueuePage } from '@/pages'
+import { SourceInfoPage, ChatPage, DecisionDetailPage, DecisionsPage, DocsHome, LibraryPage, NotebookDetailPage, NotebooksPage, OutputDetailPage, OutputsPage, PageCanvas, ProjectDetailPage, ProjectsPage, SearchPage, WorkspaceHome, WorkQueuePage } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
@@ -326,6 +328,38 @@ export function MainContentPanel({
           />
         ) : (
           <OutputsPage workspaceId={activeWorkspaceId || ''} />
+        )}
+      </Panel>
+    )
+  }
+
+  // Decisions navigator - durable architecture and product choices
+  if (isDecisionsNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        {navState.details?.type === 'decision' ? (
+          <DecisionDetailPage
+            workspaceId={activeWorkspaceId || ''}
+            decisionId={navState.details.decisionId}
+          />
+        ) : (
+          <DecisionsPage workspaceId={activeWorkspaceId || ''} />
+        )}
+      </Panel>
+    )
+  }
+
+  // Notebooks navigator - curated cross-object collections
+  if (isNotebooksNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        {navState.details?.type === 'notebook' ? (
+          <NotebookDetailPage
+            workspaceId={activeWorkspaceId || ''}
+            notebookId={navState.details.notebookId}
+          />
+        ) : (
+          <NotebooksPage workspaceId={activeWorkspaceId || ''} />
         )}
       </Panel>
     )

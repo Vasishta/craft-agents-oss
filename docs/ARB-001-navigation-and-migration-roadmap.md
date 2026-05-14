@@ -344,15 +344,21 @@ Completed:
 In progress:
 
 ```text
-17. Workspace navigation IA consolidation (#35)
+17. Decision and Notebook UI surfaces (#29)
 ```
 
-Recommended next tasks after #35:
+Completed since the shell consolidation milestone:
 
 ```text
-18. Decision and Notebook UI surfaces (#29)
-19. Library v0 durable-object surface (#30)
-20. Work Queue v0 backed by WorkItems (#31)
+17. Workspace navigation IA consolidation (#35)
+18. Library v0 durable-object surface (#30)
+19. Work Queue v0 backed by WorkItems (#31)
+```
+
+Recommended next tasks:
+
+```text
+20. Decision and Notebook UI surfaces (#29)
 21. Project linked-object navigation polish (#32)
 22. Cross-object Search expansion (#33)
 23. Explicit cross-object linking actions (#34)
