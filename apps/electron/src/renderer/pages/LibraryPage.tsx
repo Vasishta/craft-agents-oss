@@ -10,10 +10,12 @@ import { usePageList } from '@/hooks/usePages'
 import {
   buildLibraryCounts,
   filterLibraryItems,
+  formatKindLabel,
   normalizeLibraryItems,
   type LibraryFilter,
   type LibraryItem,
 } from '@/lib/library-meta'
+import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
 
 interface LibraryPageProps {
@@ -26,23 +28,6 @@ const FILTER_LABELS: Record<LibraryFilter, string> = {
   output: 'Outputs',
   decision: 'Decisions',
   notebook: 'Notebooks',
-}
-
-function formatUpdatedTime(timestamp: number, now: number): string {
-  const diffMs = timestamp - now
-  const absMs = Math.abs(diffMs)
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
-
-  if (absMs < 60_000) return 'just now'
-  if (absMs < 3_600_000) return rtf.format(Math.round(diffMs / 60_000), 'minute')
-  if (absMs < 86_400_000) return rtf.format(Math.round(diffMs / 3_600_000), 'hour')
-  if (absMs < 604_800_000) return rtf.format(Math.round(diffMs / 86_400_000), 'day')
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: new Date(timestamp).getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
-  }).format(timestamp)
 }
 
 function FilterButton({
@@ -264,7 +249,7 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
                   </span>
                   <span className="flex items-start">
                     <span className="rounded-[4px] border border-border/55 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      {FILTER_LABELS[item.kind]}
+                      {formatKindLabel(item.kind)}
                     </span>
                   </span>
                 </div>

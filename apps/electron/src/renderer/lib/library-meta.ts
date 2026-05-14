@@ -52,6 +52,19 @@ export function buildLibraryCounts(items: LibraryItem[]): Record<LibraryFilter, 
   })
 }
 
+export function formatKindLabel(kind: LibraryItemKind): string {
+  switch (kind) {
+    case 'doc':
+      return 'Docs'
+    case 'output':
+      return 'Outputs'
+    case 'decision':
+      return 'Decisions'
+    case 'notebook':
+      return 'Notebooks'
+  }
+}
+
 function normalizePageItem(page: PageListEntry): LibraryItem {
   const title = page.title?.trim() || 'Untitled Doc'
   const outputSummary = page.outputIdCount > 0 ? `${page.outputIdCount} linked outputs` : 'Standalone doc'
@@ -75,7 +88,7 @@ function normalizeOutputItem(output: OutputIndexEntry): LibraryItem {
     updatedAt: output.updatedAt,
     createdAt: output.createdAt,
     description: output.preview || 'Empty output',
-    metaLabel: formatTokenLabel(output.kind),
+    metaLabel: snakeToTitleCase(output.kind),
     provenance: output.promotedDocId
       ? 'Created from chat and promoted to a doc'
       : output.sourceSessionId || output.sourceMessageId
@@ -97,7 +110,7 @@ function normalizeDecisionItem(decision: DecisionIndexEntry): LibraryItem {
       countLabel(decision.linkCounts.outputCount, 'output'),
       countLabel(decision.linkCounts.notebookCount, 'notebook'),
     ], 'No linked durable objects'),
-    metaLabel: formatTokenLabel(decision.status),
+    metaLabel: snakeToTitleCase(decision.status),
     provenance: decision.linkCounts.outputCount > 0
       ? 'Created from output or linked durable work'
       : decision.linkCounts.projectCount > 0
@@ -119,7 +132,7 @@ function normalizeNotebookItem(notebook: NotebookIndexEntry): LibraryItem {
       countLabel(notebook.linkCounts.outputCount, 'output'),
       countLabel(notebook.linkCounts.decisionCount, 'decision'),
     ], 'Curated durable workspace collection'),
-    metaLabel: formatTokenLabel(notebook.status),
+    metaLabel: snakeToTitleCase(notebook.status),
     provenance: notebook.projectIds.length > 0
       ? 'Linked project notebook'
       : 'Curated workspace notebook',
@@ -148,6 +161,6 @@ function buildLinkSummary(parts: Array<string | null>, fallback: string): string
   return filtered.length > 0 ? filtered.join(' · ') : fallback
 }
 
-function formatTokenLabel(value: string): string {
+function snakeToTitleCase(value: string): string {
   return value.split('_').map((part) => part[0]?.toUpperCase() + part.slice(1)).join(' ')
 }

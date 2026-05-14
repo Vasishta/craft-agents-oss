@@ -1,12 +1,16 @@
 import * as React from 'react'
-import { ArrowLeft, BookOpen, Box, FileText, GitBranch, Layers, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { ArrowLeft, BookOpen, Box, FileText, GitBranch, Layers, Loader2, MessageSquareText, Pencil, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useAppShellContext } from '@/context/AppShellContext'
-import { useDecision, useDeleteDecision } from '@/hooks/useDecisions'
+import { useDecision, useDeleteDecision, useUpdateDecision } from '@/hooks/useDecisions'
 import { navigate, routes } from '@/lib/navigate'
+import type { DecisionDocument, DecisionStatus } from '../../shared/types'
 
 interface DecisionDetailPageProps {
   workspaceId: string
@@ -31,7 +35,32 @@ export default function DecisionDetailPage({ workspaceId, decisionId }: Decision
   const { leadingAction, rightSidebarButton } = useAppShellContext()
   const { decision, isLoading } = useDecision(workspaceId, decisionId)
   const deleteDecision = useDeleteDecision(workspaceId)
+  const updateDecision = useUpdateDecision(workspaceId)
   const [isDeleting, setIsDeleting] = React.useState(false)
+  const [isEditing, setIsEditing] = React.useState(false)
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [draft, setDraft] = React.useState({
+    title: '',
+    status: 'proposed' as DecisionStatus,
+    context: '',
+    decision: '',
+    consequences: '',
+  })
+
+  React.useEffect(() => {
+    if (!decision) return
+    setDraft({
+      title: decision.title,
+      status: decision.status,
+      context: decision.context,
+      decision: decision.decision,
+      consequences: decision.consequences || '',
+    })
+  }, [decision])
+
+  const setDraftPatch = React.useCallback((patch: Partial<typeof draft>) => {
+    setDraft((current) => ({ ...current, ...patch }))
+  }, [])
 
   const handleDelete = React.useCallback(async () => {
     if (!decision || isDeleting) return
@@ -47,18 +76,78 @@ export default function DecisionDetailPage({ workspaceId, decisionId }: Decision
     }
   }, [decision, deleteDecision, isDeleting])
 
+  const handleCancelEdit = React.useCallback(() => {
+    if (!decision) return
+    setDraft({
+      title: decision.title,
+      status: decision.status,
+      context: decision.context,
+      decision: decision.decision,
+      consequences: decision.consequences || '',
+    })
+    setIsEditing(false)
+  }, [decision])
+
+  const handleSave = React.useCallback(async () => {
+    if (!decision || isSaving) return
+    const title = draft.title.trim()
+    const decisionText = draft.decision.trim()
+    if (!title || !decisionText) {
+      toast.error('Title and decision are required')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const updated = await updateDecision(decision.id, {
+        title,
+        status: draft.status,
+        context: draft.context.trim(),
+        decision: decisionText,
+        consequences: draft.consequences.trim() || undefined,
+      })
+      if (updated) {
+        toast.success('Decision updated')
+        setIsEditing(false)
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update decision')
+    } finally {
+      setIsSaving(false)
+    }
+  }, [decision, draft, isSaving, updateDecision])
+
   const actions = decision ? (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-      aria-label="Delete decision"
-      onClick={() => { void handleDelete() }}
-      disabled={isDeleting}
-    >
-      {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-    </Button>
+    <>
+      {isEditing ? (
+        <>
+          <Button type="button" variant="ghost" size="sm" onClick={handleCancelEdit} disabled={isSaving}>
+            <X className="h-4 w-4" />
+            Cancel
+          </Button>
+          <Button type="button" size="sm" onClick={() => { void handleSave() }} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Save
+          </Button>
+        </>
+      ) : (
+        <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditing(true)} disabled={isDeleting}>
+          <Pencil className="h-4 w-4" />
+          Edit
+        </Button>
+      )}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+        aria-label="Delete decision"
+        onClick={() => { void handleDelete() }}
+        disabled={isDeleting || isSaving}
+      >
+        {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+      </Button>
+    </>
   ) : null
 
   return (
@@ -111,23 +200,62 @@ export default function DecisionDetailPage({ workspaceId, decisionId }: Decision
                 </div>
               </div>
 
-              {decision.context && (
+              {isEditing ? (
                 <section className="mb-5 rounded-[8px] border border-border/55 bg-background p-4">
-                  <h2 className="mb-2 text-sm font-medium text-foreground">Context</h2>
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{decision.context}</p>
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium text-foreground" htmlFor="decision-title">Title</label>
+                      <Input id="decision-title" value={draft.title} onChange={(event) => setDraftPatch({ title: event.target.value })} />
+                    </div>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium text-foreground" htmlFor="decision-status">Status</label>
+                      <Select value={draft.status} onValueChange={(value) => setDraftPatch({ status: value as DecisionStatus })}>
+                        <SelectTrigger id="decision-status" className="bg-background">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="proposed">Proposed</SelectItem>
+                          <SelectItem value="accepted">Accepted</SelectItem>
+                          <SelectItem value="superseded">Superseded</SelectItem>
+                          <SelectItem value="deprecated">Deprecated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium text-foreground" htmlFor="decision-context">Context</label>
+                      <Textarea id="decision-context" value={draft.context} onChange={(event) => setDraftPatch({ context: event.target.value })} />
+                    </div>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium text-foreground" htmlFor="decision-body">Decision</label>
+                      <Textarea id="decision-body" value={draft.decision} onChange={(event) => setDraftPatch({ decision: event.target.value })} className="min-h-[140px]" />
+                    </div>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium text-foreground" htmlFor="decision-consequences">Consequences</label>
+                      <Textarea id="decision-consequences" value={draft.consequences} onChange={(event) => setDraftPatch({ consequences: event.target.value })} />
+                    </div>
+                  </div>
                 </section>
-              )}
+              ) : (
+                <>
+                  {decision.context && (
+                    <section className="mb-5 rounded-[8px] border border-border/55 bg-background p-4">
+                      <h2 className="mb-2 text-sm font-medium text-foreground">Context</h2>
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{decision.context}</p>
+                    </section>
+                  )}
 
-              <section className="mb-5 rounded-[8px] border border-border/55 bg-background p-4">
-                <h2 className="mb-2 text-sm font-medium text-foreground">Decision</h2>
-                <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{decision.decision}</p>
-              </section>
+                  <section className="mb-5 rounded-[8px] border border-border/55 bg-background p-4">
+                    <h2 className="mb-2 text-sm font-medium text-foreground">Decision</h2>
+                    <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{decision.decision}</p>
+                  </section>
 
-              {decision.consequences && (
-                <section className="mb-5 rounded-[8px] border border-border/55 bg-background p-4">
-                  <h2 className="mb-2 text-sm font-medium text-foreground">Consequences</h2>
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{decision.consequences}</p>
-                </section>
+                  {decision.consequences && (
+                    <section className="mb-5 rounded-[8px] border border-border/55 bg-background p-4">
+                      <h2 className="mb-2 text-sm font-medium text-foreground">Consequences</h2>
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{decision.consequences}</p>
+                    </section>
+                  )}
+                </>
               )}
 
               <div className="grid gap-3 md:grid-cols-2">

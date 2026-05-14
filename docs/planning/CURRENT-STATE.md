@@ -50,13 +50,8 @@ This is intentional as a migration shell. It should not be interpreted as a comp
 #35 TASK-023 Workspace navigation IA consolidation
 #30 TASK-018 Library v0 durable-object surface
 #31 TASK-019 Work Queue v0 backed by WorkItems
-#38 TASK-024 Workspace shell polish for Library, Work Queue, and Home
-```
-
-## In Progress
-
-```text
 #29 TASK-017 Decision and Notebook UI surfaces
+#38 TASK-024 Workspace shell polish for Library, Work Queue, and Home
 ```
 
 Current implementation state:
@@ -65,16 +60,16 @@ Current implementation state:
 - #35 is complete: the shell now exposes stable Home, Search, Projects, Library, Work Queue, Files & Context, Automations, Skills, and Settings destinations.
 - #30 is complete: Library is a normalized, metadata-driven durable-object surface over Docs, Outputs, Decisions, and Notebooks.
 - #31 is complete: Work Queue is backed by durable WorkItems with compatibility session-status views preserved below it.
-- #29 is partially advanced by #30 and #38: Decisions and Notebooks now have route-safe transport plus shell-visible Library placement and Home/queue integration, but richer edit/update polish is still open.
+- #29 is complete: Decisions and Notebooks now support visible create/list/detail/update/delete flows from the polished shell surfaces.
 ```
 
 ## Next Queue
 
 ```text
-#29 TASK-017 Decision and Notebook UI surfaces
 #32 TASK-020 Project linked-object navigation polish
 #33 TASK-021 Cross-object Search expansion
 #34 TASK-022 Explicit cross-object linking actions
+#39 TASK: Consolidate durable entity UI scaffolds and resource hooks
 ```
 
 ## Documentation Rules

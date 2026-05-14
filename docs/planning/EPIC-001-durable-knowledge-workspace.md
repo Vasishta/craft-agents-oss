@@ -233,15 +233,10 @@ Completed:
 16. Serialized local index mutation helper (#28)
 ```
 
-In progress:
-
-```text
-17. Decision and Notebook UI surfaces (#29)
-```
-
 Completed since the original recommendation:
 
 ```text
+17. Decision and Notebook UI surfaces (#29)
 17. Workspace navigation IA consolidation (#35)
 18. Library v0 durable-object surface (#30)
 19. Work Queue v0 backed by WorkItems (#31)
@@ -251,10 +246,10 @@ Completed since the original recommendation:
 Recommended next:
 
 ```text
-21. Decision and Notebook UI surfaces (#29)
 22. Project linked-object navigation polish (#32)
 23. Cross-object Search expansion (#33)
 24. Explicit cross-object linking actions (#34)
+25. Consolidate durable entity UI scaffolds and resource hooks (#39)
 ```
 
 Note: this epic is durable product memory. GitHub Issues on `Vasishta/craft-agents-oss` are the live execution tracker and may be ahead of older prose in this file.

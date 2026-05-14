@@ -362,7 +362,7 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
         },
         {
           id: 'nav:decisions',
-          title: 'Decisions',
+          title: t('sidebar.decisions', 'Decisions'),
           label: String(decisions.length),
           icon: GitBranch,
           variant: isDecisionsNavigation(navState) ? 'default' : 'ghost',
@@ -370,7 +370,7 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
         },
         {
           id: 'nav:notebooks',
-          title: 'Notebooks',
+          title: t('sidebar.notebooks', 'Notebooks'),
           label: String(notebooks.length),
           icon: BookOpen,
           variant: isNotebooksNavigation(navState) ? 'default' : 'ghost',
@@ -396,7 +396,7 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
       items: [
         {
           id: 'nav:workItems',
-          title: 'Work Items',
+          title: t('sidebar.workItems', 'Work Items'),
           label: String(workItemsCount),
           icon: ListTodo,
           variant: isWorkQueueNavigation(navState) ? 'default' : 'ghost',
@@ -405,7 +405,7 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
         { id: 'separator:queue-legacy', type: 'separator' as const },
         {
           id: 'nav:legacySessions',
-          title: 'Legacy Sessions',
+          title: t('sidebar.legacySessions', 'Legacy Sessions'),
           label: String(workspaceSessionCount),
           icon: Inbox,
           variant: isSessionsNavigation(navState) ? 'default' : 'ghost',
