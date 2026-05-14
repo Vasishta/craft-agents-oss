@@ -237,19 +237,22 @@ Completed since the original recommendation:
 
 ```text
 17. Decision and Notebook UI surfaces (#29)
-17. Workspace navigation IA consolidation (#35)
-18. Library v0 durable-object surface (#30)
-19. Work Queue v0 backed by WorkItems (#31)
-20. Workspace shell polish for Library, Work Queue, and Home (#38)
+18. Workspace navigation IA consolidation (#35)
+19. Library v0 durable-object surface (#30)
+20. Work Queue v0 backed by WorkItems (#31)
+21. Workspace shell polish for Library, Work Queue, and Home (#38)
+22. Decision and Notebook editing completion plus shell/i18n polish follow-through (#29)
 ```
 
 Recommended next:
 
 ```text
-22. Project linked-object navigation polish (#32)
-23. Cross-object Search expansion (#33)
-24. Explicit cross-object linking actions (#34)
-25. Consolidate durable entity UI scaffolds and resource hooks (#39)
+23. Renderer performance and recompute hardening (#41)
+24. Navigation and sidebar infrastructure hardening (#42)
+25. Project linked-object navigation polish (#32)
+26. Cross-object Search expansion (#33)
+27. Explicit cross-object linking actions (#34)
+28. Consolidate remaining durable entity UI scaffolds (#39)
 ```
 
 Note: this epic is durable product memory. GitHub Issues on `Vasishta/craft-agents-oss` are the live execution tracker and may be ahead of older prose in this file.

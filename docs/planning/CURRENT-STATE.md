@@ -61,15 +61,20 @@ Current implementation state:
 - #30 is complete: Library is a normalized, metadata-driven durable-object surface over Docs, Outputs, Decisions, and Notebooks.
 - #31 is complete: Work Queue is backed by durable WorkItems with compatibility session-status views preserved below it.
 - #29 is complete: Decisions and Notebooks now support visible create/list/detail/update/delete flows from the polished shell surfaces.
+- #39 is partially addressed: shared workspace-resource hook plumbing, panel-local chrome context, and shared linked-count UI have landed, reducing duplication without freezing the full page abstraction too early.
+- #41 is open: the next measured pass should target renderer/runtime costs such as relative-time churn, sidebar recompute boundaries, broad row subscriptions, and batch mutation fan-out.
+- #42 is open: navigation/sidebar hardening still owns NavigationContext decomposition, navigation entry-point cleanup, sortable deep-ID correctness, and shell infrastructure cleanup.
 ```
 
 ## Next Queue
 
 ```text
+#41 TASK: Renderer performance and recompute hardening
+#42 TASK: Navigation and sidebar infrastructure hardening
 #32 TASK-020 Project linked-object navigation polish
 #33 TASK-021 Cross-object Search expansion
 #34 TASK-022 Explicit cross-object linking actions
-#39 TASK: Consolidate durable entity UI scaffolds and resource hooks
+#39 TASK: Consolidate remaining durable entity UI scaffolds
 ```
 
 ## Documentation Rules
