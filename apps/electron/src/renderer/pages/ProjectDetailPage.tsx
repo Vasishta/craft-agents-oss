@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteProject, useProject } from '@/hooks/useProjects'
 import { navigate, routes } from '@/lib/navigate'
 
@@ -49,7 +49,7 @@ function LinkedIdsSection({
 }
 
 export default function ProjectDetailPage({ workspaceId, projectId }: ProjectDetailPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { project, isLoading } = useProject(workspaceId, projectId)
   const deleteProject = useDeleteProject(workspaceId)
   const [isDeleting, setIsDeleting] = React.useState(false)

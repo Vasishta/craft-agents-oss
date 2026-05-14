@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { sourcesAtom } from '@/atoms/sources'
 import { useOutputList } from '@/hooks/useOutputs'
@@ -138,7 +139,8 @@ function RecentSection({
 }
 
 export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
-  const { leadingAction, rightSidebarButton, workspaces, openNewChat } = useAppShellContext()
+  const { workspaces, openNewChat } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const activeWorkspace = useActiveWorkspace()
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const sources = useAtomValue(sourcesAtom)

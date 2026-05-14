@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useCreateProject, useDeleteProject, useProjectList } from '@/hooks/useProjects'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -45,7 +45,7 @@ function getProjectCountSummary(project: ProjectIndexEntry): string {
 }
 
 export default function ProjectsPage({ workspaceId }: ProjectsPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { projects, isLoading, refresh } = useProjectList(workspaceId)
   const createProject = useCreateProject(workspaceId)
   const deleteProject = useDeleteProject(workspaceId)

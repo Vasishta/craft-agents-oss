@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useCreatePage, useDeletePage, usePageList } from '@/hooks/usePages'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -49,7 +49,7 @@ function getPreview(content: string | undefined): string {
 }
 
 export default function DocsHome({ workspaceId }: DocsHomeProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { pages, refresh } = usePageList(workspaceId)
   const { createPage } = useCreatePage(workspaceId)
   const deletePage = useDeletePage(workspaceId)

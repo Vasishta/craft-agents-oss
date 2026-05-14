@@ -60,6 +60,7 @@ import { AttachmentPreview } from '../AttachmentPreview'
 import { ANTHROPIC_MODELS, getModelShortName, getModelDisplayName, getModelContextWindow, type ModelDefinition } from '@config/models'
 import { resolveEffectiveConnectionSlug, isCompatProvider, isLocalConnection } from '@config/llm-connections'
 import { useOptionalAppShellContext } from '@/context/AppShellContext'
+import { useOptionalPanelChrome } from '@/context/PanelChromeContext'
 import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { SourceSelectorPopover } from '@/components/ui/SourceSelectorPopover'
@@ -419,8 +420,8 @@ export function FreeFormInput({
   }, [appShellCtx, workspaceId])
 
   // Read panel focus state from context (for multi-panel unfocused styling)
-  const appShellContext = useOptionalAppShellContext()
-  const isFocusedPanel = appShellContext?.isFocusedPanel ?? true
+  const panelChrome = useOptionalPanelChrome()
+  const isFocusedPanel = panelChrome.isFocusedPanel ?? true
 
   // Shuffle placeholder order once per mount so each session feels fresh.
   // In compact mode, suppress desktop-keyboard guidance that is noisy or misleading

@@ -19,6 +19,7 @@ import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StyledDropdownMenuContent, StyledDropdownMenuItem, StyledDropdownMenuSeparator } from '@/components/ui/styled-dropdown'
 import { useAppShellContext, usePendingPermission, usePendingCredential, useSessionOptionsFor, useSession as useSessionData } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { rendererPerf } from '@/lib/perf'
 import { routes } from '@/lib/navigate'
 import { coerceInputText } from '@/lib/input-text'
@@ -69,15 +70,13 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     onUnarchiveSession,
     onSessionStatusChange,
     onDeleteSession,
-    rightSidebarButton,
-    leadingAction,
     isCompactMode,
     sessionListSearchQuery,
     isSearchModeActive,
     chatDisplayRef,
     onChatMatchInfoChange,
-    isFocusedPanel,
   } = useAppShellContext()
+  const { rightSidebarButton, leadingAction, isFocusedPanel } = usePanelChrome()
 
   // Use the unified session options hook for clean access
   const {

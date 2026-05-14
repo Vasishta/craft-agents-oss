@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteOutput, useOutputList } from '@/hooks/useOutputs'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -43,7 +43,7 @@ function getProvenance(output: OutputIndexEntry): { label: string; icon: React.E
 }
 
 export default function OutputsPage({ workspaceId }: OutputsPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { outputs, isLoading, refresh } = useOutputList(workspaceId)
   const deleteOutput = useDeleteOutput(workspaceId)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { buildSessionStatusCounts, buildWorkQueueSummary } from '@/lib/session-meta-selectors'
 import {
@@ -179,7 +180,8 @@ function WorkItemCard({
 
 export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
   const { t } = useTranslation()
-  const { leadingAction, rightSidebarButton, sessionStatuses } = useAppShellContext()
+  const { sessionStatuses } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const activeWorkspace = useActiveWorkspace()
   const effectiveSessionStatuses = sessionStatuses ?? []
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)

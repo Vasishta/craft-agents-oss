@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDecision, useDeleteDecision, useUpdateDecision } from '@/hooks/useDecisions'
 import { navigate, routes } from '@/lib/navigate'
+import { LinkedCountCard } from '@/components/entity/LinkedCountCard'
 import type { DecisionDocument, DecisionStatus } from '../../shared/types'
 
 interface DecisionDetailPageProps {
@@ -17,22 +18,8 @@ interface DecisionDetailPageProps {
   decisionId: string
 }
 
-function LinkedCount({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
-  return (
-    <div className="rounded-[8px] border border-border/55 bg-background p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
-          {icon}
-        </span>
-        {label}
-        <span className="ml-auto text-xs text-muted-foreground">{count}</span>
-      </div>
-    </div>
-  )
-}
-
 export default function DecisionDetailPage({ workspaceId, decisionId }: DecisionDetailPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { decision, isLoading } = useDecision(workspaceId, decisionId)
   const deleteDecision = useDeleteDecision(workspaceId)
   const updateDecision = useUpdateDecision(workspaceId)
@@ -259,12 +246,12 @@ export default function DecisionDetailPage({ workspaceId, decisionId }: Decision
               )}
 
               <div className="grid gap-3 md:grid-cols-2">
-                <LinkedCount icon={<Layers className="h-4 w-4" />} label="Projects" count={decision.links.projectIds.length} />
-                <LinkedCount icon={<MessageSquareText className="h-4 w-4" />} label="Chats" count={decision.links.sessionIds.length} />
-                <LinkedCount icon={<FileText className="h-4 w-4" />} label="Docs" count={decision.links.docIds.length} />
-                <LinkedCount icon={<Box className="h-4 w-4" />} label="Outputs" count={decision.links.outputIds.length} />
-                <LinkedCount icon={<BookOpen className="h-4 w-4" />} label="Notebooks" count={decision.links.notebookIds.length} />
-                <LinkedCount icon={<GitBranch className="h-4 w-4" />} label="Supersedes" count={decision.links.supersedesDecisionIds.length} />
+                <LinkedCountCard icon={<Layers className="h-4 w-4" />} label="Projects" count={decision.links.projectIds.length} />
+                <LinkedCountCard icon={<MessageSquareText className="h-4 w-4" />} label="Chats" count={decision.links.sessionIds.length} />
+                <LinkedCountCard icon={<FileText className="h-4 w-4" />} label="Docs" count={decision.links.docIds.length} />
+                <LinkedCountCard icon={<Box className="h-4 w-4" />} label="Outputs" count={decision.links.outputIds.length} />
+                <LinkedCountCard icon={<BookOpen className="h-4 w-4" />} label="Notebooks" count={decision.links.notebookIds.length} />
+                <LinkedCountCard icon={<GitBranch className="h-4 w-4" />} label="Supersedes" count={decision.links.supersedesDecisionIds.length} />
               </div>
             </article>
           )}

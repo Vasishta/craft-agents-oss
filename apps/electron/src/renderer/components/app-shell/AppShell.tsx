@@ -81,6 +81,7 @@ import { LeftSidebar } from "./LeftSidebar"
 import { useSession } from "@/hooks/useSession"
 import { ensureSessionMessagesLoadedAtom } from "@/atoms/sessions"
 import { AppShellProvider, type AppShellContextType } from "@/context/AppShellContext"
+import { createPanelChromeValue, PanelChromeProvider } from "@/context/PanelChromeContext"
 import { EscapeInterruptProvider, useEscapeInterrupt } from "@/context/EscapeInterruptContext"
 import { useTheme } from "@/context/ThemeContext"
 import { getResizeGradientStyle } from "@/hooks/useResizeGradient"
@@ -1595,7 +1596,6 @@ function AppShellContent({
     enabledModes,
     sessionStatuses: effectiveSessionStatuses,
     onSessionSourcesChange: handleSessionSourcesChange,
-    rightSidebarButton: null,
     isCompactMode: isAutoCompact,
     // Search state for ChatDisplay highlighting
     sessionListSearchQuery: searchActive ? searchQuery : undefined,
@@ -2241,6 +2241,7 @@ function AppShellContent({
 
   return (
     <AppShellProvider value={appShellContextValue}>
+      <PanelChromeProvider value={createPanelChromeValue(undefined, undefined, true)}>
         {/* === TOP BAR === */}
         <TopBar
           workspaces={workspaces}
@@ -3364,6 +3365,7 @@ function AppShellContent({
           Mounted here so they survive context-menu / dropdown close. */}
       <MessagingDialogHost />
 
+      </PanelChromeProvider>
     </AppShellProvider>
   )
 }

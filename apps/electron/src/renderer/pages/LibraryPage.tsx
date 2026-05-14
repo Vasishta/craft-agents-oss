@@ -2,7 +2,7 @@ import * as React from 'react'
 import { BookOpen, Box, FileText, GitBranch, Loader2 } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDecisionList } from '@/hooks/useDecisions'
 import { useNotebookList } from '@/hooks/useNotebooks'
 import { useOutputList } from '@/hooks/useOutputs'
@@ -121,7 +121,7 @@ function openLibraryItem(item: LibraryItem) {
 }
 
 export default function LibraryPage({ workspaceId }: LibraryPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { pages } = usePageList(workspaceId)
   const { outputs, isLoading: outputsLoading } = useOutputList(workspaceId)
   const { decisions, isLoading: decisionsLoading } = useDecisionList(workspaceId)

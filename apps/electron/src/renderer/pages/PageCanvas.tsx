@@ -12,6 +12,7 @@ import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAppShellContext, useSession as useSessionData } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { ensureSessionMessagesLoadedAtom, sessionMetaMapAtom } from '@/atoms/sessions'
 import { activePageIdAtom, pageAtomFamily, pageDirtyAtom, pageErrorAtom, pageLoadingStateAtom } from '@/atoms/pages'
 import { useCreatePage, useDebouncedPageSave } from '@/hooks/usePages'
@@ -50,7 +51,8 @@ export default function PageCanvas({
   messageId,
   pageId,
 }: PageCanvasProps) {
-  const { onOpenFile, onOpenUrl, rightSidebarButton, leadingAction } = useAppShellContext()
+  const { onOpenFile, onOpenUrl } = useAppShellContext()
+  const { rightSidebarButton, leadingAction } = usePanelChrome()
 
   const { navigate } = useNavigation()
   const setActivePageId = useSetAtom(activePageIdAtom)

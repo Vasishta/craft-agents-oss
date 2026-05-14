@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteNotebook, useNotebook, useUpdateNotebook } from '@/hooks/useNotebooks'
 import { navigate, routes } from '@/lib/navigate'
+import { LinkedCountCard } from '@/components/entity/LinkedCountCard'
 import type { NotebookSection, NotebookStatus } from '../../shared/types'
 
 interface NotebookDetailPageProps {
@@ -17,22 +18,8 @@ interface NotebookDetailPageProps {
   notebookId: string
 }
 
-function LinkedCount({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
-  return (
-    <div className="rounded-[8px] border border-border/55 bg-background p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
-          {icon}
-        </span>
-        {label}
-        <span className="ml-auto text-xs text-muted-foreground">{count}</span>
-      </div>
-    </div>
-  )
-}
-
 export default function NotebookDetailPage({ workspaceId, notebookId }: NotebookDetailPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { notebook, isLoading } = useNotebook(workspaceId, notebookId)
   const deleteNotebook = useDeleteNotebook(workspaceId)
   const updateNotebook = useUpdateNotebook(workspaceId)
@@ -312,12 +299,12 @@ export default function NotebookDetailPage({ workspaceId, notebookId }: Notebook
               ) : null}
 
               <div className="grid gap-3 md:grid-cols-2">
-                <LinkedCount icon={<Layers className="h-4 w-4" />} label="Projects" count={notebook.links.projectIds.length} />
-                <LinkedCount icon={<MessageSquareText className="h-4 w-4" />} label="Chats" count={notebook.links.sessionIds.length} />
-                <LinkedCount icon={<FileText className="h-4 w-4" />} label="Docs" count={notebook.links.docIds.length} />
-                <LinkedCount icon={<Box className="h-4 w-4" />} label="Outputs" count={notebook.links.outputIds.length} />
-                <LinkedCount icon={<GitBranch className="h-4 w-4" />} label="Decisions" count={notebook.links.decisionIds.length} />
-                <LinkedCount icon={<BookOpen className="h-4 w-4" />} label="Sources" count={notebook.links.sourceIds.length} />
+                <LinkedCountCard icon={<Layers className="h-4 w-4" />} label="Projects" count={notebook.links.projectIds.length} />
+                <LinkedCountCard icon={<MessageSquareText className="h-4 w-4" />} label="Chats" count={notebook.links.sessionIds.length} />
+                <LinkedCountCard icon={<FileText className="h-4 w-4" />} label="Docs" count={notebook.links.docIds.length} />
+                <LinkedCountCard icon={<Box className="h-4 w-4" />} label="Outputs" count={notebook.links.outputIds.length} />
+                <LinkedCountCard icon={<GitBranch className="h-4 w-4" />} label="Decisions" count={notebook.links.decisionIds.length} />
+                <LinkedCountCard icon={<BookOpen className="h-4 w-4" />} label="Sources" count={notebook.links.sourceIds.length} />
               </div>
             </article>
           )}

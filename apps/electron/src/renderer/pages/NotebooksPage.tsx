@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useCreateNotebook, useDeleteNotebook, useNotebookList } from '@/hooks/useNotebooks'
 import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
@@ -26,7 +26,7 @@ function getNotebookSummary(notebook: NotebookIndexEntry): string {
 }
 
 export default function NotebooksPage({ workspaceId }: NotebooksPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { notebooks, isLoading, refresh } = useNotebookList(workspaceId)
   const createNotebook = useCreateNotebook(workspaceId)
   const deleteNotebook = useDeleteNotebook(workspaceId)

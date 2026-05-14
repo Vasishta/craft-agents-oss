@@ -1,104 +1,64 @@
 import * as React from 'react'
 import type { CreateProjectInput, ProjectDocument, ProjectIndexEntry, ProjectLinks, UpdateProjectInput } from '../../shared/types'
+import {
+  createWorkspaceCollectionHook,
+  createWorkspaceDeleteHook,
+  createWorkspaceDocumentHook,
+  createWorkspaceMutationHook,
+} from './useWorkspaceResource'
+
+const useProjectListResource = createWorkspaceCollectionHook<ProjectIndexEntry, { projectId?: string }>({
+  empty: [],
+  list: (workspaceId) => window.electronAPI.listProjects(workspaceId),
+  subscribe: window.electronAPI.onProjectsChanged,
+  errorMessage: 'Failed to load projects',
+})
+
+const useProjectResource = createWorkspaceDocumentHook<ProjectDocument, { projectId?: string }>({
+  empty: null,
+  get: (workspaceId, projectId) => window.electronAPI.getProject(workspaceId, projectId),
+  subscribe: window.electronAPI.onProjectsChanged,
+  getChangedId: (change) => change.projectId,
+  errorMessage: 'Failed to load project',
+})
+
+const useCreateProjectResource = createWorkspaceMutationHook<CreateProjectInput, ProjectDocument | null>(
+  (workspaceId, input) => window.electronAPI.createProject(workspaceId, input),
+  null,
+)
+
+const useUpdateProjectResource = createWorkspaceMutationHook<
+  { projectId: string; updates: UpdateProjectInput },
+  ProjectDocument | null
+>((workspaceId, input) => window.electronAPI.updateProject(workspaceId, input.projectId, input.updates), null)
+
+const useDeleteProjectResource = createWorkspaceDeleteHook((workspaceId, projectId) =>
+  window.electronAPI.deleteProject(workspaceId, projectId),
+)
 
 export function useProjectList(workspaceId: string | null | undefined) {
-  const [projects, setProjects] = React.useState<ProjectIndexEntry[]>([])
-  const [isLoading, setIsLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-
-  const refresh = React.useCallback(async () => {
-    if (!workspaceId) {
-      setProjects([])
-      return
-    }
-    setIsLoading(true)
-    setError(null)
-    try {
-      const entries = await window.electronAPI.listProjects(workspaceId)
-      setProjects(entries)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load projects')
-      setProjects([])
-    } finally {
-      setIsLoading(false)
-    }
-  }, [workspaceId])
-
-  React.useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  React.useEffect(() => {
-    if (!workspaceId || !window.electronAPI.onProjectsChanged) return
-    return window.electronAPI.onProjectsChanged((changedWorkspaceId) => {
-      if (changedWorkspaceId === workspaceId) {
-        void refresh()
-      }
-    })
-  }, [refresh, workspaceId])
-
-  return { projects, isLoading, error, refresh }
+  const resource = useProjectListResource(workspaceId)
+  return { projects: resource.entries, isLoading: resource.isLoading, error: resource.error, refresh: resource.refresh }
 }
 
 export function useProject(workspaceId: string | null | undefined, projectId: string | null | undefined) {
-  const [project, setProject] = React.useState<ProjectDocument | null>(null)
-  const [isLoading, setIsLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-
-  const refresh = React.useCallback(async () => {
-    if (!workspaceId || !projectId) {
-      setProject(null)
-      return
-    }
-    setIsLoading(true)
-    setError(null)
-    try {
-      const document = await window.electronAPI.getProject(workspaceId, projectId)
-      setProject(document)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load project')
-      setProject(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [projectId, workspaceId])
-
-  React.useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  React.useEffect(() => {
-    if (!workspaceId || !projectId || !window.electronAPI.onProjectsChanged) return
-    return window.electronAPI.onProjectsChanged((changedWorkspaceId, data) => {
-      if (changedWorkspaceId === workspaceId && data.projectId === projectId) {
-        void refresh()
-      }
-    })
-  }, [projectId, refresh, workspaceId])
-
-  return { project, isLoading, error, refresh }
+  const resource = useProjectResource(workspaceId, projectId)
+  return { project: resource.document, isLoading: resource.isLoading, error: resource.error, refresh: resource.refresh }
 }
 
 export function useCreateProject(workspaceId: string | null | undefined) {
-  return React.useCallback(async (input: CreateProjectInput): Promise<ProjectDocument | null> => {
-    if (!workspaceId) return null
-    return window.electronAPI.createProject(workspaceId, input)
-  }, [workspaceId])
+  const createProject = useCreateProjectResource(workspaceId)
+  return React.useCallback((input: CreateProjectInput) => createProject(input), [createProject])
 }
 
 export function useUpdateProject(workspaceId: string | null | undefined) {
-  return React.useCallback(async (projectId: string, updates: UpdateProjectInput): Promise<ProjectDocument | null> => {
-    if (!workspaceId) return null
-    return window.electronAPI.updateProject(workspaceId, projectId, updates)
-  }, [workspaceId])
+  const updateProject = useUpdateProjectResource(workspaceId)
+  return React.useCallback((projectId: string, updates: UpdateProjectInput) => updateProject({ projectId, updates }), [updateProject])
 }
 
 export function useDeleteProject(workspaceId: string | null | undefined) {
-  return React.useCallback(async (projectId: string): Promise<boolean> => {
-    if (!workspaceId) return false
-    await window.electronAPI.deleteProject(workspaceId, projectId)
-    return true
-  }, [workspaceId])
+  const deleteProject = useDeleteProjectResource(workspaceId)
+  return React.useCallback((projectId: string) => deleteProject(projectId), [deleteProject])
 }
 
 export function useLinkProjectObjects(workspaceId: string | null | undefined) {

@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 import { X, ChevronLeft } from 'lucide-react'
 import { parseRouteToNavigationState } from '../../../shared/route-parser'
 import { closePanelAtom, focusedPanelIdAtom, type PanelStackEntry } from '@/atoms/panel-stack'
-import { useAppShellContext, AppShellProvider } from '@/context/AppShellContext'
+import { createPanelChromeValue, PanelChromeProvider } from '@/context/PanelChromeContext'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { MainContentPanel } from './MainContentPanel'
 import { PANEL_MIN_WIDTH, RADIUS_EDGE, RADIUS_INNER } from './panel-constants'
@@ -57,7 +57,6 @@ export function PanelSlot({
   const { t } = useTranslation()
   const closePanel = useSetAtom(closePanelAtom)
   const setFocusedPanel = useSetAtom(focusedPanelIdAtom)
-  const parentContext = useAppShellContext()
   const navState = parseRouteToNavigationState(entry.route)
 
   const handleClose = useCallback(() => {
@@ -90,12 +89,10 @@ export function PanelSlot({
 
   // Override AppShellContext so ChatPage/PanelHeader gets our per-panel close button,
   // back button (compact mode), and isFocusedPanel for input field appearance
-  const contextOverride = useMemo(() => ({
-    ...parentContext,
-    rightSidebarButton: closeButton,
-    leadingAction: backButton,
-    isFocusedPanel,
-  }), [parentContext, closeButton, backButton, isFocusedPanel])
+  const chromeValue = useMemo(
+    () => createPanelChromeValue(closeButton, backButton, isFocusedPanel),
+    [closeButton, backButton, isFocusedPanel],
+  )
 
   const handlePointerDown = useCallback(() => {
     if (!isFocusedPanel) {
@@ -138,12 +135,12 @@ export function PanelSlot({
         }}
       >
         <div className="h-full flex flex-col">
-          <AppShellProvider value={contextOverride}>
+          <PanelChromeProvider value={chromeValue}>
             <MainContentPanel
               navStateOverride={navState}
               isSidebarAndNavigatorHidden={isSidebarAndNavigatorHidden}
             />
-          </AppShellProvider>
+          </PanelChromeProvider>
         </div>
       </div>
     </>

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteOutput, useOutput, usePromoteOutputToDoc } from '@/hooks/useOutputs'
 import { navigate, routes } from '@/lib/navigate'
 
@@ -20,7 +20,7 @@ function formatKind(kind?: string): string {
 }
 
 export default function OutputDetailPage({ workspaceId, outputId }: OutputDetailPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { output, isLoading } = useOutput(workspaceId, outputId)
   const deleteOutput = useDeleteOutput(workspaceId)
   const promoteOutputToDoc = usePromoteOutputToDoc(workspaceId)

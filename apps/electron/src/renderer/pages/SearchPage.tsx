@@ -4,7 +4,8 @@ import { Box, FileText, MessageSquareText, Search } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
-import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
+import { useActiveWorkspace } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
 import { sessionMetaMapAtom, type SessionMeta } from '@/atoms/sessions'
 import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
@@ -144,7 +145,7 @@ function SearchResultGroup({
 }
 
 export default function SearchPage({ workspaceId }: SearchPageProps) {
-  const { leadingAction, rightSidebarButton } = useAppShellContext()
+  const { leadingAction, rightSidebarButton } = usePanelChrome()
   const activeWorkspace = useActiveWorkspace()
   const { pages } = usePageList(workspaceId)
   const { outputs } = useOutputList(workspaceId)

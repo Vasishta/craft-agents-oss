@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { FreeFormInput, type FreeFormInputProps } from './FreeFormInput'
 import { StructuredInput } from './StructuredInput'
 import type { RichTextInputHandle } from '@/components/ui/rich-text-input'
-import { useOptionalAppShellContext } from '@/context/AppShellContext'
+import { useOptionalPanelChrome } from '@/context/PanelChromeContext'
 import type { StructuredInputState, StructuredResponse, InputMode } from './structured/types'
 
 interface InputContainerProps extends Omit<FreeFormInputProps, 'inputRef'> {
@@ -49,8 +49,8 @@ export function InputContainer({
   onAnimatedHeightChange,
   ...freeFormProps
 }: InputContainerProps) {
-  const appShellContext = useOptionalAppShellContext()
-  const isFocusedPanel = appShellContext?.isFocusedPanel ?? true
+  const panelChrome = useOptionalPanelChrome()
+  const isFocusedPanel = panelChrome.isFocusedPanel ?? true
   const mode: InputMode = structuredInput ? 'structured' : 'freeform'
   const measureRef = React.useRef<HTMLDivElement>(null)
   // Separate height states: freeform uses callback, structured uses measuring div
