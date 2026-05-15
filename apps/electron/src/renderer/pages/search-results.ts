@@ -1,12 +1,30 @@
 import { routes, type Route } from '../../shared/routes'
-import type { OutputIndexEntry, PageListEntry } from '../../shared/types'
+import type {
+  DecisionIndexEntry,
+  NotebookIndexEntry,
+  OutputIndexEntry,
+  PageListEntry,
+  ProjectIndexEntry,
+  WorkItemIndexEntry,
+} from '../../shared/types'
+import { WORK_ITEM_STATUS_LABELS } from '../lib/workitem-meta'
 import { stripMarkdown } from '../utils/text'
 
-export type SearchResultType = 'chat' | 'doc' | 'output'
+export type SearchResultType =
+  | 'chat'
+  | 'doc'
+  | 'output'
+  | 'decision'
+  | 'notebook'
+  | 'project'
+  | 'workItem'
+
+export type SearchResultFilter = 'all' | SearchResultType
 
 export interface SearchResult {
   id: string
   type: SearchResultType
+  typeLabel: string
   title: string
   snippet: string
   route: Route
@@ -29,10 +47,25 @@ interface Match<T> {
   updatedAt: number | undefined
 }
 
+interface SearchBuilderConfig<T> {
+  items: T[]
+  query: string
+  getTitle: (item: T) => string
+  getContent: (item: T) => string
+  getUpdatedAt: (item: T) => number | undefined
+  normalizeResult: (item: T, snippet: string) => SearchResult
+  emptySnippet: string
+}
+
+function getCountSummary(parts: Array<string | null>, emptyText: string): string {
+  const filtered = parts.filter(Boolean)
+  return filtered.length > 0 ? filtered.join(' · ') : emptyText
+}
+
 export function getPageSearchMeta(page: PageListEntry): string {
   if (page.outputIdCount > 0) return 'Created from Output'
   if (page.sourceSessionId || page.sourceMessageId) return 'From chat'
-  return 'Workspace Doc'
+  return 'Workspace doc'
 }
 
 export function getOutputSearchMeta(output: OutputIndexEntry): string {
@@ -40,10 +73,50 @@ export function getOutputSearchMeta(output: OutputIndexEntry): string {
   return 'Saved manually'
 }
 
+export function getDecisionSearchMeta(decision: DecisionIndexEntry): string {
+  return getCountSummary([
+    decision.status,
+    decision.linkCounts.projectCount > 0 ? `${decision.linkCounts.projectCount} projects` : null,
+    decision.linkCounts.docCount > 0 ? `${decision.linkCounts.docCount} docs` : null,
+    decision.linkCounts.outputCount > 0 ? `${decision.linkCounts.outputCount} outputs` : null,
+    decision.linkCounts.notebookCount > 0 ? `${decision.linkCounts.notebookCount} notebooks` : null,
+  ], decision.status)
+}
+
+export function getNotebookSearchMeta(notebook: NotebookIndexEntry): string {
+  return getCountSummary([
+    notebook.status,
+    notebook.sectionCount > 0 ? `${notebook.sectionCount} sections` : null,
+    notebook.linkCounts.docCount > 0 ? `${notebook.linkCounts.docCount} docs` : null,
+    notebook.linkCounts.outputCount > 0 ? `${notebook.linkCounts.outputCount} outputs` : null,
+    notebook.linkCounts.decisionCount > 0 ? `${notebook.linkCounts.decisionCount} decisions` : null,
+  ], notebook.status)
+}
+
+export function getProjectSearchMeta(project: ProjectIndexEntry): string {
+  return getCountSummary([
+    project.status,
+    project.linkCounts.workItemCount > 0 ? `${project.linkCounts.workItemCount} work items` : null,
+    project.linkCounts.sessionCount > 0 ? `${project.linkCounts.sessionCount} chats` : null,
+    project.linkCounts.docCount > 0 ? `${project.linkCounts.docCount} docs` : null,
+    project.linkCounts.outputCount > 0 ? `${project.linkCounts.outputCount} outputs` : null,
+  ], project.status)
+}
+
+export function getWorkItemSearchMeta(workItem: WorkItemIndexEntry): string {
+  return getCountSummary([
+    WORK_ITEM_STATUS_LABELS[workItem.status],
+    workItem.priority ?? null,
+    workItem.type ? workItem.type.replace(/_/g, ' ') : null,
+    workItem.area ?? null,
+  ], WORK_ITEM_STATUS_LABELS[workItem.status])
+}
+
 export function normalizePageSearchResult(page: PageListEntry, snippet: string): SearchResult {
   return {
     id: page.id,
     type: 'doc',
+    typeLabel: 'Doc',
     title: page.title || 'Untitled Doc',
     snippet,
     route: routes.view.savedPage(page.id),
@@ -56,6 +129,7 @@ export function normalizeOutputSearchResult(output: OutputIndexEntry, snippet: s
   return {
     id: output.id,
     type: 'output',
+    typeLabel: 'Output',
     title: output.title || 'Untitled Output',
     snippet,
     route: routes.view.savedOutput(output.id),
@@ -68,11 +142,64 @@ export function normalizeChatSearchResult(session: SearchableSessionMeta, snippe
   return {
     id: session.id,
     type: 'chat',
+    typeLabel: 'Chat',
     title: session.name || session.preview || 'Untitled Chat',
     snippet,
     route: routes.view.allSessions(session.id),
     updatedAt: session.lastMessageAt ?? session.createdAt ?? null,
-    meta: 'Chat',
+    meta: 'Recent workspace chat',
+  }
+}
+
+export function normalizeDecisionSearchResult(decision: DecisionIndexEntry, snippet: string): SearchResult {
+  return {
+    id: decision.id,
+    type: 'decision',
+    typeLabel: 'Decision',
+    title: decision.title || 'Untitled Decision',
+    snippet,
+    route: routes.view.decision(decision.id),
+    updatedAt: decision.updatedAt ?? null,
+    meta: getDecisionSearchMeta(decision),
+  }
+}
+
+export function normalizeNotebookSearchResult(notebook: NotebookIndexEntry, snippet: string): SearchResult {
+  return {
+    id: notebook.id,
+    type: 'notebook',
+    typeLabel: 'Notebook',
+    title: notebook.title || 'Untitled Notebook',
+    snippet,
+    route: routes.view.notebook(notebook.id),
+    updatedAt: notebook.updatedAt ?? null,
+    meta: getNotebookSearchMeta(notebook),
+  }
+}
+
+export function normalizeProjectSearchResult(project: ProjectIndexEntry, snippet: string): SearchResult {
+  return {
+    id: project.id,
+    type: 'project',
+    typeLabel: 'Project',
+    title: project.name || 'Untitled Project',
+    snippet,
+    route: routes.view.project(project.id),
+    updatedAt: project.updatedAt ?? null,
+    meta: getProjectSearchMeta(project),
+  }
+}
+
+export function normalizeWorkItemSearchResult(workItem: WorkItemIndexEntry, snippet: string): SearchResult {
+  return {
+    id: workItem.id,
+    type: 'workItem',
+    typeLabel: 'Work Item',
+    title: workItem.title || 'Untitled Work Item',
+    snippet,
+    route: routes.view.workItem(workItem.id),
+    updatedAt: workItem.updatedAt ?? null,
+    meta: getWorkItemSearchMeta(workItem),
   }
 }
 
@@ -101,89 +228,166 @@ function sortMatches<T>(matches: Match<T>[]): Match<T>[] {
   })
 }
 
-export function buildDocSearchResults(
-  pages: PageListEntry[],
-  docContents: Record<string, string>,
-  query: string
-): SearchResult[] {
+function buildSearchResults<T>({
+  items,
+  query,
+  getTitle,
+  getContent,
+  getUpdatedAt,
+  normalizeResult,
+  emptySnippet,
+}: SearchBuilderConfig<T>): SearchResult[] {
   const trimmedQuery = query.trim()
   const lowerQuery = trimmedQuery.toLowerCase()
   if (!lowerQuery) return []
 
-  const matches: Match<PageListEntry>[] = []
-  for (const page of pages) {
-    const title = page.title || 'Untitled Doc'
-    const content = docContents[page.id] ?? ''
-    const normalizedContent = normalizeSearchText(content)
+  const matches: Match<T>[] = []
+  for (const item of items) {
+    const title = getTitle(item)
+    const normalizedContent = normalizeSearchText(getContent(item))
     const titleMatched = title.toLowerCase().includes(lowerQuery)
     const contentMatched = normalizedContent.toLowerCase().includes(lowerQuery)
     if (!titleMatched && !contentMatched) continue
 
     matches.push({
-      item: page,
-      snippet: normalizedContent ? makeSearchSnippet(normalizedContent, trimmedQuery, 'Empty doc') : 'Title match',
+      item,
+      snippet: normalizedContent ? makeSearchSnippet(normalizedContent, trimmedQuery, emptySnippet) : 'Title match',
       titleMatched,
-      updatedAt: page.updatedAt,
+      updatedAt: getUpdatedAt(item),
     })
   }
 
-  return sortMatches(matches).map(({ item, snippet }) => normalizePageSearchResult(item, snippet))
+  return sortMatches(matches).map(({ item, snippet }) => normalizeResult(item, snippet))
+}
+
+export function buildDocSearchResults(
+  pages: PageListEntry[],
+  docContents: Record<string, string>,
+  query: string,
+): SearchResult[] {
+  return buildSearchResults({
+    items: pages,
+    query,
+    getTitle: (page) => page.title || 'Untitled Doc',
+    getContent: (page) => docContents[page.id] ?? '',
+    getUpdatedAt: (page) => page.updatedAt,
+    normalizeResult: normalizePageSearchResult,
+    emptySnippet: 'Empty doc',
+  })
 }
 
 export function buildOutputSearchResults(
   outputs: OutputIndexEntry[],
   outputContents: Record<string, string>,
-  query: string
+  query: string,
 ): SearchResult[] {
-  const trimmedQuery = query.trim()
-  const lowerQuery = trimmedQuery.toLowerCase()
-  if (!lowerQuery) return []
-
-  const matches: Match<OutputIndexEntry>[] = []
-  for (const output of outputs) {
-    const title = output.title || 'Untitled Output'
-    const content = outputContents[output.id] ?? output.preview ?? ''
-    const normalizedContent = normalizeSearchText(content)
-    const titleMatched = title.toLowerCase().includes(lowerQuery)
-    const contentMatched = normalizedContent.toLowerCase().includes(lowerQuery)
-    if (!titleMatched && !contentMatched) continue
-
-    matches.push({
-      item: output,
-      snippet: normalizedContent ? makeSearchSnippet(normalizedContent, trimmedQuery, 'Empty output') : 'Title match',
-      titleMatched,
-      updatedAt: output.updatedAt,
-    })
-  }
-
-  return sortMatches(matches).map(({ item, snippet }) => normalizeOutputSearchResult(item, snippet))
+  return buildSearchResults({
+    items: outputs,
+    query,
+    getTitle: (output) => output.title || 'Untitled Output',
+    getContent: (output) => outputContents[output.id] ?? output.preview ?? '',
+    getUpdatedAt: (output) => output.updatedAt,
+    normalizeResult: normalizeOutputSearchResult,
+    emptySnippet: 'Empty output',
+  })
 }
 
 export function buildChatSearchResults(
   sessions: SearchableSessionMeta[],
-  query: string
+  query: string,
 ): SearchResult[] {
-  const trimmedQuery = query.trim()
-  const lowerQuery = trimmedQuery.toLowerCase()
-  if (!lowerQuery) return []
+  return buildSearchResults({
+    items: sessions,
+    query,
+    getTitle: (session) => session.name || session.preview || 'Untitled Chat',
+    getContent: (session) => session.preview || '',
+    getUpdatedAt: (session) => session.lastMessageAt ?? session.createdAt,
+    normalizeResult: normalizeChatSearchResult,
+    emptySnippet: 'No preview available',
+  })
+}
 
-  const matches: Match<SearchableSessionMeta>[] = []
-  for (const session of sessions) {
-    const title = session.name || session.preview || 'Untitled Chat'
-    const preview = session.preview || ''
-    const normalizedPreview = normalizeSearchText(preview)
-    const titleMatched = title.toLowerCase().includes(lowerQuery)
-    const previewMatched = normalizedPreview.toLowerCase().includes(lowerQuery)
-    if (!titleMatched && !previewMatched) continue
+export function buildDecisionSearchResults(
+  decisions: DecisionIndexEntry[],
+  decisionContents: Record<string, string>,
+  query: string,
+): SearchResult[] {
+  return buildSearchResults({
+    items: decisions,
+    query,
+    getTitle: (decision) => decision.title || 'Untitled Decision',
+    getContent: (decision) => decisionContents[decision.id] ?? '',
+    getUpdatedAt: (decision) => decision.updatedAt,
+    normalizeResult: normalizeDecisionSearchResult,
+    emptySnippet: 'Decision matched by title',
+  })
+}
 
-    const updatedAt = session.lastMessageAt ?? session.createdAt
-    matches.push({
-      item: session,
-      snippet: makeSearchSnippet(normalizedPreview, trimmedQuery, 'No preview available'),
-      titleMatched,
-      updatedAt,
-    })
-  }
+export function buildNotebookSearchResults(
+  notebooks: NotebookIndexEntry[],
+  notebookContents: Record<string, string>,
+  query: string,
+): SearchResult[] {
+  return buildSearchResults({
+    items: notebooks,
+    query,
+    getTitle: (notebook) => notebook.title || 'Untitled Notebook',
+    getContent: (notebook) => notebookContents[notebook.id] ?? notebook.description ?? '',
+    getUpdatedAt: (notebook) => notebook.updatedAt,
+    normalizeResult: normalizeNotebookSearchResult,
+    emptySnippet: 'Notebook matched by title',
+  })
+}
 
-  return sortMatches(matches).map(({ item, snippet }) => normalizeChatSearchResult(item, snippet))
+export function buildProjectSearchResults(
+  projects: ProjectIndexEntry[],
+  query: string,
+): SearchResult[] {
+  return buildSearchResults({
+    items: projects,
+    query,
+    getTitle: (project) => project.name || 'Untitled Project',
+    getContent: (project) => project.description ?? '',
+    getUpdatedAt: (project) => project.updatedAt,
+    normalizeResult: normalizeProjectSearchResult,
+    emptySnippet: 'Project matched by title',
+  })
+}
+
+export function buildWorkItemSearchResults(
+  workItems: WorkItemIndexEntry[],
+  query: string,
+): SearchResult[] {
+  return buildSearchResults({
+    items: workItems,
+    query,
+    getTitle: (workItem) => workItem.title || 'Untitled Work Item',
+    getContent: (workItem) => workItem.description ?? [workItem.area, workItem.type].filter(Boolean).join(' '),
+    getUpdatedAt: (workItem) => workItem.updatedAt,
+    normalizeResult: normalizeWorkItemSearchResult,
+    emptySnippet: 'Work item matched by title',
+  })
+}
+
+export function buildMixedSearchResults(
+  resultGroups: SearchResult[][],
+): SearchResult[] {
+  return resultGroups
+    .flat()
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+}
+
+export function countSearchResultsByType(results: SearchResult[]): Record<SearchResultType, number> {
+  return results.reduce<Record<SearchResultType, number>>((counts, result) => {
+    counts[result.type] += 1
+    return counts
+  }, {
+    chat: 0,
+    doc: 0,
+    output: 0,
+    decision: 0,
+    notebook: 0,
+    project: 0,
+    workItem: 0,
+  })
 }

@@ -54,6 +54,7 @@ This is intentional as a migration shell. It should not be interpreted as a comp
 #38 TASK-024 Workspace shell polish for Library, Work Queue, and Home
 #41 TASK: Measured renderer perf pass
 #43 TASK: Project linked-object navigation polish
+#44 TASK: Cross-object Search expansion
 #45 TASK: Navigation and sidebar infrastructure hardening
 #46 TASK: Consolidate remaining durable entity UI scaffolds
 #47 TASK: Explicit cross-object linking actions
@@ -68,6 +69,7 @@ Current implementation state:
 - #29 is complete: Decisions and Notebooks now support visible create/list/detail/update/delete flows from the polished shell surfaces.
 - #41 is complete: the measured renderer pass removed per-render relative-time churn, narrowed sidebar label recomputation, parallelized batch session mutations, scoped messaging subscriptions per session row, and cleaned up route-parser and shell animation hotspots without destabilizing routing.
 - #43 is complete: Project detail now resolves linked docs, outputs, decisions, notebooks, chats, and work items into direct navigation cards, and Work Queue now has a first-class work-item detail route so project-linked work is actually openable instead of just listed by id.
+- #44 is complete: Search now returns one mixed result stream across Docs, Outputs, Decisions, Notebooks, Projects, WorkItems, and workspace chats, with type filters, richer per-row context, and route-safe navigation into every supported destination.
 - #47 is complete: Outputs now act as explicit cross-object workflow hubs with direct attach/create actions into Projects, WorkItems, and Decisions, and reusable project-attach flows also exist on Decision and Notebook detail surfaces.
 - #45 is complete: Workspace Home now has a calmer resume-oriented hierarchy, and NavigationContext now reads its URL/panel contract through extracted navigation URL-state helpers instead of carrying the full encode/decode path inline.
 - #46 is complete: Decisions, Notebooks, and Projects now share a reusable durable-collection page shell with common empty/loading/create behavior, while preserving object-specific summaries and row actions.
@@ -89,9 +91,9 @@ On 2026-05-15 those were backfilled into live GitHub issues:
 ## Active Queue
 
 ```text
-#44 TASK: Cross-object Search expansion
-Follow-on after #44: Pi dependency upgrade evaluation (`@mariozechner/pi-ai` / `@mariozechner/pi-coding-agent` `0.70.2 -> 0.73.1`) plus selected upstream shell/menu cherry-picks from `v0.9.3` / `v0.9.4` where they fit cleanly.
-Potential follow-on after #44: project-aware relationship badges, provenance-weighted result ranking, and final durable-entity scaffold cleanup once the post-linking UI shape is stable.
+Transition feature queue is complete.
+Next follow-on: Pi dependency upgrade evaluation (`@mariozechner/pi-ai` / `@mariozechner/pi-coding-agent` `0.70.2 -> 0.73.1`) plus selected upstream shell/menu cherry-picks from `v0.9.3` / `v0.9.4` where they fit cleanly.
+Post-transition grooming: project-aware relationship badges, provenance-weighted result ranking, empty-state/copy cleanup, compact-mode polish, and any remaining product-rhythm cleanup revealed by the now-complete durable workspace model.
 ```
 
 ## Documentation Rules

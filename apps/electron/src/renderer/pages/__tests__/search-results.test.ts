@@ -1,9 +1,22 @@
 import { describe, expect, it } from 'bun:test'
-import type { OutputIndexEntry, PageListEntry } from '../../../shared/types'
+import type {
+  DecisionIndexEntry,
+  NotebookIndexEntry,
+  OutputIndexEntry,
+  PageListEntry,
+  ProjectIndexEntry,
+  WorkItemIndexEntry,
+} from '../../../shared/types'
 import {
   buildChatSearchResults,
+  buildDecisionSearchResults,
   buildDocSearchResults,
+  buildMixedSearchResults,
+  buildNotebookSearchResults,
   buildOutputSearchResults,
+  buildProjectSearchResults,
+  buildWorkItemSearchResults,
+  countSearchResultsByType,
   type SearchableSessionMeta,
 } from '../search-results'
 
@@ -34,6 +47,90 @@ function output(id: string, overrides: Partial<OutputIndexEntry> = {}): OutputIn
   }
 }
 
+function decision(id: string, overrides: Partial<DecisionIndexEntry> = {}): DecisionIndexEntry {
+  return {
+    id,
+    workspaceId: 'ws-1',
+    title: `Decision ${id}`,
+    status: 'accepted',
+    createdAt: 1,
+    updatedAt: 1,
+    projectIds: [],
+    linkCounts: {
+      projectCount: 0,
+      sessionCount: 0,
+      docCount: 0,
+      outputCount: 0,
+      workItemCount: 0,
+      sourceCount: 0,
+      notebookCount: 0,
+      supersedesDecisionCount: 0,
+    },
+    ...overrides,
+  }
+}
+
+function notebook(id: string, overrides: Partial<NotebookIndexEntry> = {}): NotebookIndexEntry {
+  return {
+    id,
+    workspaceId: 'ws-1',
+    title: `Notebook ${id}`,
+    status: 'active',
+    createdAt: 1,
+    updatedAt: 1,
+    projectIds: [],
+    sectionCount: 0,
+    linkCounts: {
+      projectCount: 0,
+      sessionCount: 0,
+      docCount: 0,
+      outputCount: 0,
+      workItemCount: 0,
+      sourceCount: 0,
+      decisionCount: 0,
+    },
+    ...overrides,
+  }
+}
+
+function project(id: string, overrides: Partial<ProjectIndexEntry> = {}): ProjectIndexEntry {
+  return {
+    id,
+    workspaceId: 'ws-1',
+    name: `Project ${id}`,
+    status: 'active',
+    createdAt: 1,
+    updatedAt: 1,
+    linkCounts: {
+      sessionCount: 0,
+      docCount: 0,
+      outputCount: 0,
+      workItemCount: 0,
+      sourceCount: 0,
+      decisionCount: 0,
+      notebookCount: 0,
+    },
+    ...overrides,
+  }
+}
+
+function workItem(id: string, overrides: Partial<WorkItemIndexEntry> = {}): WorkItemIndexEntry {
+  return {
+    id,
+    workspaceId: 'ws-1',
+    title: `Work ${id}`,
+    status: 'ready',
+    createdAt: 1,
+    updatedAt: 1,
+    linkCounts: {
+      sessionCount: 0,
+      docCount: 0,
+      outputCount: 0,
+    },
+    ...overrides,
+  }
+}
+
 function session(id: string, overrides: Partial<SearchableSessionMeta> = {}): SearchableSessionMeta {
   return {
     id,
@@ -46,49 +143,88 @@ function session(id: string, overrides: Partial<SearchableSessionMeta> = {}): Se
 }
 
 describe('search result builders', () => {
-  it('returns representative normalized doc, output, and chat results', () => {
+  it('returns representative normalized results for every supported object type', () => {
     const docResults = buildDocSearchResults(
       [page('doc_1', { title: 'Research Plan', updatedAt: 20, outputIdCount: 1 })],
       {},
-      'research'
+      'research',
     )
     const outputResults = buildOutputSearchResults(
       [output('out_1', { title: 'Saved Answer', updatedAt: 30, sourceSessionId: 'chat_1', preview: 'assistant response' })],
       {},
-      'saved'
+      'saved',
+    )
+    const decisionResults = buildDecisionSearchResults(
+      [decision('decision_1', { title: 'Search ranking', updatedAt: 40 })],
+      { decision_1: 'ranking and provenance' },
+      'ranking',
+    )
+    const notebookResults = buildNotebookSearchResults(
+      [notebook('note_1', { title: 'Search notes', updatedAt: 50, sectionCount: 2 })],
+      { note_1: 'cross object ideas' },
+      'search',
+    )
+    const projectResults = buildProjectSearchResults(
+      [project('project_1', { name: 'Search transition', updatedAt: 60, description: 'workspace search polish' })],
+      'search',
+    )
+    const workItemResults = buildWorkItemSearchResults(
+      [workItem('work_1', { title: 'Expand search', updatedAt: 70, description: 'mixed results', priority: 'P1' })],
+      'search',
     )
     const chatResults = buildChatSearchResults(
-      [session('chat_1', { name: 'Planning Chat', lastMessageAt: 40, preview: 'draft plan' })],
-      'planning'
+      [session('chat_1', { name: 'Planning Chat', lastMessageAt: 80, preview: 'draft plan' })],
+      'planning',
     )
 
     expect(docResults[0]).toMatchObject({
       id: 'doc_1',
       type: 'doc',
-      title: 'Research Plan',
+      typeLabel: 'Doc',
       route: 'pages/page/doc_1',
-      updatedAt: 20,
       meta: 'Created from Output',
     })
     expect(outputResults[0]).toMatchObject({
       id: 'out_1',
       type: 'output',
-      title: 'Saved Answer',
+      typeLabel: 'Output',
       route: 'outputs/output/out_1',
-      updatedAt: 30,
       meta: 'From assistant response',
+    })
+    expect(decisionResults[0]).toMatchObject({
+      id: 'decision_1',
+      type: 'decision',
+      typeLabel: 'Decision',
+      route: 'decisions/decision/decision_1',
+    })
+    expect(notebookResults[0]).toMatchObject({
+      id: 'note_1',
+      type: 'notebook',
+      typeLabel: 'Notebook',
+      route: 'notebooks/notebook/note_1',
+    })
+    expect(projectResults[0]).toMatchObject({
+      id: 'project_1',
+      type: 'project',
+      typeLabel: 'Project',
+      route: 'projects/project/project_1',
+    })
+    expect(workItemResults[0]).toMatchObject({
+      id: 'work_1',
+      type: 'workItem',
+      typeLabel: 'Work Item',
+      route: 'workQueue/work-item/work_1',
     })
     expect(chatResults[0]).toMatchObject({
       id: 'chat_1',
       type: 'chat',
-      title: 'Planning Chat',
+      typeLabel: 'Chat',
       route: 'allSessions/session/chat_1',
-      updatedAt: 40,
-      meta: 'Chat',
+      meta: 'Recent workspace chat',
     })
   })
 
-  it('sorts title matches before body matches, then by updated time', () => {
+  it('sorts title matches before body matches inside per-type builders', () => {
     const results = buildDocSearchResults(
       [
         page('body_newer', { title: 'Other newer', updatedAt: 30 }),
@@ -100,13 +236,28 @@ describe('search result builders', () => {
         title_older: '',
         title_newer: '',
       },
-      'needle'
+      'needle',
     )
 
-    expect(results.map(result => result.id)).toEqual(['title_newer', 'title_older', 'body_newer'])
+    expect(results.map((result) => result.id)).toEqual(['title_newer', 'title_older', 'body_newer'])
   })
 
-  it('uses consistent fallback provenance and title copy', () => {
+  it('builds a mixed result stream and type counts across all result groups', () => {
+    const results = buildMixedSearchResults([
+      buildProjectSearchResults([project('project_1', { updatedAt: 100, description: 'search roadmap' })], 'search'),
+      buildChatSearchResults([session('chat_1', { lastMessageAt: 120, preview: 'search roadmap' })], 'search'),
+      buildWorkItemSearchResults([workItem('work_1', { updatedAt: 110, description: 'search roadmap' })], 'search'),
+    ])
+
+    expect(results.map((result) => result.id)).toEqual(['chat_1', 'work_1', 'project_1'])
+    expect(countSearchResultsByType(results)).toMatchObject({
+      chat: 1,
+      project: 1,
+      workItem: 1,
+    })
+  })
+
+  it('uses consistent fallback copy and ignores blank queries', () => {
     expect(buildDocSearchResults([page('doc', { title: '', sourceSessionId: 'chat_1' })], {}, 'untitled')[0]).toMatchObject({
       title: 'Untitled Doc',
       snippet: 'Title match',
@@ -116,15 +267,20 @@ describe('search result builders', () => {
       title: 'Untitled Output',
       meta: 'Saved manually',
     })
+    expect(buildDecisionSearchResults([decision('decision', { title: '' })], { decision: 'untitled body' }, 'untitled')[0]).toMatchObject({
+      title: 'Untitled Decision',
+    })
     expect(buildChatSearchResults([session('chat', { name: '', preview: '' })], 'untitled')[0]).toMatchObject({
       title: 'Untitled Chat',
-      snippet: 'No preview available',
+      snippet: 'Title match',
     })
-  })
 
-  it('does not return results for blank queries', () => {
     expect(buildDocSearchResults([page('doc')], {}, '   ')).toEqual([])
     expect(buildOutputSearchResults([output('out')], {}, '')).toEqual([])
+    expect(buildDecisionSearchResults([decision('decision')], {}, ' ')).toEqual([])
+    expect(buildNotebookSearchResults([notebook('note')], {}, '\n')).toEqual([])
+    expect(buildProjectSearchResults([project('project')], '\t')).toEqual([])
+    expect(buildWorkItemSearchResults([workItem('work')], '\n')).toEqual([])
     expect(buildChatSearchResults([session('chat')], '\n')).toEqual([])
   })
 })
