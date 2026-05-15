@@ -69,10 +69,10 @@ Current implementation state:
 ## Next Queue
 
 ```text
-#42 TASK: Navigation and sidebar infrastructure hardening
+#34 TASK-022 Explicit cross-object linking actions
 #32 TASK-020 Project linked-object navigation polish
 #33 TASK-021 Cross-object Search expansion
-#34 TASK-022 Explicit cross-object linking actions
+#42 TASK: Navigation and sidebar infrastructure hardening
 #39 TASK: Consolidate remaining durable entity UI scaffolds
 ```
 

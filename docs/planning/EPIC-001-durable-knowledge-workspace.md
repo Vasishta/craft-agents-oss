@@ -247,10 +247,10 @@ Completed since the original recommendation:
 Recommended next:
 
 ```text
-23. Navigation and sidebar infrastructure hardening (#42)
+23. Explicit cross-object linking actions (#34)
 24. Project linked-object navigation polish (#32)
 25. Cross-object Search expansion (#33)
-26. Explicit cross-object linking actions (#34)
+26. Navigation and sidebar infrastructure hardening (#42)
 27. Consolidate remaining durable entity UI scaffolds (#39)
 ```
 
