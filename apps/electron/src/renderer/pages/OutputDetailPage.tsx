@@ -1,12 +1,16 @@
 import * as React from 'react'
-import { ArrowLeft, Archive, FileText, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { ArrowLeft, Archive, FileText, GitBranch, GitPullRequest, Layers, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
 import { Markdown } from '@craft-agent/ui'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { ProjectLinkDialog } from '@/components/entity/ProjectLinkDialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { usePanelChrome } from '@/context/PanelChromeContext'
+import { useCreateDecision } from '@/hooks/useDecisions'
 import { useDeleteOutput, useOutput, usePromoteOutputToDoc } from '@/hooks/useOutputs'
+import { useCreateWorkItem } from '@/hooks/useWorkItems'
+import { buildDecisionFromOutput, buildWorkItemFromOutput } from '@/lib/cross-object-linking'
 import { navigate, routes } from '@/lib/navigate'
 
 interface OutputDetailPageProps {
@@ -24,8 +28,13 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
   const { output, isLoading } = useOutput(workspaceId, outputId)
   const deleteOutput = useDeleteOutput(workspaceId)
   const promoteOutputToDoc = usePromoteOutputToDoc(workspaceId)
+  const createDecision = useCreateDecision(workspaceId)
+  const createWorkItem = useCreateWorkItem(workspaceId)
   const [isPromoting, setIsPromoting] = React.useState(false)
   const [isDeleting, setIsDeleting] = React.useState(false)
+  const [isCreatingTask, setIsCreatingTask] = React.useState(false)
+  const [isCreatingDecision, setIsCreatingDecision] = React.useState(false)
+  const [projectDialogOpen, setProjectDialogOpen] = React.useState(false)
 
   const handlePromote = React.useCallback(async () => {
     if (!output || isPromoting) return
@@ -56,6 +65,38 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
       setIsDeleting(false)
     }
   }, [deleteOutput, isDeleting, output])
+
+  const handleCreateTask = React.useCallback(async () => {
+    if (!output || isCreatingTask) return
+    setIsCreatingTask(true)
+    try {
+      const workItem = await createWorkItem(buildWorkItemFromOutput(output))
+      if (workItem) {
+        toast.success('Work item created from output')
+        navigate(routes.view.workQueue())
+      } else {
+        toast.error('Failed to create work item')
+      }
+    } finally {
+      setIsCreatingTask(false)
+    }
+  }, [createWorkItem, isCreatingTask, output])
+
+  const handleRecordDecision = React.useCallback(async () => {
+    if (!output || isCreatingDecision) return
+    setIsCreatingDecision(true)
+    try {
+      const decision = await createDecision(buildDecisionFromOutput(output))
+      if (decision) {
+        toast.success('Decision created from output')
+        navigate(routes.view.decision(decision.id))
+      } else {
+        toast.error('Failed to create decision')
+      }
+    } finally {
+      setIsCreatingDecision(false)
+    }
+  }, [createDecision, isCreatingDecision, output])
 
   const sourceLabel = output?.sourceSessionId || output?.sourceMessageId
     ? 'From assistant response'
@@ -90,6 +131,18 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
           Promote to Doc
         </Button>
       )}
+      <Button type="button" variant="outline" size="sm" onClick={() => setProjectDialogOpen(true)}>
+        <Layers className="h-4 w-4" />
+        Attach to Project
+      </Button>
+      <Button type="button" variant="outline" size="sm" onClick={() => { void handleCreateTask() }} disabled={isCreatingTask}>
+        {isCreatingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitPullRequest className="h-4 w-4" />}
+        Create Task
+      </Button>
+      <Button type="button" variant="outline" size="sm" onClick={() => { void handleRecordDecision() }} disabled={isCreatingDecision}>
+        {isCreatingDecision ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitBranch className="h-4 w-4" />}
+        Record Decision
+      </Button>
       <Button
         type="button"
         variant="ghost"
@@ -112,6 +165,18 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
         actions={actions}
         rightSidebarButton={rightSidebarButton}
       />
+
+      {output ? (
+        <ProjectLinkDialog
+          open={projectDialogOpen}
+          onOpenChange={setProjectDialogOpen}
+          workspaceId={workspaceId}
+          entityKind="output"
+          entityId={output.id}
+          entityTitle={output.title || 'Output'}
+          entityLabel="Output"
+        />
+      ) : null}
 
       <ScrollArea className="min-h-0 flex-1">
         <main className="mx-auto flex w-full max-w-[920px] flex-col px-5 py-7 sm:px-8">

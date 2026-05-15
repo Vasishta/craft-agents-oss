@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { LinkedCountGrid } from '@/components/entity/LinkedCountGrid'
 import { EntityNotFoundState } from '@/components/entity/EntityPageState'
+import { ProjectLinkDialog } from '@/components/entity/ProjectLinkDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -27,6 +28,7 @@ export default function NotebookDetailPage({ workspaceId, notebookId }: Notebook
   const [isDeleting, setIsDeleting] = React.useState(false)
   const [isEditing, setIsEditing] = React.useState(false)
   const [isSaving, setIsSaving] = React.useState(false)
+  const [projectDialogOpen, setProjectDialogOpen] = React.useState(false)
   const [draft, setDraft] = React.useState({
     title: '',
     description: '',
@@ -159,10 +161,16 @@ export default function NotebookDetailPage({ workspaceId, notebookId }: Notebook
           </Button>
         </>
       ) : (
-        <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditing(true)} disabled={isDeleting}>
-          <Pencil className="h-4 w-4" />
-          Edit
-        </Button>
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={() => setProjectDialogOpen(true)} disabled={isDeleting}>
+            <Layers className="h-4 w-4" />
+            Attach to Project
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditing(true)} disabled={isDeleting}>
+            <Pencil className="h-4 w-4" />
+            Edit
+          </Button>
+        </>
       )}
       <Button
         type="button"
@@ -186,6 +194,18 @@ export default function NotebookDetailPage({ workspaceId, notebookId }: Notebook
         actions={actions}
         rightSidebarButton={rightSidebarButton}
       />
+
+      {notebook ? (
+        <ProjectLinkDialog
+          open={projectDialogOpen}
+          onOpenChange={setProjectDialogOpen}
+          workspaceId={workspaceId}
+          entityKind="notebook"
+          entityId={notebook.id}
+          entityTitle={notebook.title}
+          entityLabel="Notebook"
+        />
+      ) : null}
 
       <ScrollArea className="min-h-0 flex-1">
         <main className="mx-auto flex w-full max-w-[980px] flex-col px-5 py-7 sm:px-8">
