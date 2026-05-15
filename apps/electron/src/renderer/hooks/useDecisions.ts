@@ -1,40 +1,26 @@
 import * as React from 'react'
 import type { CreateDecisionInput, DecisionDocument, DecisionIndexEntry, UpdateDecisionInput } from '../../shared/types'
-import {
-  createWorkspaceCollectionHook,
-  createWorkspaceDeleteHook,
-  createWorkspaceDocumentHook,
-  createWorkspaceMutationHook,
-} from './useWorkspaceResource'
+import { createWorkspaceCrudHooks } from './useWorkspaceResource'
 
-const useDecisionListResource = createWorkspaceCollectionHook<DecisionIndexEntry, { decisionId?: string }>({
-  empty: [],
+const {
+  useListResource: useDecisionListResource,
+  useDocumentResource: useDecisionResource,
+  useCreateResource: useCreateDecisionResource,
+  useUpdateResource: useUpdateDecisionResource,
+  useDeleteResource: useDeleteDecisionResource,
+} = createWorkspaceCrudHooks<DecisionIndexEntry, DecisionDocument, CreateDecisionInput, UpdateDecisionInput, { decisionId?: string }>({
   list: (workspaceId) => window.electronAPI.listDecisions(workspaceId),
-  subscribe: window.electronAPI.onDecisionsChanged,
-  errorMessage: 'Failed to load decisions',
-})
-
-const useDecisionResource = createWorkspaceDocumentHook<DecisionDocument, { decisionId?: string }>({
-  empty: null,
   get: (workspaceId, decisionId) => window.electronAPI.getDecision(workspaceId, decisionId),
   subscribe: window.electronAPI.onDecisionsChanged,
   getChangedId: (change) => change.decisionId,
-  errorMessage: 'Failed to load decision',
+  create: (workspaceId, input) => window.electronAPI.createDecision(workspaceId, input),
+  update: (workspaceId, decisionId, updates) => window.electronAPI.updateDecision(workspaceId, decisionId, updates),
+  remove: (workspaceId, decisionId) => window.electronAPI.deleteDecision(workspaceId, decisionId),
+  errors: {
+    list: 'Failed to load decisions',
+    document: 'Failed to load decision',
+  },
 })
-
-const useCreateDecisionResource = createWorkspaceMutationHook<CreateDecisionInput, DecisionDocument | null>(
-  (workspaceId, input) => window.electronAPI.createDecision(workspaceId, input),
-  null,
-)
-
-const useUpdateDecisionResource = createWorkspaceMutationHook<
-  { decisionId: string; updates: UpdateDecisionInput },
-  DecisionDocument | null
->((workspaceId, input) => window.electronAPI.updateDecision(workspaceId, input.decisionId, input.updates), null)
-
-const useDeleteDecisionResource = createWorkspaceDeleteHook((workspaceId, decisionId) =>
-  window.electronAPI.deleteDecision(workspaceId, decisionId),
-)
 
 export function useDecisionList(workspaceId: string | null | undefined) {
   const resource = useDecisionListResource(workspaceId)
@@ -54,7 +40,7 @@ export function useCreateDecision(workspaceId: string | null | undefined) {
 export function useUpdateDecision(workspaceId: string | null | undefined) {
   const updateDecision = useUpdateDecisionResource(workspaceId)
   return React.useCallback(
-    (decisionId: string, updates: UpdateDecisionInput) => updateDecision({ decisionId, updates }),
+    (decisionId: string, updates: UpdateDecisionInput) => updateDecision({ resourceId: decisionId, updates }),
     [updateDecision],
   )
 }

@@ -2,6 +2,8 @@ import * as React from 'react'
 import { GitBranch, Layers, Loader2, MessageSquareText, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { EntityEmptyState, EntityLoadingState } from '@/components/entity/EntityPageState'
+import { EntityListCard } from '@/components/entity/EntityListCard'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { usePanelChrome } from '@/context/PanelChromeContext'
@@ -9,7 +11,6 @@ import { useCreateDecision, useDecisionList, useDeleteDecision } from '@/hooks/u
 import { useRelativeNow } from '@/hooks/useRelativeNow'
 import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
-import { cn } from '@/lib/utils'
 import type { DecisionIndexEntry } from '../../shared/types'
 
 interface DecisionsPageProps {
@@ -96,65 +97,37 @@ export default function DecisionsPage({ workspaceId }: DecisionsPageProps) {
       <ScrollArea className="min-h-0 flex-1">
         <main className="mx-auto flex w-full max-w-[980px] flex-col px-5 py-7 sm:px-8">
           {isLoading && decisions.length === 0 ? (
-            <section className="flex min-h-[calc(100vh-180px)] items-center justify-center text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-            </section>
+            <EntityLoadingState />
           ) : decisions.length === 0 ? (
-            <section className="flex min-h-[calc(100vh-180px)] items-center justify-center">
-              <div className="max-w-[400px] text-center">
-                <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
-                  <GitBranch className="h-5 w-5" />
-                </div>
-                <h1 className="text-[22px] font-semibold tracking-normal text-foreground">No decisions yet</h1>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Decisions capture durable architecture or product choices without forcing docs or projects to own them.
-                </p>
-              </div>
-            </section>
+            <EntityEmptyState
+              icon={<GitBranch className="h-5 w-5" />}
+              title="No decisions yet"
+              description="Decisions capture durable architecture or product choices without forcing docs or projects to own them."
+            />
           ) : (
             <section aria-label="Decisions list" className="flex flex-col gap-2">
               {decisions.map((decision) => {
                 const isDeleting = deletingId === decision.id
 
                 return (
-                  <div
+                  <EntityListCard
                     key={decision.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => navigate(routes.view.decision(decision.id))}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        navigate(routes.view.decision(decision.id))
-                      }
-                    }}
-                    className={cn(
-                      'cursor-pointer',
-                      'group grid min-h-[86px] w-full grid-cols-[1fr_auto] gap-4 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left transition-colors',
-                      'hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
-                    )}
-                  >
-                    <span className="flex min-w-0 gap-3">
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
-                        <GitBranch className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-foreground">{decision.title}</span>
-                        <span className="mt-1.5 line-clamp-2 block text-sm leading-5 text-muted-foreground">
+                    title={decision.title}
+                    description={getDecisionSummary(decision)}
+                    meta={(
+                      <>
+                        <span>Updated {formatUpdatedTime(decision.updatedAt, now)}</span>
+                        <span>{decision.status}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Layers className="h-3.5 w-3.5" />
                           {getDecisionSummary(decision)}
                         </span>
-                        <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span>Updated {formatUpdatedTime(decision.updatedAt, now)}</span>
-                          <span>{decision.status}</span>
-                          <span className="inline-flex items-center gap-1">
-                            <Layers className="h-3.5 w-3.5" />
-                            {getDecisionSummary(decision)}
-                          </span>
-                        </span>
-                      </span>
-                    </span>
-
-                    <span className="flex items-start gap-1 pt-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                      </>
+                    )}
+                    icon={<GitBranch className="h-4 w-4" />}
+                    onOpen={() => navigate(routes.view.decision(decision.id))}
+                    trailing={(
+                      <>
                       {decision.linkCounts.sessionCount > 0 && <MessageSquareText className="mt-2 h-4 w-4 text-muted-foreground" />}
                       <Button
                         type="button"
@@ -167,8 +140,9 @@ export default function DecisionsPage({ workspaceId }: DecisionsPageProps) {
                       >
                         {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                       </Button>
-                    </span>
-                  </div>
+                      </>
+                    )}
+                  />
                 )
               })}
             </section>

@@ -18,6 +18,22 @@ interface ResourceDocumentOptions<TDocument, TChange> {
   errorMessage: string
 }
 
+interface ResourceMutationMessages {
+  list: string
+  document: string
+}
+
+interface WorkspaceCrudHookOptions<TEntry, TDocument, TCreateInput, TUpdateInput, TChange> {
+  list: (workspaceId: string) => Promise<TEntry[]>
+  get: (workspaceId: string, resourceId: string) => Promise<TDocument | null>
+  subscribe?: WorkspaceChangeSubscription<TChange>
+  getChangedId: (change: TChange) => string | null | undefined
+  create: (workspaceId: string, input: TCreateInput) => Promise<TDocument | null>
+  update: (workspaceId: string, resourceId: string, updates: TUpdateInput) => Promise<TDocument | null>
+  remove: (workspaceId: string, resourceId: string) => Promise<void>
+  errors: ResourceMutationMessages
+}
+
 export function createWorkspaceCollectionHook<TEntry, TChange = never>(
   options: ResourceCollectionOptions<TEntry, TChange>,
 ) {
@@ -128,6 +144,40 @@ export function createWorkspaceDeleteHook(
       await remove(workspaceId, resourceId)
       return true
     }, [workspaceId])
+  }
+}
+
+export function createWorkspaceCrudHooks<TEntry, TDocument, TCreateInput, TUpdateInput, TChange>(
+  options: WorkspaceCrudHookOptions<TEntry, TDocument, TCreateInput, TUpdateInput, TChange>,
+) {
+  const useListResource = createWorkspaceCollectionHook<TEntry, TChange>({
+    empty: [],
+    list: options.list,
+    subscribe: options.subscribe,
+    errorMessage: options.errors.list,
+  })
+
+  const useDocumentResource = createWorkspaceDocumentHook<TDocument, TChange>({
+    empty: null,
+    get: options.get,
+    subscribe: options.subscribe,
+    getChangedId: options.getChangedId,
+    errorMessage: options.errors.document,
+  })
+
+  const useCreateResource = createWorkspaceMutationHook<TCreateInput, TDocument | null>(options.create, null)
+  const useUpdateResource = createWorkspaceMutationHook<{ resourceId: string; updates: TUpdateInput }, TDocument | null>(
+    (workspaceId, input) => options.update(workspaceId, input.resourceId, input.updates),
+    null,
+  )
+  const useDeleteResource = createWorkspaceDeleteHook(options.remove)
+
+  return {
+    useListResource,
+    useDocumentResource,
+    useCreateResource,
+    useUpdateResource,
+    useDeleteResource,
   }
 }
 

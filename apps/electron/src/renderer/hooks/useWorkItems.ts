@@ -6,40 +6,28 @@ import type {
   WorkItemIndexEntry,
 } from '../../shared/types'
 import {
-  createWorkspaceCollectionHook,
-  createWorkspaceDeleteHook,
-  createWorkspaceDocumentHook,
-  createWorkspaceMutationHook,
+  createWorkspaceCrudHooks,
 } from './useWorkspaceResource'
 
-const useWorkItemListResource = createWorkspaceCollectionHook<WorkItemIndexEntry, { workItemId?: string }>({
-  empty: [],
+const {
+  useListResource: useWorkItemListResource,
+  useDocumentResource: useWorkItemResource,
+  useCreateResource: useCreateWorkItemResource,
+  useUpdateResource: useUpdateWorkItemResource,
+  useDeleteResource: useDeleteWorkItemResource,
+} = createWorkspaceCrudHooks<WorkItemIndexEntry, WorkItemDocument, CreateWorkItemInput, UpdateWorkItemInput, { workItemId?: string }>({
   list: (workspaceId) => window.electronAPI.listWorkItems(workspaceId),
-  subscribe: window.electronAPI.onWorkItemsChanged,
-  errorMessage: 'Failed to load work items',
-})
-
-const useWorkItemResource = createWorkspaceDocumentHook<WorkItemDocument, { workItemId?: string }>({
-  empty: null,
   get: (workspaceId, workItemId) => window.electronAPI.getWorkItem(workspaceId, workItemId),
   subscribe: window.electronAPI.onWorkItemsChanged,
   getChangedId: (change) => change.workItemId,
-  errorMessage: 'Failed to load work item',
+  create: (workspaceId, input) => window.electronAPI.createWorkItem(workspaceId, input),
+  update: (workspaceId, workItemId, updates) => window.electronAPI.updateWorkItem(workspaceId, workItemId, updates),
+  remove: (workspaceId, workItemId) => window.electronAPI.deleteWorkItem(workspaceId, workItemId),
+  errors: {
+    list: 'Failed to load work items',
+    document: 'Failed to load work item',
+  },
 })
-
-const useCreateWorkItemResource = createWorkspaceMutationHook<CreateWorkItemInput, WorkItemDocument | null>(
-  (workspaceId, input) => window.electronAPI.createWorkItem(workspaceId, input),
-  null,
-)
-
-const useUpdateWorkItemResource = createWorkspaceMutationHook<
-  { workItemId: string; updates: UpdateWorkItemInput },
-  WorkItemDocument | null
->((workspaceId, input) => window.electronAPI.updateWorkItem(workspaceId, input.workItemId, input.updates), null)
-
-const useDeleteWorkItemResource = createWorkspaceDeleteHook((workspaceId, workItemId) =>
-  window.electronAPI.deleteWorkItem(workspaceId, workItemId),
-)
 
 export function useWorkItemList(workspaceId: string | null | undefined) {
   const resource = useWorkItemListResource(workspaceId)
@@ -58,7 +46,7 @@ export function useCreateWorkItem(workspaceId: string | null | undefined) {
 
 export function useUpdateWorkItem(workspaceId: string | null | undefined) {
   const updateWorkItem = useUpdateWorkItemResource(workspaceId)
-  return React.useCallback((workItemId: string, updates: UpdateWorkItemInput) => updateWorkItem({ workItemId, updates }), [updateWorkItem])
+  return React.useCallback((workItemId: string, updates: UpdateWorkItemInput) => updateWorkItem({ resourceId: workItemId, updates }), [updateWorkItem])
 }
 
 export function useDeleteWorkItem(workspaceId: string | null | undefined) {

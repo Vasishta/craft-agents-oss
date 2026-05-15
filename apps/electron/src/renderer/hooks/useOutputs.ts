@@ -1,40 +1,28 @@
 import * as React from 'react'
 import type { CreateOutputInput, OutputDocument, OutputIndexEntry, UpdateOutputInput } from '../../shared/types'
 import {
-  createWorkspaceCollectionHook,
-  createWorkspaceDeleteHook,
-  createWorkspaceDocumentHook,
-  createWorkspaceMutationHook,
+  createWorkspaceCrudHooks,
 } from './useWorkspaceResource'
 
-const useOutputListResource = createWorkspaceCollectionHook<OutputIndexEntry, { outputId?: string }>({
-  empty: [],
+const {
+  useListResource: useOutputListResource,
+  useDocumentResource: useOutputResource,
+  useCreateResource: useCreateOutputResource,
+  useUpdateResource: useUpdateOutputResource,
+  useDeleteResource: useDeleteOutputResource,
+} = createWorkspaceCrudHooks<OutputIndexEntry, OutputDocument, CreateOutputInput, UpdateOutputInput, { outputId?: string }>({
   list: (workspaceId) => window.electronAPI.listOutputs(workspaceId),
-  subscribe: window.electronAPI.onOutputsChanged,
-  errorMessage: 'Failed to load outputs',
-})
-
-const useOutputResource = createWorkspaceDocumentHook<OutputDocument, { outputId?: string }>({
-  empty: null,
   get: (workspaceId, outputId) => window.electronAPI.getOutput(workspaceId, outputId),
   subscribe: window.electronAPI.onOutputsChanged,
   getChangedId: (change) => change.outputId,
-  errorMessage: 'Failed to load output',
+  create: (workspaceId, input) => window.electronAPI.createOutput(workspaceId, input),
+  update: (workspaceId, outputId, updates) => window.electronAPI.updateOutput(workspaceId, outputId, updates),
+  remove: (workspaceId, outputId) => window.electronAPI.deleteOutput(workspaceId, outputId),
+  errors: {
+    list: 'Failed to load outputs',
+    document: 'Failed to load output',
+  },
 })
-
-const useCreateOutputResource = createWorkspaceMutationHook<CreateOutputInput, OutputDocument | null>(
-  (workspaceId, input) => window.electronAPI.createOutput(workspaceId, input),
-  null,
-)
-
-const useUpdateOutputResource = createWorkspaceMutationHook<
-  { outputId: string; updates: UpdateOutputInput },
-  OutputDocument | null
->((workspaceId, input) => window.electronAPI.updateOutput(workspaceId, input.outputId, input.updates), null)
-
-const useDeleteOutputResource = createWorkspaceDeleteHook((workspaceId, outputId) =>
-  window.electronAPI.deleteOutput(workspaceId, outputId),
-)
 
 export function useOutputList(workspaceId: string | null | undefined) {
   const resource = useOutputListResource(workspaceId)
@@ -53,7 +41,7 @@ export function useCreateOutput(workspaceId: string | null | undefined) {
 
 export function useUpdateOutput(workspaceId: string | null | undefined) {
   const updateOutput = useUpdateOutputResource(workspaceId)
-  return React.useCallback((outputId: string, updates: UpdateOutputInput) => updateOutput({ outputId, updates }), [updateOutput])
+  return React.useCallback((outputId: string, updates: UpdateOutputInput) => updateOutput({ resourceId: outputId, updates }), [updateOutput])
 }
 
 export function useDeleteOutput(workspaceId: string | null | undefined) {

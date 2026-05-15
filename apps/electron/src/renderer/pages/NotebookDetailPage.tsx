@@ -2,6 +2,8 @@ import * as React from 'react'
 import { ArrowLeft, BookOpen, Box, FileText, GitBranch, Layers, Loader2, MessageSquareText, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { LinkedCountGrid } from '@/components/entity/LinkedCountGrid'
+import { EntityNotFoundState } from '@/components/entity/EntityPageState'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -10,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteNotebook, useNotebook, useUpdateNotebook } from '@/hooks/useNotebooks'
 import { navigate, routes } from '@/lib/navigate'
-import { LinkedCountCard } from '@/components/entity/LinkedCountCard'
 import type { NotebookSection, NotebookStatus } from '../../shared/types'
 
 interface NotebookDetailPageProps {
@@ -204,12 +205,7 @@ export default function NotebookDetailPage({ workspaceId, notebookId }: Notebook
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           ) : !notebook ? (
-            <section className="flex min-h-[320px] items-center justify-center text-center">
-              <div>
-                <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Notebook not found</h1>
-                <p className="mt-2 text-sm text-muted-foreground">It may have been deleted or moved.</p>
-              </div>
-            </section>
+            <EntityNotFoundState title="Notebook not found" description="It may have been deleted or moved." />
           ) : (
             <article className="min-w-0">
               <div className="mb-6 border-b border-border/60 pb-4">
@@ -298,14 +294,16 @@ export default function NotebookDetailPage({ workspaceId, notebookId }: Notebook
                 </section>
               ) : null}
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <LinkedCountCard icon={<Layers className="h-4 w-4" />} label="Projects" count={notebook.links.projectIds.length} />
-                <LinkedCountCard icon={<MessageSquareText className="h-4 w-4" />} label="Chats" count={notebook.links.sessionIds.length} />
-                <LinkedCountCard icon={<FileText className="h-4 w-4" />} label="Docs" count={notebook.links.docIds.length} />
-                <LinkedCountCard icon={<Box className="h-4 w-4" />} label="Outputs" count={notebook.links.outputIds.length} />
-                <LinkedCountCard icon={<GitBranch className="h-4 w-4" />} label="Decisions" count={notebook.links.decisionIds.length} />
-                <LinkedCountCard icon={<BookOpen className="h-4 w-4" />} label="Sources" count={notebook.links.sourceIds.length} />
-              </div>
+              <LinkedCountGrid
+                items={[
+                  { icon: <Layers className="h-4 w-4" />, label: 'Projects', count: notebook.links.projectIds.length },
+                  { icon: <MessageSquareText className="h-4 w-4" />, label: 'Chats', count: notebook.links.sessionIds.length },
+                  { icon: <FileText className="h-4 w-4" />, label: 'Docs', count: notebook.links.docIds.length },
+                  { icon: <Box className="h-4 w-4" />, label: 'Outputs', count: notebook.links.outputIds.length },
+                  { icon: <GitBranch className="h-4 w-4" />, label: 'Decisions', count: notebook.links.decisionIds.length },
+                  { icon: <BookOpen className="h-4 w-4" />, label: 'Sources', count: notebook.links.sourceIds.length },
+                ]}
+              />
             </article>
           )}
         </main>
