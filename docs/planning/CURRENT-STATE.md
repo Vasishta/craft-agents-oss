@@ -53,6 +53,7 @@ This is intentional as a migration shell. It should not be interpreted as a comp
 #35 TASK-023 Workspace navigation IA consolidation
 #38 TASK-024 Workspace shell polish for Library, Work Queue, and Home
 #41 TASK: Measured renderer perf pass
+#43 TASK: Project linked-object navigation polish
 #47 TASK: Explicit cross-object linking actions
 ```
 
@@ -64,6 +65,7 @@ Current implementation state:
 - #31 is complete: Work Queue is backed by durable WorkItems with compatibility session-status views preserved below it.
 - #29 is complete: Decisions and Notebooks now support visible create/list/detail/update/delete flows from the polished shell surfaces.
 - #41 is complete: the measured renderer pass removed per-render relative-time churn, narrowed sidebar label recomputation, parallelized batch session mutations, scoped messaging subscriptions per session row, and cleaned up route-parser and shell animation hotspots without destabilizing routing.
+- #43 is complete: Project detail now resolves linked docs, outputs, decisions, notebooks, chats, and work items into direct navigation cards, and Work Queue now has a first-class work-item detail route so project-linked work is actually openable instead of just listed by id.
 - #47 is complete: Outputs now act as explicit cross-object workflow hubs with direct attach/create actions into Projects, WorkItems, and Decisions, and reusable project-attach flows also exist on Decision and Notebook detail surfaces.
 - #45 is open: navigation/sidebar hardening is now narrower and owns NavigationContext decomposition, navigation entry-point cleanup, and the remaining shell infrastructure cleanup beyond the safe perf/a11y/listener fixes already landed.
 - #46 is partially addressed: shared workspace-resource hook plumbing, panel-local chrome context, shared linked-count UI, and reusable durable-resource scaffolds have landed, but some durable-entity UI consolidation remains intentionally deferred until the post-linking surface shape settles.
@@ -76,7 +78,7 @@ Older roadmap prose referenced placeholder task handles (#32 / #33 / #34 / #39 /
 On 2026-05-15 those were backfilled into live GitHub issues:
 
 - #47 TASK: Explicit cross-object linking actions (closed)
-- #43 TASK: Project linked-object navigation polish
+- #43 TASK: Project linked-object navigation polish (closed)
 - #44 TASK: Cross-object Search expansion
 - #45 TASK: Navigation and sidebar infrastructure hardening
 - #46 TASK: Consolidate remaining durable entity UI scaffolds
@@ -85,11 +87,10 @@ On 2026-05-15 those were backfilled into live GitHub issues:
 ## Next Queue
 
 ```text
-#43 TASK: Project linked-object navigation polish
 #44 TASK: Cross-object Search expansion
 #45 TASK: Navigation and sidebar infrastructure hardening
 #46 TASK: Consolidate remaining durable entity UI scaffolds
-Potential follow-on after #43/#44: project-aware relationship badges, provenance-weighted result ranking, and final durable-entity scaffold cleanup once the post-linking UI shape is stable.
+Potential follow-on after #44: project-aware relationship badges, provenance-weighted result ranking, and final durable-entity scaffold cleanup once the post-linking UI shape is stable.
 ```
 
 ## Documentation Rules

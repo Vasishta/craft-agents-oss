@@ -204,6 +204,10 @@ export const routes = {
     /** Projects list/detail view */
     projects: () => 'projects' as const,
 
+    /** Work item detail view */
+    workItem: (workItemId: string) =>
+      `workQueue/work-item/${encodeURIComponent(workItemId)}` as const,
+
     /** Saved output detail view */
     savedOutput: (outputId: string) =>
       `outputs/output/${encodeURIComponent(outputId)}` as const,

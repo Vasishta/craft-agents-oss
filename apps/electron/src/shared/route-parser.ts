@@ -80,6 +80,10 @@ function isSafeProjectRouteId(projectId: string): boolean {
   return /^[a-zA-Z0-9_-]+$/.test(projectId)
 }
 
+function isSafeWorkItemRouteId(workItemId: string): boolean {
+  return /^[a-zA-Z0-9_-]+$/.test(workItemId)
+}
+
 // =============================================================================
 // Compound Route Parsing
 // =============================================================================
@@ -123,6 +127,7 @@ const COMPOUND_ROUTE_PREFIXES = [
   'sources/',
   'state/',
   'view/',
+  'workQueue/work-item/',
 ]
 
 /**
@@ -186,6 +191,19 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
       navigator: 'workQueue',
       details: null,
     }
+  }
+  if (first === 'workQueue' && segments.length === 3 && segments[1] === 'work-item') {
+    const workItemId = segments[2] ? maybeDecodeURIComponent(segments[2]) : undefined
+    if (workItemId && isSafeWorkItemRouteId(workItemId)) {
+      return {
+        navigator: 'workQueue',
+        details: {
+          type: 'workItem',
+          id: workItemId,
+        },
+      }
+    }
+    return null
   }
 
   // Outputs navigator
@@ -523,7 +541,8 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
   }
 
   if (parsed.navigator === 'workQueue') {
-    return 'workQueue'
+    if (!parsed.details) return 'workQueue'
+    return `workQueue/work-item/${encodeURIComponent(parsed.details.id)}`
   }
 
   if (parsed.navigator === 'outputs') {
@@ -717,7 +736,10 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
   }
 
   if (compound.navigator === 'workQueue') {
-    return { type: 'view', name: 'workQueue', params: {} }
+    if (!compound.details) {
+      return { type: 'view', name: 'workQueue', params: {} }
+    }
+    return { type: 'view', name: 'workItem', id: compound.details.id, params: {} }
   }
 
   if (compound.navigator === 'outputs') {
@@ -911,7 +933,13 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
   }
 
   if (compound.navigator === 'workQueue') {
-    return { navigator: 'workQueue', details: null }
+    if (!compound.details) {
+      return { navigator: 'workQueue', details: null }
+    }
+    return {
+      navigator: 'workQueue',
+      details: { type: 'workItem', workItemId: compound.details.id },
+    }
   }
 
   if (compound.navigator === 'outputs') {
@@ -1075,6 +1103,14 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
       return { navigator: 'library', details: null }
     case 'workQueue':
       return { navigator: 'workQueue', details: null }
+    case 'workItem':
+      if (parsed.id) {
+        return {
+          navigator: 'workQueue',
+          details: { type: 'workItem', workItemId: parsed.id },
+        }
+      }
+      return null
     case 'outputs':
       return { navigator: 'outputs', details: null }
     case 'savedOutput':
@@ -1272,7 +1308,7 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
   if (state.navigator === 'workQueue') {
     return {
       navigator: 'workQueue',
-      details: null,
+      details: state.details?.type === 'workItem' ? { type: 'workItem', id: state.details.workItemId } : null,
     }
   }
 

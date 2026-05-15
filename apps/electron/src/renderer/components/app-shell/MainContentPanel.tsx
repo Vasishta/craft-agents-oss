@@ -257,7 +257,10 @@ export function MainContentPanel({
   if (isWorkQueueNavigation(navState)) {
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <WorkQueuePage workspaceId={activeWorkspaceId || ''} />
+        <WorkQueuePage
+          workspaceId={activeWorkspaceId || ''}
+          workItemId={navState.details?.type === 'workItem' ? navState.details.workItemId : undefined}
+        />
       </Panel>
     )
   }

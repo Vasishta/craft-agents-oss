@@ -1,11 +1,29 @@
 import * as React from 'react'
+import { useAtomValue } from 'jotai'
 import { ArrowLeft, BookOpen, Box, BriefcaseBusiness, FileText, GitPullRequest, Layers, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { EntityNotFoundState } from '@/components/entity/EntityPageState'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { usePanelChrome } from '@/context/PanelChromeContext'
+import { useDecisionList } from '@/hooks/useDecisions'
+import { useNotebookList } from '@/hooks/useNotebooks'
+import { useOutputList } from '@/hooks/useOutputs'
+import { usePageList } from '@/hooks/usePages'
 import { useDeleteProject, useProject } from '@/hooks/useProjects'
+import { useWorkItemList } from '@/hooks/useWorkItems'
+import {
+  buildProjectChatLink,
+  buildProjectDecisionLink,
+  buildProjectDocLink,
+  buildProjectLinkedLookups,
+  buildProjectNotebookLink,
+  buildProjectOutputLink,
+  buildProjectWorkItemLink,
+  type ProjectLinkedItem,
+} from '@/lib/project-links'
 import { navigate, routes } from '@/lib/navigate'
 
 interface ProjectDetailPageProps {
@@ -13,15 +31,15 @@ interface ProjectDetailPageProps {
   projectId: string
 }
 
-function LinkedIdsSection({
+function LinkedResourceSection({
   title,
   icon,
-  ids,
+  items,
   empty,
 }: {
   title: string
   icon: React.ReactNode
-  ids: string[]
+  items: ProjectLinkedItem[]
   empty: string
 }) {
   return (
@@ -31,16 +49,26 @@ function LinkedIdsSection({
           {icon}
         </span>
         <h2 className="text-sm font-medium text-foreground">{title}</h2>
-        <span className="ml-auto text-xs text-muted-foreground">{ids.length}</span>
+        <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
       </div>
-      {ids.length === 0 ? (
+      {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">{empty}</p>
       ) : (
-        <div className="flex flex-col gap-1">
-          {ids.map(id => (
-            <code key={id} className="truncate rounded-[6px] bg-foreground/[0.035] px-2 py-1.5 text-xs text-muted-foreground">
-              {id}
-            </code>
+        <div className="flex flex-col gap-2">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => navigate(item.route)}
+              className="grid w-full grid-cols-[1fr_auto] gap-3 rounded-[8px] border border-border/55 bg-foreground/[0.02] px-3 py-2 text-left transition-colors hover:border-border hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-foreground">{item.title}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">{item.description}</span>
+                <code className="mt-1 block truncate text-[11px] text-muted-foreground">{item.id}</code>
+              </span>
+              <span className="self-center text-xs font-medium text-muted-foreground">{item.ctaLabel}</span>
+            </button>
           ))}
         </div>
       )}
@@ -51,8 +79,23 @@ function LinkedIdsSection({
 export default function ProjectDetailPage({ workspaceId, projectId }: ProjectDetailPageProps) {
   const { leadingAction, rightSidebarButton } = usePanelChrome()
   const { project, isLoading } = useProject(workspaceId, projectId)
+  const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
+  const { pages } = usePageList(workspaceId)
+  const { outputs } = useOutputList(workspaceId)
+  const { decisions } = useDecisionList(workspaceId)
+  const { notebooks } = useNotebookList(workspaceId)
+  const { workItems } = useWorkItemList(workspaceId)
   const deleteProject = useDeleteProject(workspaceId)
   const [isDeleting, setIsDeleting] = React.useState(false)
+
+  const linkedLookups = React.useMemo(() => buildProjectLinkedLookups({
+    sessions: Array.from(sessionMetaMap.values()).filter((session) => session.workspaceId === workspaceId),
+    docs: pages,
+    outputs,
+    decisions,
+    notebooks,
+    workItems,
+  }), [decisions, notebooks, outputs, pages, sessionMetaMap, workItems, workspaceId])
 
   const handleDelete = React.useCallback(async () => {
     if (!project || isDeleting) return
@@ -109,12 +152,7 @@ export default function ProjectDetailPage({ workspaceId, projectId }: ProjectDet
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           ) : !project ? (
-            <section className="flex min-h-[320px] items-center justify-center text-center">
-              <div>
-                <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Project not found</h1>
-                <p className="mt-2 text-sm text-muted-foreground">It may have been deleted or moved.</p>
-              </div>
-            </section>
+            <EntityNotFoundState title="Project not found" description="It may have been deleted or moved." />
           ) : (
             <article className="min-w-0">
               <div className="mb-6 border-b border-border/60 pb-4">
@@ -143,12 +181,42 @@ export default function ProjectDetailPage({ workspaceId, projectId }: ProjectDet
               </section>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <LinkedIdsSection title="Work items" icon={<GitPullRequest className="h-4 w-4" />} ids={project.links.workItemIds} empty="No linked work items" />
-                <LinkedIdsSection title="Chats" icon={<MessageSquareText className="h-4 w-4" />} ids={project.links.sessionIds} empty="No linked chats" />
-                <LinkedIdsSection title="Docs" icon={<FileText className="h-4 w-4" />} ids={project.links.docIds} empty="No linked docs" />
-                <LinkedIdsSection title="Outputs" icon={<Box className="h-4 w-4" />} ids={project.links.outputIds} empty="No linked outputs" />
-                <LinkedIdsSection title="Decisions" icon={<Layers className="h-4 w-4" />} ids={project.links.decisionIds} empty="No linked decisions" />
-                <LinkedIdsSection title="Notebooks" icon={<BookOpen className="h-4 w-4" />} ids={project.links.notebookIds} empty="No linked notebooks" />
+                <LinkedResourceSection
+                  title="Work items"
+                  icon={<GitPullRequest className="h-4 w-4" />}
+                  items={project.links.workItemIds.map((id) => buildProjectWorkItemLink(id, linkedLookups.workItems.get(id)))}
+                  empty="No linked work items"
+                />
+                <LinkedResourceSection
+                  title="Chats"
+                  icon={<MessageSquareText className="h-4 w-4" />}
+                  items={project.links.sessionIds.map((id) => buildProjectChatLink(id, linkedLookups.sessions.get(id)))}
+                  empty="No linked chats"
+                />
+                <LinkedResourceSection
+                  title="Docs"
+                  icon={<FileText className="h-4 w-4" />}
+                  items={project.links.docIds.map((id) => buildProjectDocLink(id, linkedLookups.docs.get(id)))}
+                  empty="No linked docs"
+                />
+                <LinkedResourceSection
+                  title="Outputs"
+                  icon={<Box className="h-4 w-4" />}
+                  items={project.links.outputIds.map((id) => buildProjectOutputLink(id, linkedLookups.outputs.get(id)))}
+                  empty="No linked outputs"
+                />
+                <LinkedResourceSection
+                  title="Decisions"
+                  icon={<Layers className="h-4 w-4" />}
+                  items={project.links.decisionIds.map((id) => buildProjectDecisionLink(id, linkedLookups.decisions.get(id)))}
+                  empty="No linked decisions"
+                />
+                <LinkedResourceSection
+                  title="Notebooks"
+                  icon={<BookOpen className="h-4 w-4" />}
+                  items={project.links.notebookIds.map((id) => buildProjectNotebookLink(id, linkedLookups.notebooks.get(id)))}
+                  empty="No linked notebooks"
+                />
               </div>
             </article>
           )}

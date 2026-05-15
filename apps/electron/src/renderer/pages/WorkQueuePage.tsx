@@ -1,9 +1,10 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
-import { Archive, Flag, Inbox, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Archive, ArrowLeft, Flag, Inbox, Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { EntityNotFoundState } from '@/components/entity/EntityPageState'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -28,6 +29,7 @@ import { navigate, routes } from '@/lib/navigate'
 import {
   useCreateWorkItem,
   useDeleteWorkItem,
+  useWorkItem,
   useUpdateWorkItem,
   useWorkItemList,
 } from '@/hooks/useWorkItems'
@@ -41,6 +43,7 @@ import type {
 
 interface WorkQueuePageProps {
   workspaceId: string
+  workItemId?: string
 }
 
 interface QueueRowProps {
@@ -179,7 +182,7 @@ function WorkItemCard({
   )
 }
 
-export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
+export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePageProps) {
   const { t } = useTranslation()
   const { sessionStatuses } = useAppShellContext()
   const { leadingAction, rightSidebarButton } = usePanelChrome()
@@ -188,6 +191,7 @@ export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const remoteWorkspaceId = activeWorkspace?.remoteServer?.remoteWorkspaceId
   const { workItems, isLoading, refresh } = useWorkItemList(workspaceId)
+  const { workItem, isLoading: isWorkItemLoading } = useWorkItem(workspaceId, workItemId ?? null)
   const createWorkItem = useCreateWorkItem(workspaceId)
   const updateWorkItem = useUpdateWorkItem(workspaceId)
   const deleteWorkItem = useDeleteWorkItem(workspaceId)
@@ -275,7 +279,7 @@ export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
     }
   }, [updateWorkItem])
 
-  const handleDelete = React.useCallback(async (workItem: WorkItemIndexEntry) => {
+  const handleDelete = React.useCallback(async (workItem: Pick<WorkItemIndexEntry, 'id' | 'title'>) => {
     const confirmed = window.confirm(`Delete "${workItem.title}"?`)
     if (!confirmed) return
 
@@ -302,6 +306,95 @@ export default function WorkQueuePage({ workspaceId }: WorkQueuePageProps) {
       New Work Item
     </Button>
   )
+
+  if (workItemId) {
+    const detailActions = workItem ? (
+      <div className="flex items-center gap-2">
+        <Select value={workItem.status} onValueChange={(value) => { void handleStatusChange(workItem.id, value as WorkItemStatus) }} disabled={updatingId === workItem.id || deletingId === workItem.id}>
+          <SelectTrigger className="h-8 w-[148px] bg-background text-xs">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {WORK_ITEM_STATUS_ORDER.map((status) => (
+              <SelectItem key={status} value={status}>
+                {WORK_ITEM_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          aria-label="Delete work item"
+          disabled={updatingId === workItem.id || deletingId === workItem.id}
+          onClick={() => { void handleDelete(workItem) }}
+        >
+          {deletingId === workItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        </Button>
+      </div>
+    ) : null
+
+    return (
+      <div className="flex h-full flex-col bg-background">
+        <PanelHeader
+          title={workItem?.title || 'Work Item'}
+          leadingAction={leadingAction}
+          actions={detailActions}
+          rightSidebarButton={rightSidebarButton}
+        />
+
+        <ScrollArea className="min-h-0 flex-1">
+          <main className="mx-auto flex w-full max-w-[920px] flex-col px-5 py-7 sm:px-8">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mb-5 w-fit text-muted-foreground"
+              onClick={() => navigate(routes.view.workQueue())}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Work Queue
+            </Button>
+
+            {isWorkItemLoading ? (
+              <div className="flex min-h-[320px] items-center justify-center text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            ) : !workItem ? (
+              <EntityNotFoundState title="Work item not found" description="It may have been deleted or moved." />
+            ) : (
+              <article className="min-w-0">
+                <div className="mb-6 border-b border-border/60 pb-4">
+                  <h1 className="text-[28px] font-semibold tracking-normal text-foreground">{workItem.title}</h1>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span>{WORK_ITEM_STATUS_LABELS[workItem.status]}</span>
+                    {workItem.priority ? <span>{workItem.priority}</span> : null}
+                    <span>{getWorkItemTypeLabel(workItem.type)}</span>
+                    {workItem.area ? <span>{workItem.area}</span> : null}
+                    <span>Updated {formatUpdatedTime(workItem.updatedAt, now)}</span>
+                  </div>
+                </div>
+
+                {workItem.description ? (
+                  <section className="mb-5 rounded-[8px] border border-border/55 bg-background p-4">
+                    <h2 className="mb-2 text-sm font-medium text-foreground">Notes</h2>
+                    <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{workItem.description}</p>
+                  </section>
+                ) : null}
+
+                <section className="rounded-[8px] border border-border/55 bg-background p-4">
+                  <h2 className="mb-2 text-sm font-medium text-foreground">Linked objects</h2>
+                  <p className="text-sm leading-6 text-muted-foreground">{getWorkItemLinkSummary(workItem)}</p>
+                </section>
+              </article>
+            )}
+          </main>
+        </ScrollArea>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col bg-background">

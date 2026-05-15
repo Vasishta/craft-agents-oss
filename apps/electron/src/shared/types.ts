@@ -923,7 +923,7 @@ export interface LibraryNavigationState {
  */
 export interface WorkQueueNavigationState {
   navigator: 'workQueue'
-  details: null
+  details: null | { type: 'workItem'; workItemId: string }
   rightSidebar?: RightSidebarPanel
 }
 
@@ -1072,6 +1072,9 @@ export const getNavigationStateKey = (state: NavigationState): string => {
     return 'library'
   }
   if (state.navigator === 'workQueue') {
+    if (state.details?.type === 'workItem') {
+      return `workQueue/work-item/${state.details.workItemId}`
+    }
     return 'workQueue'
   }
   // Chats
@@ -1197,6 +1200,13 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
   // Handle Library and Work Queue overview routes
   if (key === 'library') return { navigator: 'library', details: null }
   if (key === 'workQueue') return { navigator: 'workQueue', details: null }
+  if (key.startsWith('workQueue/work-item/')) {
+    const workItemId = key.slice(20)
+    if (workItemId) {
+      return { navigator: 'workQueue', details: { type: 'workItem', workItemId } }
+    }
+    return { navigator: 'workQueue', details: null }
+  }
 
   // Handle sessions
   const parseSessionsKey = (filterKey: string, sessionId?: string): NavigationState | null => {

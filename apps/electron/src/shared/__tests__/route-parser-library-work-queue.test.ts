@@ -42,16 +42,31 @@ describe('library and work queue route parsing', () => {
       navigator: 'workQueue',
       details: null,
     })
+
+    expect(parseRoute('workQueue/work-item/task_123')).toEqual({
+      type: 'view',
+      name: 'workItem',
+      id: 'task_123',
+      params: {},
+    })
+    expect(parseRouteToNavigationState('workQueue/work-item/task_123')).toEqual({
+      navigator: 'workQueue',
+      details: { type: 'workItem', workItemId: 'task_123' },
+    })
   })
 
   it('builds work queue routes from helpers, compound routes, and navigation state keys', () => {
     const state = { navigator: 'workQueue' as const, details: null }
+    const detailState = { navigator: 'workQueue' as const, details: { type: 'workItem' as const, workItemId: 'task_123' } }
     const parsed = parseCompoundRoute('workQueue')!
 
     expect(routes.view.workQueue()).toBe('workQueue')
+    expect(routes.view.workItem('task_123')).toBe('workQueue/work-item/task_123')
     expect(buildCompoundRoute(parsed)).toBe('workQueue')
     expect(buildRouteFromNavigationState(state)).toBe('workQueue')
+    expect(buildRouteFromNavigationState(detailState)).toBe('workQueue/work-item/task_123')
     expect(parseNavigationStateKey(getNavigationStateKey(state))).toEqual(state)
+    expect(parseNavigationStateKey(getNavigationStateKey(detailState))).toEqual(detailState)
   })
 
   it('parses decisions and notebooks detail routes as navigation-safe surfaces', () => {
