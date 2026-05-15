@@ -5,19 +5,20 @@ import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { SourceAvatar } from '@/components/ui/source-avatar'
-import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
-import { usePanelChrome } from '@/context/PanelChromeContext'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
 import { sourcesAtom } from '@/atoms/sources'
+import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
+import { usePanelChrome } from '@/context/PanelChromeContext'
+import { useDecisionList } from '@/hooks/useDecisions'
+import { useNotebookList } from '@/hooks/useNotebooks'
 import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
 import { useProjectList } from '@/hooks/useProjects'
-import { useDecisionList } from '@/hooks/useDecisions'
-import { useNotebookList } from '@/hooks/useNotebooks'
 import { useWorkItemList } from '@/hooks/useWorkItems'
 import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
 import { getWorkspaceSessionMetas } from '@/lib/session-meta-selectors'
+import { buildWorkspaceHomeActivityFeed, buildWorkspaceHomeFocusItems, type WorkspaceHomeActivityItem, type WorkspaceHomeActivityKind } from '@/lib/workspace-home'
 import { cn } from '@/lib/utils'
 import type { Workspace } from '../../shared/types'
 
@@ -30,20 +31,70 @@ function getWorkspaceName(workspaces: Workspace[], workspaceId: string): string 
   return workspace?.name || workspace?.slug || workspaceId || 'Workspace'
 }
 
-function ActionButton({
+function getActivityIcon(kind: WorkspaceHomeActivityKind) {
+  switch (kind) {
+    case 'chat':
+      return <MessageSquareText className="h-4 w-4" />
+    case 'doc':
+      return <FileText className="h-4 w-4" />
+    case 'output':
+      return <Box className="h-4 w-4" />
+    case 'decision':
+      return <GitBranch className="h-4 w-4" />
+    case 'notebook':
+      return <BookOpen className="h-4 w-4" />
+    case 'project':
+      return <BriefcaseBusiness className="h-4 w-4" />
+    case 'workItem':
+      return <ListTodo className="h-4 w-4" />
+  }
+}
+
+function navigateToActivity(item: WorkspaceHomeActivityItem) {
+  switch (item.kind) {
+    case 'chat':
+      navigate(routes.view.allSessions(item.id))
+      return
+    case 'doc':
+      navigate(routes.view.savedPage(item.id))
+      return
+    case 'output':
+      navigate(routes.view.savedOutput(item.id))
+      return
+    case 'decision':
+      navigate(routes.view.decision(item.id))
+      return
+    case 'notebook':
+      navigate(routes.view.notebook(item.id))
+      return
+    case 'project':
+      navigate(routes.view.project(item.id))
+      return
+    case 'workItem':
+      navigate(routes.view.workItem(item.id))
+      return
+  }
+}
+
+function HeroActionButton({
   icon,
   label,
+  variant,
   onClick,
 }: {
   icon: React.ReactNode
   label: string
+  variant: 'default' | 'outline' | 'secondary'
   onClick: () => void
 }) {
   return (
     <Button
       type="button"
-      variant="outline"
-      className="h-10 justify-start gap-2 rounded-[8px] px-3"
+      variant={variant}
+      className={cn(
+        'h-10 rounded-full px-4',
+        variant === 'default' ? 'shadow-[0_10px_30px_rgba(0,0,0,0.18)]' : 'border-border/55 bg-background/80'
+      )}
       onClick={onClick}
     >
       {icon}
@@ -52,89 +103,100 @@ function ActionButton({
   )
 }
 
-function SnapshotCard({
+function SignalButton({
   label,
   value,
   detail,
-  icon,
   onClick,
 }: {
   label: string
   value: string
   detail: string
-  icon: React.ReactNode
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-[10px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="flex items-start justify-between gap-3 rounded-[16px] border border-border/45 bg-background/70 px-4 py-3 text-left transition-colors hover:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
-      <span className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{label}</span>
-        <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
-          {icon}
-        </span>
+      <span className="min-w-0">
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">{detail}</span>
       </span>
-      <span className="mt-3 block text-2xl font-semibold tracking-normal text-foreground">{value}</span>
-      <span className="mt-1 block text-xs text-muted-foreground">{detail}</span>
+      <span className="text-xl font-semibold tracking-tight text-foreground">{value}</span>
     </button>
   )
 }
 
-function RecentRow({
+function FocusCard({
+  item,
+}: {
+  item: WorkspaceHomeActivityItem
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => navigateToActivity(item)}
+      className="rounded-[18px] border border-border/45 bg-background/75 px-4 py-4 text-left transition-colors hover:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    >
+      <span className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-foreground/[0.04] text-muted-foreground">
+        {getActivityIcon(item.kind)}
+      </span>
+      <span className="mt-4 block text-sm font-medium text-foreground">{item.title}</span>
+      <span className="mt-1 block text-sm leading-5 text-muted-foreground">{item.detail}</span>
+    </button>
+  )
+}
+
+function ActivityRow({
+  item,
+}: {
+  item: WorkspaceHomeActivityItem
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => navigateToActivity(item)}
+      className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[14px] px-3 py-3 text-left transition-colors hover:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    >
+      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground/[0.04] text-muted-foreground">
+        {getActivityIcon(item.kind)}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium text-foreground">{item.title}</span>
+        <span className="mt-1 block truncate text-xs text-muted-foreground">{item.detail}</span>
+      </span>
+      <span className="text-xs text-muted-foreground">{formatUpdatedTime(item.timestamp)}</span>
+    </button>
+  )
+}
+
+function SurfaceButton({
   icon,
-  title,
-  meta,
+  label,
   detail,
   onClick,
 }: {
   icon: React.ReactNode
-  title: string
-  meta: string
-  detail?: string
+  label: string
+  detail: string
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="grid min-h-[54px] w-full grid-cols-[auto_1fr] gap-3 rounded-[8px] px-3 py-2 text-left transition-colors hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="flex items-center gap-3 rounded-[14px] border border-border/40 bg-background/70 px-3 py-3 text-left transition-colors hover:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
-      <span className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
+      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground/[0.04] text-muted-foreground">
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-medium text-foreground">{title}</span>
-        <span className="mt-1 block truncate text-xs text-muted-foreground">
-          {meta}{detail ? ` · ${detail}` : ''}
-        </span>
+        <span className="block text-sm font-medium text-foreground">{label}</span>
+        <span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
       </span>
     </button>
-  )
-}
-
-function RecentSection({
-  title,
-  empty,
-  children,
-}: {
-  title: string
-  empty: string
-  children: React.ReactNode
-}) {
-  const hasChildren = React.Children.count(children) > 0
-  return (
-    <section className="min-w-0">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground">{title}</h2>
-      <div className={cn(
-        'rounded-[8px] border border-border/55 bg-background p-1',
-        !hasChildren && 'px-3 py-3'
-      )}>
-        {hasChildren ? children : <p className="text-sm text-muted-foreground">{empty}</p>}
-      </div>
-    </section>
   )
 }
 
@@ -157,36 +219,72 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
   const recentChats = React.useMemo(
     () => getWorkspaceSessionMetas(sessionMetaMap.values(), workspaceId, remoteWorkspaceId)
       .sort((a, b) => (b.lastMessageAt ?? b.createdAt ?? 0) - (a.lastMessageAt ?? a.createdAt ?? 0))
-      .slice(0, 5),
+      .slice(0, 6),
     [sessionMetaMap, workspaceId, remoteWorkspaceId]
   )
 
   const recentDocs = React.useMemo(
-    () => [...pages].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
+    () => [...pages].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6),
     [pages]
   )
 
   const recentOutputs = React.useMemo(
-    () => [...outputs].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
+    () => [...outputs].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6),
     [outputs]
   )
 
   const recentProjects = React.useMemo(
-    () => [...projects].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
+    () => [...projects].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6),
     [projects]
   )
 
   const recentDecisions = React.useMemo(
-    () => [...decisions].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
+    () => [...decisions].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6),
     [decisions]
   )
 
+  const recentNotebooks = React.useMemo(
+    () => [...notebooks].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6),
+    [notebooks]
+  )
+
+  const recentWorkItems = React.useMemo(
+    () => [...workItems].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6),
+    [workItems]
+  )
+
   const recentSources = React.useMemo(
-    () => [...sources]
-      .sort((a, b) => a.config.name.localeCompare(b.config.name))
-      .slice(0, 5),
+    () => [...sources].sort((a, b) => a.config.name.localeCompare(b.config.name)).slice(0, 4),
     [sources]
   )
+
+  const focusItems = React.useMemo(
+    () => buildWorkspaceHomeFocusItems({
+      recentChats,
+      recentDocs,
+      recentOutputs,
+      recentProjects,
+      recentWorkItems,
+    }).map((item) => ({ ...item, timestamp: 0 })),
+    [recentChats, recentDocs, recentOutputs, recentProjects, recentWorkItems]
+  )
+
+  const activityFeed = React.useMemo(
+    () => buildWorkspaceHomeActivityFeed({
+      recentChats,
+      recentDocs,
+      recentOutputs,
+      recentDecisions,
+      recentNotebooks,
+      recentProjects,
+      recentWorkItems,
+      limit: 10,
+    }),
+    [recentChats, recentDocs, recentOutputs, recentDecisions, recentNotebooks, recentProjects, recentWorkItems]
+  )
+
+  const libraryCount = pages.length + outputs.length + decisions.length + notebooks.length
+  const activeWorkCount = workItems.filter((item) => item.status !== 'done').length
 
   if (!workspaceId) {
     return (
@@ -220,173 +318,201 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
       />
 
       <ScrollArea className="min-h-0 flex-1">
-        <main className="mx-auto flex w-full max-w-[980px] flex-col gap-8 px-5 py-7 sm:px-8">
-          <section>
-            <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">Workspace</p>
-            <h1 className="mt-1 text-[26px] font-semibold tracking-normal text-foreground">{workspaceName}</h1>
-            <p className="mt-3 max-w-[680px] text-sm leading-6 text-muted-foreground">
-              Durable work now lives across docs, outputs, decisions, notebooks, and work items. Use Home as the quickest way to orient, resume, and jump into the right surface.
-            </p>
-          </section>
+        <main className="mx-auto flex w-full max-w-[1040px] flex-col gap-6 px-5 py-7 sm:px-8">
+          <section className="relative overflow-hidden rounded-[28px] border border-border/45 bg-background px-6 py-6 sm:px-8">
+            <div className="absolute inset-y-0 right-0 w-[42%] bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.16),transparent_62%)]" aria-hidden="true" />
+            <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.7fr)_320px]">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Workspace</p>
+                <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.03em] text-foreground sm:text-[40px]">{workspaceName}</h1>
+                <p className="mt-4 max-w-[680px] text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                  Pick up active work, reopen recent artifacts, and move across chats, docs, outputs, decisions, notebooks, and work items without digging through every surface.
+                </p>
 
-          <section>
-            <h2 className="mb-3 text-sm font-medium text-foreground">At a glance</h2>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <SnapshotCard
-                label="Library"
-                value={String(pages.length + outputs.length + decisions.length + notebooks.length)}
-                detail={`${pages.length} docs, ${outputs.length} outputs, ${decisions.length} decisions, ${notebooks.length} notebooks`}
-                icon={<BookOpen className="h-4 w-4" />}
-                onClick={() => navigate(routes.view.library())}
-              />
-              <SnapshotCard
-                label="Work Queue"
-                value={String(workItems.length)}
-                detail={`${workItems.filter((item) => item.status !== 'done').length} active durable items`}
-                icon={<ListTodo className="h-4 w-4" />}
-                onClick={() => navigate(routes.view.workQueue())}
-              />
-              <SnapshotCard
-                label="Chats"
-                value={String(recentChats.length)}
-                detail={`${workspaceName} sessions with recent activity`}
-                icon={<MessageSquareText className="h-4 w-4" />}
-                onClick={() => navigate(routes.view.allSessions())}
-              />
-              <SnapshotCard
-                label="Context"
-                value={String(sources.length)}
-                detail="Connected files, APIs, MCPs, and local folders"
-                icon={<DatabaseZap className="h-4 w-4" />}
-                onClick={() => navigate(routes.view.sources())}
-              />
-            </div>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-sm font-medium text-foreground">What do you want to do?</h2>
-            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-              <ActionButton
-                icon={<SquarePen className="h-4 w-4" />}
-                label="Start chat"
-                onClick={() => { void openNewChat?.() }}
-              />
-              <ActionButton
-                icon={<FileText className="h-4 w-4" />}
-                label="Open docs"
-                onClick={() => navigate(routes.view.pages())}
-              />
-              <ActionButton
-                icon={<Box className="h-4 w-4" />}
-                label="Open outputs"
-                onClick={() => navigate(routes.view.outputs())}
-              />
-              <ActionButton
-                icon={<GitBranch className="h-4 w-4" />}
-                label="Review decisions"
-                onClick={() => navigate(routes.view.decisions())}
-              />
-              <ActionButton
-                icon={<ListTodo className="h-4 w-4" />}
-                label="Open work queue"
-                onClick={() => navigate(routes.view.workQueue())}
-              />
-              <ActionButton
-                icon={<BriefcaseBusiness className="h-4 w-4" />}
-                label="Open projects"
-                onClick={() => navigate(routes.view.projects())}
-              />
-              <ActionButton
-                icon={<Search className="h-4 w-4" />}
-                label="Search workspace"
-                onClick={() => navigate(routes.view.search())}
-              />
-              <ActionButton
-                icon={<DatabaseZap className="h-4 w-4" />}
-                label="Manage files & context"
-                onClick={() => navigate(routes.view.sources())}
-              />
-            </div>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-sm font-medium text-foreground">Recent</h2>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <RecentSection title="Recent chats" empty="No recent chats">
-                {recentChats.map((session) => (
-                  <RecentRow
-                    key={session.id}
-                    icon={<MessageSquareText className="h-4 w-4" />}
-                    title={session.name || session.preview || 'Untitled Chat'}
-                    meta={formatUpdatedTime(session.lastMessageAt ?? session.createdAt)}
-                    onClick={() => navigate(routes.view.allSessions(session.id))}
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <HeroActionButton
+                    icon={<SquarePen className="h-4 w-4" />}
+                    label="Start chat"
+                    variant="default"
+                    onClick={() => { void openNewChat?.() }}
                   />
-                ))}
-              </RecentSection>
+                  <HeroActionButton
+                    icon={<ListTodo className="h-4 w-4" />}
+                    label="Open work queue"
+                    variant="secondary"
+                    onClick={() => navigate(routes.view.workQueue())}
+                  />
+                  <HeroActionButton
+                    icon={<Search className="h-4 w-4" />}
+                    label="Search workspace"
+                    variant="outline"
+                    onClick={() => navigate(routes.view.search())}
+                  />
+                </div>
 
-              <RecentSection title="Recent docs" empty="No recent docs">
-                {recentDocs.map((page) => (
-                  <RecentRow
-                    key={page.id}
+                <div className="mt-8">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Resume</p>
+                      <p className="mt-1 text-sm text-muted-foreground">The next useful places to continue work.</p>
+                    </div>
+                  </div>
+
+                  {focusItems.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-3">
+                      {focusItems.map((item) => (
+                        <FocusCard key={`${item.kind}:${item.id}`} item={item} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-[18px] border border-dashed border-border/50 bg-foreground/[0.02] px-4 py-5 text-sm text-muted-foreground">
+                      Start a chat or save a doc, output, project, or work item to turn Home into a real resume surface.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <aside className="rounded-[24px] border border-border/40 bg-foreground/[0.02] p-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Workspace signals</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">A compact read on what is active here now.</p>
+                </div>
+
+                <div className="mt-4 grid gap-2">
+                  <SignalButton
+                    label="Library"
+                    value={String(libraryCount)}
+                    detail={`${pages.length} docs, ${outputs.length} outputs, ${decisions.length} decisions, ${notebooks.length} notebooks`}
+                    onClick={() => navigate(routes.view.library())}
+                  />
+                  <SignalButton
+                    label="Work queue"
+                    value={String(activeWorkCount)}
+                    detail={`${workItems.length} total work items`}
+                    onClick={() => navigate(routes.view.workQueue())}
+                  />
+                  <SignalButton
+                    label="Projects"
+                    value={String(projects.length)}
+                    detail="Curated work containers"
+                    onClick={() => navigate(routes.view.projects())}
+                  />
+                  <SignalButton
+                    label="Context"
+                    value={String(sources.length)}
+                    detail="Connected files, APIs, MCPs, and folders"
+                    onClick={() => navigate(routes.view.sources())}
+                  />
+                </div>
+
+                <div className="mt-5 border-t border-border/45 pt-4">
+                  <div className="mb-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Available context</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Connected sources that can ground the next step.</p>
+                  </div>
+
+                  <div className="grid gap-2">
+                    {recentSources.length > 0 ? recentSources.map((source) => (
+                      <button
+                        key={source.config.slug}
+                        type="button"
+                        onClick={() => navigate(routes.view.sources({ sourceSlug: source.config.slug }))}
+                        className="flex items-center gap-3 rounded-[14px] px-2 py-2 text-left transition-colors hover:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <SourceAvatar source={source} size="sm" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-foreground">{source.config.name}</span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{source.config.tagline || source.config.provider || source.config.type}</span>
+                        </span>
+                      </button>
+                    )) : (
+                      <p className="text-sm text-muted-foreground">No files or external context connected yet.</p>
+                    )}
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_320px]">
+            <div className="rounded-[24px] border border-border/45 bg-background p-4 sm:p-5">
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Recent activity</p>
+                  <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">Across the workspace</h2>
+                </div>
+                <Button type="button" variant="ghost" className="h-8 rounded-full px-3 text-xs" onClick={() => navigate(routes.view.library())}>
+                  Open library
+                </Button>
+              </div>
+
+              {activityFeed.length > 0 ? (
+                <div className="grid gap-1">
+                  {activityFeed.map((item) => (
+                    <ActivityRow key={`${item.kind}:${item.id}`} item={item} />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-[18px] border border-dashed border-border/50 bg-foreground/[0.02] px-4 py-6 text-sm text-muted-foreground">
+                  No recent durable activity yet. Once you start saving work, Home will surface the freshest artifacts here.
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <section className="rounded-[24px] border border-border/45 bg-background p-4">
+                <div className="mb-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Surfaces</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Jump into the durable views without reopening the whole dashboard.</p>
+                </div>
+                <div className="grid gap-2">
+                  <SurfaceButton
                     icon={<FileText className="h-4 w-4" />}
-                    title={page.title || 'Untitled Doc'}
-                    meta={formatUpdatedTime(page.updatedAt)}
-                    detail={page.outputIdCount > 0 ? 'Created from Output' : page.sourceSessionId ? 'From chat' : undefined}
-                    onClick={() => navigate(routes.view.savedPage(page.id))}
+                    label="Open docs"
+                    detail="Review and edit saved documents"
+                    onClick={() => navigate(routes.view.pages())}
                   />
-                ))}
-              </RecentSection>
-
-              <RecentSection title="Recent outputs" empty="No recent outputs">
-                {recentOutputs.map((output) => (
-                  <RecentRow
-                    key={output.id}
+                  <SurfaceButton
                     icon={<Box className="h-4 w-4" />}
-                    title={output.title || 'Untitled Output'}
-                    meta={formatUpdatedTime(output.updatedAt)}
-                    detail={output.sourceSessionId || output.sourceMessageId ? 'From assistant response' : 'Saved manually'}
-                    onClick={() => navigate(routes.view.savedOutput(output.id))}
+                    label="Open outputs"
+                    detail="Review saved assistant work"
+                    onClick={() => navigate(routes.view.outputs())}
                   />
-                ))}
-              </RecentSection>
-
-              <RecentSection title="Recent decisions" empty="No recent decisions">
-                {recentDecisions.map((decision) => (
-                  <RecentRow
-                    key={decision.id}
+                  <SurfaceButton
                     icon={<GitBranch className="h-4 w-4" />}
-                    title={decision.title}
-                    meta={formatUpdatedTime(decision.updatedAt)}
-                    detail={decision.status}
-                    onClick={() => navigate(routes.view.decision(decision.id))}
+                    label="Review decisions"
+                    detail="Keep durable decisions visible"
+                    onClick={() => navigate(routes.view.decisions())}
                   />
-                ))}
-              </RecentSection>
-
-              <RecentSection title="Recent projects" empty="No recent projects">
-                {recentProjects.map((project) => (
-                  <RecentRow
-                    key={project.id}
+                  <SurfaceButton
                     icon={<BriefcaseBusiness className="h-4 w-4" />}
-                    title={project.name || 'Untitled Project'}
-                    meta={formatUpdatedTime(project.updatedAt)}
-                    detail={project.status}
-                    onClick={() => navigate(routes.view.project(project.id))}
+                    label="Open projects"
+                    detail="Move through linked work containers"
+                    onClick={() => navigate(routes.view.projects())}
                   />
-                ))}
-              </RecentSection>
+                </div>
+              </section>
 
-              <RecentSection title="Available context" empty="No files or context yet">
-                {recentSources.map((source) => (
-                  <RecentRow
-                    key={source.config.slug}
-                    icon={<SourceAvatar source={source} size="sm" />}
-                    title={source.config.name}
-                    meta={source.config.tagline || source.config.provider || source.config.type}
-                    onClick={() => navigate(routes.view.sources({ sourceSlug: source.config.slug }))}
+              <section className="rounded-[24px] border border-border/45 bg-background p-4">
+                <div className="mb-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Search and context</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Use the shell for lookup and grounding, not as another grid of links.</p>
+                </div>
+                <div className="grid gap-2">
+                  <SurfaceButton
+                    icon={<Search className="h-4 w-4" />}
+                    label="Search workspace"
+                    detail="Find the right durable object or chat"
+                    onClick={() => navigate(routes.view.search())}
                   />
-                ))}
-              </RecentSection>
+                  <SurfaceButton
+                    icon={<DatabaseZap className="h-4 w-4" />}
+                    label="Manage files and context"
+                    detail="Inspect connected sources and local folders"
+                    onClick={() => navigate(routes.view.sources())}
+                  />
+                </div>
+              </section>
             </div>
           </section>
         </main>

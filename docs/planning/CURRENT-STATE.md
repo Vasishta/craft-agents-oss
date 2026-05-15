@@ -67,8 +67,8 @@ Current implementation state:
 - #41 is complete: the measured renderer pass removed per-render relative-time churn, narrowed sidebar label recomputation, parallelized batch session mutations, scoped messaging subscriptions per session row, and cleaned up route-parser and shell animation hotspots without destabilizing routing.
 - #43 is complete: Project detail now resolves linked docs, outputs, decisions, notebooks, chats, and work items into direct navigation cards, and Work Queue now has a first-class work-item detail route so project-linked work is actually openable instead of just listed by id.
 - #47 is complete: Outputs now act as explicit cross-object workflow hubs with direct attach/create actions into Projects, WorkItems, and Decisions, and reusable project-attach flows also exist on Decision and Notebook detail surfaces.
-- #45 is open: navigation/sidebar hardening is now narrower and owns NavigationContext decomposition, navigation entry-point cleanup, and the remaining shell infrastructure cleanup beyond the safe perf/a11y/listener fixes already landed.
-- #46 is partially addressed: shared workspace-resource hook plumbing, panel-local chrome context, shared linked-count UI, and reusable durable-resource scaffolds have landed, but some durable-entity UI consolidation remains intentionally deferred until the post-linking surface shape settles.
+- #45 is open and now leads the queue: it owns NavigationContext decomposition, navigation entry-point cleanup, Workspace Home/sidebar declutter, and selective upstream shell/menu polish so the transition shell feels intentional instead of merely functional.
+- #46 is partially addressed: shared workspace-resource hook plumbing, panel-local chrome context, shared linked-count UI, and reusable durable-resource scaffolds have landed, but the remaining durable-entity UI consolidation stays intentionally sequenced after the calmer post-#45 shell shape settles.
 ```
 
 ## Tracker Normalization
@@ -84,12 +84,13 @@ On 2026-05-15 those were backfilled into live GitHub issues:
 - #46 TASK: Consolidate remaining durable entity UI scaffolds
 ```
 
-## Next Queue
+## Active Queue
 
 ```text
-#44 TASK: Cross-object Search expansion
 #45 TASK: Navigation and sidebar infrastructure hardening
 #46 TASK: Consolidate remaining durable entity UI scaffolds
+#44 TASK: Cross-object Search expansion
+Follow-on after #45/#46: Pi dependency upgrade evaluation (`@mariozechner/pi-ai` / `@mariozechner/pi-coding-agent` `0.70.2 -> 0.73.1`) plus selected upstream shell/menu cherry-picks from `v0.9.3` / `v0.9.4` where they fit cleanly.
 Potential follow-on after #44: project-aware relationship badges, provenance-weighted result ranking, and final durable-entity scaffold cleanup once the post-linking UI shape is stable.
 ```
 
