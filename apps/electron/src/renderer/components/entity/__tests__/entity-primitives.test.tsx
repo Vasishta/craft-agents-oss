@@ -28,7 +28,12 @@ describe('entity primitives', () => {
   it('renders shared loading, empty, and not-found states', () => {
     const loadingMarkup = renderToStaticMarkup(<EntityLoadingState />)
     const emptyMarkup = renderToStaticMarkup(
-      <EntityEmptyState icon={<BookOpen className="h-5 w-5" />} title="No notebooks yet" description="Create one." />,
+      <EntityEmptyState
+        icon={<BookOpen className="h-5 w-5" />}
+        title="No notebooks yet"
+        description="Create one."
+        action={<button type="button">New notebook</button>}
+      />,
     )
     const notFoundMarkup = renderToStaticMarkup(
       <EntityNotFoundState title="Notebook not found" description="It may have been deleted." />,
@@ -37,6 +42,7 @@ describe('entity primitives', () => {
     expect(loadingMarkup).toContain('animate-spin')
     expect(emptyMarkup).toContain('No notebooks yet')
     expect(emptyMarkup).toContain('Create one.')
+    expect(emptyMarkup).toContain('New notebook')
     expect(notFoundMarkup).toContain('Notebook not found')
   })
 

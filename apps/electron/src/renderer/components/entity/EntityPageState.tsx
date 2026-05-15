@@ -5,6 +5,7 @@ interface EntityPageStateProps {
   icon?: React.ReactNode
   title: string
   description?: React.ReactNode
+  action?: React.ReactNode
 }
 
 export function EntityLoadingState() {
@@ -15,7 +16,7 @@ export function EntityLoadingState() {
   )
 }
 
-export function EntityEmptyState({ icon, title, description }: EntityPageStateProps) {
+export function EntityEmptyState({ icon, title, description, action }: EntityPageStateProps) {
   return (
     <section className="flex min-h-[calc(100vh-180px)] items-center justify-center">
       <div className="max-w-[400px] text-center">
@@ -26,6 +27,7 @@ export function EntityEmptyState({ icon, title, description }: EntityPageStatePr
         ) : null}
         <h1 className="text-[22px] font-semibold tracking-normal text-foreground">{title}</h1>
         {description ? <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p> : null}
+        {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
       </div>
     </section>
   )

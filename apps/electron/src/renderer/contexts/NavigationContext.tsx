@@ -52,6 +52,7 @@ import { parsePermissionMode } from '@craft-agent/shared/agent/mode-types'
 import { NAVIGATE_EVENT, readNavigateEventDetail, type NavigateOptions } from '../lib/navigate'
 import { normalizePanelRouteForReconcile } from './navigation-reconcile'
 import { buildSemanticHistoryKey, canRunInitialRestore } from './navigation-history'
+import { buildNavigationUrlSearch, parseNavigationUrlState } from './navigation-url-state'
 import * as storage from '@/lib/local-storage'
 import type {
   DeepLinkNavigation,
@@ -278,39 +279,13 @@ export function NavigationProvider({
     const focusedIdx = store.get(focusedPanelIndexAtom)
     if (panels.length === 0) return
 
-    const focusedPanel = panels[focusedIdx] ?? panels[0]
     const url = new URL(window.location.href)
-
-    // ?ws= workspace slug
-    if (workspaceSlug) {
-      url.searchParams.set('ws', workspaceSlug)
-    }
-
-    // ?route= is the focused panel's route
-    url.searchParams.set('route', focusedPanel.route)
-
-    // ?panels= encodes ALL panels in stack order
-    if (panels.length > 1) {
-      const encoded = panels.map(p => `${p.route}:${p.proportion.toFixed(4)}`).join(',')
-      url.searchParams.set('panels', encoded)
-    } else {
-      url.searchParams.delete('panels')
-    }
-
-    // ?fi= is focused panel index (for multi-panel layouts)
-    if (panels.length > 1) {
-      url.searchParams.set('fi', String(focusedIdx))
-    } else {
-      url.searchParams.delete('fi')
-    }
-
-    // ?sidebar=
-    const sidebarParam = buildRightSidebarParam(rightSidebarRef.current)
-    if (sidebarParam) {
-      url.searchParams.set('sidebar', sidebarParam)
-    } else {
-      url.searchParams.delete('sidebar')
-    }
+    url.search = buildNavigationUrlSearch({
+      workspaceSlug,
+      panels: panels.map((panel) => ({ route: panel.route, proportion: panel.proportion })),
+      focusedIndex: focusedIdx,
+      rightSidebar: rightSidebarRef.current,
+    })
 
     const urlStr = url.toString()
 
@@ -420,14 +395,14 @@ export function NavigationProvider({
    */
   const reconcileFromUrlParams = useCallback(
     (params: URLSearchParams) => {
-      const initialRoute = params.get('route')
-      const sidebarParam = params.get('sidebar') || undefined
-      const panelsParam = params.get('panels')
-      const focusedIndexParam = params.get('fi')
+      const parsedUrlState = parseNavigationUrlState(
+        params,
+        (rawRoute) => normalizePanelRouteForReconcile(rawRoute, (state) => resolveAutoSelectionRef.current(state)),
+      )
 
       // Restore right sidebar
-      if (sidebarParam) {
-        const parsed = parseRouteToNavigationState('allSessions', sidebarParam)
+      if (parsedUrlState.sidebarParam) {
+        const parsed = parseRouteToNavigationState('allSessions', parsedUrlState.sidebarParam)
         if (parsed?.rightSidebar) {
           setRightSidebar(parsed.rightSidebar)
         } else {
@@ -441,42 +416,16 @@ export function NavigationProvider({
       let entries: { route: ViewRoute; proportion: number }[] = []
       let focusedIndex = 0
 
-      if (panelsParam) {
+      if (parsedUrlState.entries.length > 0) {
         // Canonical format: ?panels= contains ALL panels, ?fi= is focused index.
-        // We intentionally no longer support older mixed route/panels formats.
-        entries = panelsParam.split(',').filter(Boolean).map(entry => {
-          const colonIdx = entry.lastIndexOf(':')
-          if (colonIdx > 0) {
-            const proportion = parseFloat(entry.slice(colonIdx + 1))
-            if (!isNaN(proportion) && proportion > 0 && proportion < 1) {
-              const rawRoute = entry.slice(0, colonIdx) as ViewRoute
-              const route = normalizePanelRouteForReconcile(rawRoute, (state) => resolveAutoSelectionRef.current(state))
-              return { route, proportion }
-            }
-          }
-          const rawRoute = entry as ViewRoute
-          const route = normalizePanelRouteForReconcile(rawRoute, (state) => resolveAutoSelectionRef.current(state))
-          return { route, proportion: 0 }
-        })
-
-        const hasProportions = entries.some(e => e.proportion > 0)
-        if (!hasProportions) {
-          const equal = 1 / entries.length
-          entries.forEach(e => { e.proportion = equal })
-        } else {
-          const total = entries.reduce((s, e) => s + e.proportion, 0)
-          if (total > 0 && Math.abs(total - 1) > 0.001) {
-            entries.forEach(e => { e.proportion = e.proportion / total })
-          }
-        }
-
-        focusedIndex = focusedIndexParam != null ? (parseInt(focusedIndexParam, 10) || 0) : 0
-      } else if (initialRoute) {
+        entries = parsedUrlState.entries
+        focusedIndex = parsedUrlState.focusedIndex
+      } else if (parsedUrlState.route) {
         // Single panel from ?route=
-        const navState = parseRouteToNavigationState(initialRoute)
+        const navState = parseRouteToNavigationState(parsedUrlState.route)
         if (navState) {
           const finalRoute = ('details' in navState && navState.details)
-            ? (initialRoute as ViewRoute)
+            ? (parsedUrlState.route as ViewRoute)
             : (buildRouteFromNavigationState(resolveAutoSelectionRef.current(navState)) as ViewRoute)
           entries = [{ route: finalRoute, proportion: 1 }]
         }
