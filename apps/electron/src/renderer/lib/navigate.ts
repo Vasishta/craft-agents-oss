@@ -35,6 +35,30 @@ export interface NavigateOptions {
   skipAutoSelect?: boolean
 }
 
+export interface NavigateEventDetail extends NavigateOptions {
+  route: Route
+}
+
+export function createNavigateEvent(detail: NavigateEventDetail): CustomEvent<NavigateEventDetail> {
+  return new CustomEvent(NAVIGATE_EVENT, {
+    detail,
+    bubbles: true,
+  })
+}
+
+export function readNavigateEventDetail(event: Event): NavigateEventDetail | null {
+  if (!(event instanceof CustomEvent)) return null
+  const detail = event.detail as Partial<NavigateEventDetail> | undefined
+  if (!detail?.route) return null
+  return detail as NavigateEventDetail
+}
+
+declare global {
+  interface WindowEventMap {
+    [NAVIGATE_EVENT]: CustomEvent<NavigateEventDetail>
+  }
+}
+
 /**
  * Navigate to a route
  *
@@ -42,9 +66,6 @@ export interface NavigateOptions {
  * Can be called from anywhere in the app.
  */
 export function navigate(route: Route, options?: NavigateOptions): void {
-  const event = new CustomEvent(NAVIGATE_EVENT, {
-    detail: { route, ...options },
-    bubbles: true,
-  })
+  const event = createNavigateEvent({ route, ...options })
   window.dispatchEvent(event)
 }

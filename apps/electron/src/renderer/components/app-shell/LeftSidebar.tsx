@@ -12,6 +12,7 @@ import {
 import { ContextMenuProvider } from '@/components/ui/menu-context'
 import { SidebarMenu, type SidebarMenuType } from './SidebarMenu'
 import { SortableList, type SortableItemData } from '@/components/ui/sortable-list'
+import { getSidebarSubtreeId } from './sidebar-a11y'
 import { extractSortableSidebarEntityId } from './sidebar-sortable'
 
 /** Context menu configuration for sidebar items */
@@ -209,12 +210,14 @@ export function LeftSidebar({ links, isCollapsed, getItemProps, focusedItemId, i
           const link = item
           const itemProps = getItemProps?.(link.id)
           const isFocused = focusedItemId === link.id
+          const expandedContentId = link.expandable ? getSidebarSubtreeId(link.id) : undefined
 
           // Button element shared by both expandable and non-expandable items
           const buttonElement = (
             <SidebarButton
               link={link}
               itemProps={itemProps}
+              expandedContentId={expandedContentId}
             />
           )
 
@@ -264,6 +267,7 @@ export function LeftSidebar({ links, isCollapsed, getItemProps, focusedItemId, i
                 <AnimatePresence initial={false}>
                   {link.expanded && (
                     <motion.div
+                      id={expandedContentId}
                       initial={{ height: 0, opacity: 0, marginTop: 0, marginBottom: 0 }}
                       animate={{ height: 'auto', opacity: 1, marginTop: 2, marginBottom: isNested ? 4 : 8 }}
                       exit={{ height: 0, opacity: 0, marginTop: 0, marginBottom: 0 }}
@@ -386,6 +390,7 @@ function SortableStatusList({ items, onReorder, getItemProps, focusedItemId, tra
                     <SidebarButton
                       link={item}
                       itemProps={getItemProps?.(item.id)}
+                      expandedContentId={item.expandable ? getSidebarSubtreeId(item.id) : undefined}
                     />
                   </ContextMenuTrigger>
                   <StyledContextMenuContent>
@@ -414,6 +419,7 @@ function SortableStatusList({ items, onReorder, getItemProps, focusedItemId, tra
                 <SidebarButton
                   link={item}
                   itemProps={getItemProps?.(item.id)}
+                  expandedContentId={item.expandable ? getSidebarSubtreeId(item.id) : undefined}
                 />
               )}
             </div>
@@ -461,6 +467,7 @@ interface SidebarButtonProps {
   }
   /** True when rendering inside the DragOverlay (floating clone) */
   isOverlay?: boolean
+  expandedContentId?: string
 }
 
 function getSidebarButtonItemProps(
@@ -474,7 +481,7 @@ function getSidebarButtonItemProps(
 // forwardRef is required so Radix's ContextMenuTrigger (asChild) can attach its ref
 // and pass props like data-state="open" directly onto this button element.
 const SidebarButton = React.forwardRef<HTMLButtonElement, SidebarButtonProps & React.ButtonHTMLAttributes<HTMLButtonElement>>(
-  ({ link, itemProps, isOverlay, className: extraClassName, ...radixProps }, forwardedRef) => {
+  ({ link, itemProps, isOverlay, expandedContentId, className: extraClassName, ...radixProps }, forwardedRef) => {
     const mergedItemProps = isOverlay ? undefined : getSidebarButtonItemProps(itemProps)
 
     return (
@@ -512,12 +519,13 @@ const SidebarButton = React.forwardRef<HTMLButtonElement, SidebarButtonProps & R
                 {renderIcon(link)}
               </span>
               {/* Toggle chevron - shown on hover. data-no-dnd prevents drag activation on click. */}
-              <span
-                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer"
+              <button
+                type="button"
+                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer rounded-sm focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
                 data-no-dnd="true"
-                role="button"
                 aria-label={link.expanded ? `Collapse ${link.title}` : `Expand ${link.title}`}
                 aria-expanded={link.expanded}
+                aria-controls={expandedContentId}
                 onClick={(e) => {
                   e.stopPropagation()
                   link.onToggle?.()
@@ -529,7 +537,7 @@ const SidebarButton = React.forwardRef<HTMLButtonElement, SidebarButtonProps & R
                     link.expanded && "rotate-90"
                   )}
                 />
-              </span>
+              </button>
             </>
           ) : (
             renderIcon(link)

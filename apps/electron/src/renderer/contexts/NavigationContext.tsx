@@ -49,7 +49,7 @@ import {
 } from '../../shared/route-parser'
 import { routes, type Route, type ViewRoute } from '../../shared/routes'
 import { parsePermissionMode } from '@craft-agent/shared/agent/mode-types'
-import { NAVIGATE_EVENT, type NavigateOptions } from '../lib/navigate'
+import { NAVIGATE_EVENT, readNavigateEventDetail, type NavigateOptions } from '../lib/navigate'
 import { normalizePanelRouteForReconcile } from './navigation-reconcile'
 import { buildSemanticHistoryKey, canRunInitialRestore } from './navigation-history'
 import * as storage from '@/lib/local-storage'
@@ -341,6 +341,24 @@ export function NavigationProvider({
     lastSemanticHistoryKeyRef.current = currentSemanticKey
   }, [getSemanticHistoryKey])
 
+  const scheduleSemanticHistoryPush = useCallback(() => {
+    if (pendingPushRef.current) return
+    pendingPushRef.current = true
+    queueMicrotask(() => {
+      pendingPushRef.current = false
+      maybePushHistoryForSemanticChange()
+    })
+  }, [maybePushHistoryForSemanticChange])
+
+  const reconcileUrlState = useCallback((params: URLSearchParams) => {
+    suppressPushRef.current = true
+    reconcileFromUrlParamsRef.current(params)
+    lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
+    requestAnimationFrame(() => {
+      suppressPushRef.current = false
+    })
+  }, [getSemanticHistoryKey])
+
   // replaceState sync when panel stack, focus, or sidebar changes (catches resize, etc.)
   const panelStack = useAtomValue(panelStackAtom)
   const focusedPanelId = useAtomValue(focusedPanelIdAtom)
@@ -360,15 +378,12 @@ export function NavigationProvider({
       if (suppressPushRef.current || !initialRouteRestoredRef.current) return
       const currRoutes = store.get(panelStackAtom).map(p => p.route)
       if (currRoutes.length !== prevRoutes.length || !currRoutes.every((r, i) => r === prevRoutes[i])) {
-        if (!pendingPushRef.current) {
-          pendingPushRef.current = true
-          queueMicrotask(() => { pendingPushRef.current = false; maybePushHistoryForSemanticChange() })
-        }
+        scheduleSemanticHistoryPush()
       }
       prevRoutes = currRoutes
     })
     return unsub
-  }, [store, maybePushHistoryForSemanticChange])
+  }, [store, scheduleSemanticHistoryPush])
 
   // Focus changes: push history when active panel changes
   useEffect(() => {
@@ -377,25 +392,23 @@ export function NavigationProvider({
       if (suppressPushRef.current || !initialRouteRestoredRef.current) return
       const newFocusId = store.get(focusedPanelIdAtom)
       if (newFocusId !== prevFocusId) {
-        if (!pendingPushRef.current) {
-          pendingPushRef.current = true
-          queueMicrotask(() => { pendingPushRef.current = false; maybePushHistoryForSemanticChange() })
-        }
+        scheduleSemanticHistoryPush()
         prevFocusId = newFocusId
       }
     })
     return unsub
-  }, [store, maybePushHistoryForSemanticChange])
+  }, [store, scheduleSemanticHistoryPush])
 
   // Right sidebar changes: push history
-  const prevSidebarTypeRef = useRef(rightSidebar?.type)
+  const prevSidebarParamRef = useRef(buildRightSidebarParam(rightSidebar))
   useEffect(() => {
-    if (rightSidebar?.type === prevSidebarTypeRef.current) return
-    prevSidebarTypeRef.current = rightSidebar?.type
+    const currentSidebarParam = buildRightSidebarParam(rightSidebar)
+    if (currentSidebarParam === prevSidebarParamRef.current) return
+    prevSidebarParamRef.current = currentSidebarParam
     if (suppressPushRef.current) return
     if (!initialRouteRestoredRef.current) return
-    maybePushHistoryForSemanticChange()
-  }, [rightSidebar, maybePushHistoryForSemanticChange])
+    scheduleSemanticHistoryPush()
+  }, [rightSidebar, scheduleSemanticHistoryPush])
 
   // =========================================================================
   // RECONCILE PANELS FROM URL PARAMS
@@ -965,17 +978,12 @@ export function NavigationProvider({
       }
 
       // Same workspace — reconcile panels from the URL
-      suppressPushRef.current = true
-      reconcileFromUrlParamsRef.current(params)
-      lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
-      requestAnimationFrame(() => {
-        suppressPushRef.current = false
-      })
+      reconcileUrlState(params)
     }
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [workspaceSlug, onSwitchWorkspaceBySlug, updateCanGoBackForward, getSemanticHistoryKey, isSessionsReady])
+  }, [workspaceSlug, onSwitchWorkspaceBySlug, updateCanGoBackForward, reconcileUrlState, isSessionsReady])
 
   // =========================================================================
   // WORKSPACE SWITCH
@@ -995,14 +1003,10 @@ export function NavigationProvider({
     if (previousWorkspaceSlugRef.current === workspaceSlug) return
     previousWorkspaceSlugRef.current = workspaceSlug
 
-    // Suppress pushState during reconciliation
-    suppressPushRef.current = true
-
     if (isPopstateSwitchRef.current) {
       // Popstate-triggered: URL is already correct, just reconcile from it
       isPopstateSwitchRef.current = false
-      reconcileFromUrlParamsRef.current(new URLSearchParams(window.location.search))
-      lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
+      reconcileUrlState(new URLSearchParams(window.location.search))
     } else {
       // UI-triggered: load stored URL for the new workspace, push history entry
       const savedSearch = storage.get<string>(storage.KEYS.workspaceUrl, '', workspaceSlug)
@@ -1028,8 +1032,7 @@ export function NavigationProvider({
       updateCanGoBackForward()
 
       // Reconcile panels from the new URL
-      reconcileFromUrlParamsRef.current(new URLSearchParams(url.search))
-      lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
+      reconcileUrlState(new URLSearchParams(url.search))
     }
 
     initialRouteRestoredRef.current = true
@@ -1038,7 +1041,7 @@ export function NavigationProvider({
       suppressPushRef.current = false
       lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
     })
-  }, [workspaceId, workspaceSlug, store, updateCanGoBackForward, getSemanticHistoryKey, isSessionsReady])
+  }, [workspaceId, workspaceSlug, store, updateCanGoBackForward, getSemanticHistoryKey, isSessionsReady, reconcileUrlState])
 
   // =========================================================================
   // INITIAL ROUTE RESTORATION (CMD+R reload)
@@ -1053,14 +1056,10 @@ export function NavigationProvider({
     })) return
     initialRouteRestoredRef.current = true
 
-    // Suppress pushState during initial restoration
-    suppressPushRef.current = true
-
     const params = new URLSearchParams(window.location.search)
 
     // Reconcile panels + sidebar from current URL
-    reconcileFromUrlParamsRef.current(params)
-    lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
+    reconcileUrlState(params)
 
     // If nothing was in the URL, navigate to default
     if (!params.get('route') && !params.get('panels')) {
@@ -1073,10 +1072,9 @@ export function NavigationProvider({
     historyMaxSeqRef.current = 0
 
     requestAnimationFrame(() => {
-      suppressPushRef.current = false
       lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
     })
-  }, [isReady, isSessionsReady, workspaceId, navigate, store, getSemanticHistoryKey])
+  }, [isReady, isSessionsReady, workspaceId, navigate, store, getSemanticHistoryKey, reconcileUrlState])
 
   // =========================================================================
   // PENDING NAVIGATION
@@ -1147,12 +1145,11 @@ export function NavigationProvider({
   // =========================================================================
 
   useEffect(() => {
-    const handleNavigateEvent = (event: Event) => {
-      const customEvent = event as CustomEvent<{ route: Route; newPanel?: boolean; targetLaneId?: 'main' }>
-      if (customEvent.detail?.route) {
-        const { route: r, newPanel, targetLaneId } = customEvent.detail
-        navigate(r, newPanel ? { newPanel, targetLaneId } : undefined)
-      }
+    const handleNavigateEvent = (event: WindowEventMap[typeof NAVIGATE_EVENT]) => {
+      const detail = readNavigateEventDetail(event)
+      if (!detail) return
+      const { route: routeToNavigate, ...options } = detail
+      void navigate(routeToNavigate, options)
     }
 
     window.addEventListener(NAVIGATE_EVENT, handleNavigateEvent)
