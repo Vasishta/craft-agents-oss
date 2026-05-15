@@ -50,7 +50,8 @@ describe('Notebook Storage', () => {
     const read = readNotebookDocument(workspaceRootPath, result.notebook!.id, workspaceId)
     expect(read?.title).toBe('Research notebook')
     expect(read?.links.docIds).toEqual(['doc-a'])
-    expect(read?.sections[0].links.sourceIds).toEqual(['source-a'])
+    expect(read).not.toBeNull()
+    expect(read!.sections[0]!.links.sourceIds).toEqual(['source-a'])
   })
 
   it('rejects missing titles', () => {
@@ -115,7 +116,7 @@ describe('Notebook Storage', () => {
     expect(read?.links.projectIds).toEqual([])
     expect(read?.links.docIds).toEqual(['doc-a'])
 
-    const [entry] = listNotebookEntries(workspaceRootPath, workspaceId)
+    const entry = listNotebookEntries(workspaceRootPath, workspaceId)[0]!
     expect(entry.linkCounts.projectCount).toBe(0)
     expect(entry.linkCounts.docCount).toBe(1)
   })
@@ -131,7 +132,8 @@ describe('Notebook Storage', () => {
     }).notebook!
 
     const all = listNotebookEntries(workspaceRootPath, workspaceId)
-    expect(all[0].id).toBe(newest.id)
+    const newestEntry = all[0]!
+    expect(newestEntry.id).toBe(newest.id)
 
     const projectB = listNotebookEntries(workspaceRootPath, workspaceId, 'project-b')
     expect(projectB.map(entry => entry.id)).toEqual([newest.id])
@@ -152,7 +154,7 @@ describe('Notebook Storage', () => {
 
     const rebuilt = loadNotebookIndex(workspaceRootPath)
     expect(rebuilt.notebooks).toHaveLength(1)
-    expect(rebuilt.notebooks[0].title).toBe('Safe')
+    expect(rebuilt.notebooks[0]!.title).toBe('Safe')
   })
 
   it('enforces workspace isolation for reads and mutations', () => {

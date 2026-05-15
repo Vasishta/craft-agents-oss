@@ -1,6 +1,6 @@
 # CURRENT STATE: Durable Knowledge Workspace
 
-Status: Snapshot as of 2026-05-15
+Status: Snapshot as of 2026-05-16
 Live tracker: GitHub Issues on `Vasishta/craft-agents-oss`  
 Related epic: `#9 EPIC-001: Durable Knowledge Workspace`
 
@@ -92,7 +92,9 @@ On 2026-05-15 those were backfilled into live GitHub issues:
 
 ```text
 Transition feature queue is complete.
-Next follow-on: Pi dependency upgrade evaluation (`@mariozechner/pi-ai` / `@mariozechner/pi-coding-agent` `0.70.2 -> 0.73.1`) plus selected upstream shell/menu cherry-picks from `v0.9.3` / `v0.9.4` where they fit cleanly.
+Pi runtime follow-on is complete: `@mariozechner/pi-ai`, `@mariozechner/pi-coding-agent`, and `@mariozechner/pi-agent-core` are now aligned on `0.73.1`, picking up the upstream Codex/OpenAI long-running transport fixes.
+Selected upstream adaptation landed: skill "Show in Finder" / reveal actions now target the authoritative skill folder path instead of fabricating a `SKILL.md` path.
+Remaining follow-on: any additional upstream shell/menu cherry-picks from `v0.9.3` / `v0.9.4` that still fit the calmer post-transition shell without importing the full compact/mobile rewrite.
 Post-transition grooming: project-aware relationship badges, provenance-weighted result ranking, empty-state/copy cleanup, compact-mode polish, and any remaining product-rhythm cleanup revealed by the now-complete durable workspace model.
 ```
 

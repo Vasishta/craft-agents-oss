@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from 'bun:test';
 import { buildCallLlmRequest } from '../llm-tool.ts';
-import { join } from 'path';
+import { basename, join } from 'path';
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
 
 // ============================================================
@@ -88,11 +88,13 @@ describe('buildCallLlmRequest()', () => {
   // --- Attachments ---
 
   it('processes text file attachments', async () => {
+    const attachmentPath = join(TMP_DIR, 'test.ts');
     const result = await buildCallLlmRequest(
-      { prompt: 'Summarize', attachments: [join(TMP_DIR, 'test.ts')] },
+      { prompt: 'Summarize', attachments: [attachmentPath] },
       { backendName: 'Test' }
     );
-    expect(result.prompt).toContain('<file path="test.ts">');
+    expect(result.prompt).toContain(`<file path="${attachmentPath}">`);
+    expect(basename(attachmentPath)).toBe('test.ts');
     expect(result.prompt).toContain('const x = 1;');
     expect(result.prompt).toContain('Summarize');
   });

@@ -109,7 +109,7 @@ describe('Decision Storage', () => {
     expect(read?.links.projectIds).toEqual([])
     expect(read?.links.docIds).toEqual(['doc-a'])
 
-    const [entry] = listDecisionEntries(workspaceRootPath, workspaceId)
+    const entry = listDecisionEntries(workspaceRootPath, workspaceId)[0]!
     expect(entry.linkCounts.projectCount).toBe(0)
     expect(entry.linkCounts.docCount).toBe(1)
   })
@@ -127,7 +127,8 @@ describe('Decision Storage', () => {
     }).decision!
 
     const all = listDecisionEntries(workspaceRootPath, workspaceId)
-    expect(all[0].id).toBe(newest.id)
+    const newestEntry = all[0]!
+    expect(newestEntry.id).toBe(newest.id)
 
     const projectB = listDecisionEntries(workspaceRootPath, workspaceId, 'project-b')
     expect(projectB.map(entry => entry.id)).toEqual([newest.id])
@@ -148,7 +149,7 @@ describe('Decision Storage', () => {
 
     const rebuilt = loadDecisionIndex(workspaceRootPath)
     expect(rebuilt.decisions).toHaveLength(1)
-    expect(rebuilt.decisions[0].title).toBe('Safe')
+    expect(rebuilt.decisions[0]!.title).toBe('Safe')
   })
 
   it('enforces workspace isolation for reads and mutations', () => {

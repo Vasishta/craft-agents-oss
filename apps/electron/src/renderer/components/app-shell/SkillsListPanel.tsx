@@ -90,7 +90,7 @@ export function SkillsListPanel({
             onOpenInNewWindow={() => window.electronAPI.openUrl(`craftagents://skills/skill/${skill.slug}?window=focused`)}
             onShowInFinder={() => {
               if (canRevealLocally) {
-                void window.electronAPI.showInFolder(`${skill.path}/SKILL.md`)
+                void window.electronAPI.showInFolder(skill.path)
               }
             }}
             canShowInFinder={canRevealLocally}

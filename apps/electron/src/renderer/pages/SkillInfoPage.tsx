@@ -88,7 +88,7 @@ export default function SkillInfoPage({ skillSlug, workspaceId, workingDirectory
 
     try {
       if (!canRevealLocally) return
-      await window.electronAPI.showInFolder(`${skill.path}/SKILL.md`)
+      await window.electronAPI.showInFolder(skill.path)
     } catch (err) {
       console.error('Failed to open skill in finder:', err)
     }
@@ -131,9 +131,9 @@ export default function SkillInfoPage({ skillSlug, workspaceId, workingDirectory
   // Open the skill folder in Finder with SKILL.md selected
   const handleLocationClick = () => {
     if (!skill) return
-    // Show the SKILL.md file in Finder (this reveals the enclosing folder with file focused)
+    // Show the authoritative skill folder in Finder/Explorer.
     if (!canRevealLocally) return
-    window.electronAPI.showInFolder(`${skill.path}/SKILL.md`)
+    window.electronAPI.showInFolder(skill.path)
   }
 
   return (

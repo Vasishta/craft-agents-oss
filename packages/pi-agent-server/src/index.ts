@@ -49,7 +49,7 @@ import type { TextContent as PiTextContent } from '@mariozechner/pi-ai';
 // Pre-register the Bedrock provider module so the Pi SDK doesn't attempt a
 // dynamic import of "./amazon-bedrock.js" — which fails in the bundled output
 // because bun collapses everything into a single file.
-// With the current Pi SDK (0.70.0 here), pi-ai is deduped (single hoisted
+// With the current Pi SDK, pi-ai is deduped (single hoisted
 // copy), so one registration covers both pi-ai and pi-agent-core module scopes.
 import { setBedrockProviderModule } from '@mariozechner/pi-ai';
 import { bedrockProviderModule } from '@mariozechner/pi-ai/bedrock-provider';
@@ -464,7 +464,7 @@ function createAuthenticatedRegistry(): {
   const authStorage = moduleAuthStorage;
   if (initConfig?.piAuth) {
     const { provider, credential } = initConfig.piAuth;
-    // Pi SDK 0.70.0's AuthCredential union (ApiKeyCredential | OAuthCredential) doesn't
+    // Pi SDK's AuthCredential union (ApiKeyCredential | OAuthCredential) doesn't
     // include 'iam' as a first-class member, but the auth storage accepts it at runtime
     // — the Bedrock provider module reads AWS env directly; this `set` keeps Pi SDK's
     // internal provider-tracking consistent regardless of credential shape.
@@ -531,7 +531,7 @@ async function ensureSession(): Promise<AgentSession> {
   );
   const webTools = [searchTool, webFetchTool];
 
-  // Pi SDK 0.70.0 registration contract:
+  // Pi SDK registration contract:
   //   - `customTools` accepts ToolDefinition[] — our hook-wrapped objects go here
   //   - `tools` is a string[] name allowlist — MUST include every tool we want active,
   //     otherwise Pi SDK defaults to the built-in [read, bash, edit, write] set and

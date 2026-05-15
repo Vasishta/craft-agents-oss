@@ -124,8 +124,8 @@ describe('Project Storage', () => {
     const entries = listProjectEntries(workspaceRootPath, workspaceId)
 
     expect(entries).toHaveLength(2)
-    expect(entries[0].name).toBe('Newest')
-    expect(entries[1].name).toBe('Oldest')
+    expect(entries[0]!.name).toBe('Newest')
+    expect(entries[1]!.name).toBe('Oldest')
   })
 
   it('rebuilds the index from project files when missing', () => {
@@ -148,7 +148,7 @@ describe('Project Storage', () => {
     const index = loadProjectIndex(workspaceRootPath)
 
     expect(index.projects).toHaveLength(1)
-    expect(index.projects[0].name).toBe('Safe Project')
+    expect(index.projects[0]!.name).toBe('Safe Project')
   })
 
   it('enforces workspace isolation for reads and mutations', () => {
