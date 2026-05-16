@@ -605,6 +605,10 @@ export interface ElectronAPI {
   setExtendedPromptCache(enabled: boolean): Promise<void>
   getEnable1MContext(): Promise<boolean>
   setEnable1MContext(enabled: boolean): Promise<void>
+  getRtkEnabled(): Promise<boolean>
+  setRtkEnabled(enabled: boolean): Promise<void>
+  getRtkStatus(opts?: { forceRecheck?: boolean }): Promise<{ installed: boolean; path: string | null; version: string | null }>
+  getRtkGain(): Promise<{ totalCommands: number; totalInput: number; totalOutput: number; totalSaved: number; avgSavingsPct: number; totalTimeMs: number; avgTimeMs: number } | null>
 
   // Network proxy settings
   getNetworkProxySettings(): Promise<NetworkProxySettings | undefined>
@@ -707,16 +711,21 @@ export interface ElectronAPI {
   // Messaging gateway — workspaceId is taken from the client handshake (ctx.workspaceId)
   getMessagingConfig(): Promise<{
     enabled: boolean
-    platforms: Record<string, { enabled: boolean } | undefined>
+    platforms: Record<string, { enabled: boolean; accessMode?: MessagingPlatformAccessMode; owners?: MessagingPlatformOwnerInfo[] } | undefined>
     runtime: Record<string, MessagingPlatformRuntimeInfo | undefined>
   } | null>
   updateMessagingConfig(config: Record<string, unknown>): Promise<void>
   testTelegramToken(token: string): Promise<{ success: boolean; botName?: string; botUsername?: string; error?: string }>
   saveTelegramToken(token: string): Promise<void>
+  testLarkCredentials(creds: { appId: string; appSecret: string; domain: 'lark' | 'feishu' }): Promise<{ success: boolean; botName?: string; error?: string }>
+  saveLarkCredentials(creds: { appId: string; appSecret: string; domain: 'lark' | 'feishu' }): Promise<void>
   disconnectMessagingPlatform(platform: string): Promise<void>
   forgetMessagingPlatform(platform: string): Promise<void>
-  getMessagingBindings(): Promise<Array<{ id: string; workspaceId: string; sessionId: string; platform: string; channelId: string; channelName?: string; enabled: boolean; createdAt: number }>>
+  getMessagingBindings(): Promise<Array<{ id: string; workspaceId: string; sessionId: string; platform: string; channelId: string; threadId?: number; channelName?: string; enabled: boolean; createdAt: number; accessMode?: MessagingBindingAccessMode; allowedSenderIds?: string[] }>>
   generateMessagingPairingCode(sessionId: string, platform: string): Promise<{ code: string; expiresAt: number; botUsername?: string }>
+  generateMessagingSupergroupCode(platform: string): Promise<{ code: string; expiresAt: number; botUsername?: string }>
+  getMessagingSupergroup(): Promise<{ chatId: string; title: string; capturedAt: number } | null>
+  unbindMessagingSupergroup(): Promise<{ success: boolean }>
   unbindMessagingSession(sessionId: string, platform?: string): Promise<void>
   unbindMessagingBinding(bindingId: string): Promise<{ success: boolean }>
   onMessagingBindingChanged(callback: (workspaceId: string) => void): () => void
@@ -725,6 +734,19 @@ export interface ElectronAPI {
   startWhatsAppConnect(): Promise<{ success: boolean }>
   submitWhatsAppPhone(phoneNumber: string): Promise<{ success: boolean }>
   onWhatsAppEvent(callback: (payload: { workspaceId: string; event: WhatsAppUiEvent }) => void): () => void
+  getMessagingPlatformOwners(platform: string): Promise<MessagingPlatformOwnerInfo[]>
+  setMessagingPlatformOwners(platform: string, owners: MessagingPlatformOwnerInfo[]): Promise<MessagingPlatformOwnerInfo[]>
+  getMessagingPlatformAccessMode(platform: string): Promise<MessagingPlatformAccessMode>
+  setMessagingPlatformAccessMode(platform: string, mode: MessagingPlatformAccessMode): Promise<{ success: boolean }>
+  getMessagingPendingSenders(platform?: string): Promise<MessagingPendingSenderInfo[]>
+  dismissMessagingPendingSender(platform: string, userId: string, opts?: { reason?: MessagingPendingRejectReason; bindingId?: string }): Promise<{ success: boolean }>
+  allowMessagingPendingSender(
+    platform: string,
+    userId: string,
+    entryKey?: { reason?: MessagingPendingRejectReason; bindingId?: string },
+  ): Promise<{ owners: MessagingPlatformOwnerInfo[]; bindingId?: string }>
+  setMessagingBindingAccess(bindingId: string, access: { mode: MessagingBindingAccessMode; allowedSenderIds?: string[] }): Promise<{ success: boolean }>
+  onMessagingPendingChanged(callback: (workspaceId: string) => void): () => void
 }
 
 export interface MessagingPlatformRuntimeInfo {
@@ -735,6 +757,33 @@ export interface MessagingPlatformRuntimeInfo {
   identity?: string
   lastError?: string
   updatedAt: number
+}
+
+export type MessagingPlatformAccessMode = 'open' | 'owner-only'
+
+export type MessagingBindingAccessMode = 'inherit' | 'allow-list' | 'open'
+
+export interface MessagingPlatformOwnerInfo {
+  userId: string
+  displayName?: string
+  username?: string
+  addedAt: number
+}
+
+export type MessagingPendingRejectReason = 'not-owner' | 'not-on-binding-allowlist'
+
+export interface MessagingPendingSenderInfo {
+  platform: string
+  userId: string
+  displayName?: string
+  username?: string
+  lastAttemptAt: number
+  attemptCount: number
+  reason?: MessagingPendingRejectReason
+  bindingId?: string
+  sessionId?: string
+  channelId?: string
+  threadId?: number
 }
 
 /** Event payloads broadcast from the WhatsApp subprocess to the UI. */
@@ -813,10 +862,12 @@ export interface SourcesNavigationState {
 
 /**
  * Settings navigation state
+ *
+ * `subpage: null` means the bare `settings` route.
  */
 export interface SettingsNavigationState {
   navigator: 'settings'
-  subpage: SettingsSubpage
+  subpage: SettingsSubpage | null
   rightSidebar?: RightSidebarPanel
 }
 
@@ -1027,6 +1078,7 @@ export const getNavigationStateKey = (state: NavigationState): string => {
     return 'automations'
   }
   if (state.navigator === 'settings') {
+    if (state.subpage === null) return 'settings'
     return `settings:${state.subpage}`
   }
   if (state.navigator === 'pageCanvas') {
@@ -1122,7 +1174,7 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
   }
 
   // Handle settings
-  if (key === 'settings') return { navigator: 'settings', subpage: 'app' }
+  if (key === 'settings') return { navigator: 'settings', subpage: null }
   if (key.startsWith('settings:')) {
     const subpage = key.slice(9)
     if (isValidSettingsSubpage(subpage)) {

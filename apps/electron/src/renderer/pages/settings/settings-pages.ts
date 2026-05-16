@@ -47,6 +47,6 @@ export const SETTINGS_PAGE_COMPONENTS: Record<SettingsSubpage, ComponentType> = 
 /**
  * Get the component for a settings subpage
  */
-export function getSettingsPageComponent(subpage: SettingsSubpage): ComponentType {
-  return SETTINGS_PAGE_COMPONENTS[subpage]
+export function getSettingsPageComponent(subpage: SettingsSubpage | null): ComponentType {
+  return SETTINGS_PAGE_COMPONENTS[subpage ?? 'app']
 }

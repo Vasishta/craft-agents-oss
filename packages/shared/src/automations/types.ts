@@ -5,6 +5,7 @@
  */
 
 import type { PermissionMode } from '../agent/mode-types.ts';
+import type { ThinkingLevel } from '../agent/thinking-levels.ts';
 
 // ============================================================================
 // Event Types
@@ -61,6 +62,8 @@ export interface PromptAction {
   llmConnection?: string;
   /** Model ID for the created session (falls back to provider default if invalid) */
   model?: string;
+  /** Override the workspace default thinking level for the created session. */
+  thinkingLevel?: ThinkingLevel;
 }
 
 /** HTTP method for webhook actions */
@@ -155,6 +158,8 @@ export interface AutomationMatcher {
   timezone?: string;
   /** Permission mode for sessions created by prompt actions. */
   permissionMode?: PermissionMode;
+  /** Optional Telegram forum-topic name for sessions created by prompt actions. */
+  telegramTopic?: string;
   /** Labels to apply to sessions created by prompt actions */
   labels?: string[];
   /** Whether this automation matcher is enabled. Defaults to true. Set to false to disable without removing. */
@@ -236,6 +241,10 @@ export interface PendingPrompt {
   llmConnection?: string;
   /** Model ID for the created session (falls back to provider default if invalid) */
   model?: string;
+  /** Override the workspace default thinking level for the created session. */
+  thinkingLevel?: ThinkingLevel;
+  /** Forum-topic name to bind the new session to (Telegram supergroup, when paired). */
+  telegramTopic?: string;
 }
 
 export interface AutomationResult {

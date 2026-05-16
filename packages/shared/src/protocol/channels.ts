@@ -369,6 +369,12 @@ export const RPC_CHANNELS = {
     GET_ENABLE_1M_CONTEXT: 'caching:getEnable1MContext',
     SET_ENABLE_1M_CONTEXT: 'caching:setEnable1MContext',
   },
+  rtk: {
+    GET_ENABLED: 'rtk:getEnabled',
+    SET_ENABLED: 'rtk:setEnabled',
+    GET_STATUS: 'rtk:getStatus',
+    GET_GAIN: 'rtk:getGain',
+  },
   badge: {
     REFRESH: 'badge:refresh',
     SET_ICON: 'badge:setIcon',
@@ -441,15 +447,21 @@ export const RPC_CHANNELS = {
     // Gateway → UI clients (broadcast)
     BINDING_CHANGED: 'messaging:bindingChanged',
     PLATFORM_STATUS: 'messaging:platformStatus',
+    PENDING_CHANGED: 'messaging:pendingChanged',
     // UI ↔ Server (config/binding CRUD)
     GET_CONFIG: 'messaging:getConfig',
     UPDATE_CONFIG: 'messaging:updateConfig',
     TEST_TELEGRAM: 'messaging:testTelegram',
     SAVE_TELEGRAM: 'messaging:saveTelegram',
+    TEST_LARK: 'messaging:testLark',
+    SAVE_LARK: 'messaging:saveLark',
     DISCONNECT: 'messaging:disconnect',
     FORGET: 'messaging:forget',
     GET_BINDINGS: 'messaging:getBindings',
     GENERATE_CODE: 'messaging:generateCode',
+    GENERATE_SUPERGROUP_CODE: 'messaging:generateSupergroupCode',
+    GET_SUPERGROUP: 'messaging:getSupergroup',
+    UNBIND_SUPERGROUP: 'messaging:unbindSupergroup',
     UNBIND: 'messaging:unbind',
     UNBIND_BINDING: 'messaging:unbindBinding',
     // UI ↔ Server — WhatsApp pairing/connection flow (Baileys subprocess adapter)
@@ -457,6 +469,15 @@ export const RPC_CHANNELS = {
     WA_SUBMIT_PHONE: 'messaging:wa:submitPhone',
     /** Broadcast to UI clients: QR string, pairing code, status, unavailable, error. */
     WA_UI_EVENT: 'messaging:wa:uiEvent',
+    // Messaging access control
+    GET_PLATFORM_OWNERS: 'messaging:getPlatformOwners',
+    SET_PLATFORM_OWNERS: 'messaging:setPlatformOwners',
+    GET_PLATFORM_ACCESS_MODE: 'messaging:getPlatformAccessMode',
+    SET_PLATFORM_ACCESS_MODE: 'messaging:setPlatformAccessMode',
+    GET_PENDING_SENDERS: 'messaging:getPendingSenders',
+    DISMISS_PENDING_SENDER: 'messaging:dismissPendingSender',
+    ALLOW_PENDING_SENDER: 'messaging:allowPendingSender',
+    SET_BINDING_ACCESS: 'messaging:setBindingAccess',
   },
 } as const
 

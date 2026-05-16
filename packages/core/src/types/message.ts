@@ -450,6 +450,7 @@ export type ErrorCode =
   | 'invalid_api_key'
   | 'invalid_credentials'
   | 'response_too_large'
+  | 'queued_message_replay_failed'
   | 'expired_oauth_token'
   | 'token_expired'
   | 'rate_limited'

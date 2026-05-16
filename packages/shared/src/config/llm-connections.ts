@@ -112,6 +112,12 @@ export interface CustomEndpointConfig {
 }
 
 /**
+ * Per-connection behavior when the user sends a message while the agent is
+ * still streaming/processing a previous turn.
+ */
+export type MidStreamBehavior = 'steer' | 'queue';
+
+/**
  * LLM Connection configuration.
  * Stored in config.llmConnections array.
  */
@@ -163,6 +169,12 @@ export interface LlmConnection {
    * Determines which streaming adapter the Pi SDK uses for requests.
    */
   customEndpoint?: CustomEndpointConfig;
+
+  /**
+   * Behavior when the user sends a message while the agent is still streaming.
+   * Optional for backward compatibility with older configs.
+   */
+  midStreamBehavior?: MidStreamBehavior;
 
   // --- Timestamps ---
 
@@ -403,6 +415,69 @@ export function isLocalConnection(conn: Pick<LlmConnection, 'baseUrl'>): boolean
  */
 export function isPiProvider(providerType: LlmProviderType): boolean {
   return providerType === 'pi' || providerType === 'pi_compat';
+}
+
+/**
+ * Default mid-stream send behavior for a given provider type.
+ */
+export function defaultMidStreamBehavior(providerType: LlmProviderType): MidStreamBehavior {
+  return providerType === 'anthropic' ? 'queue' : 'steer';
+}
+
+/**
+ * Resolve the effective mid-stream behavior for a connection.
+ */
+export function resolveMidStreamBehavior(
+  connection: Pick<LlmConnection, 'midStreamBehavior' | 'providerType'>,
+): MidStreamBehavior {
+  if (connection.midStreamBehavior === 'steer' || connection.midStreamBehavior === 'queue') {
+    return connection.midStreamBehavior;
+  }
+  return defaultMidStreamBehavior(connection.providerType);
+}
+
+/**
+ * Return a new LlmConnection with the given model's `supportsImages` override set.
+ */
+export function setModelSupportsImages(
+  connection: LlmConnection,
+  modelId: string,
+  enabled: boolean,
+): LlmConnection {
+  if (!connection.models) return connection;
+  const idOf = (m: ModelDefinition | string) => (typeof m === 'string' ? m : m.id);
+  const idx = connection.models.findIndex((m) => idOf(m) === modelId);
+  if (idx === -1) return connection;
+
+  const entry = connection.models[idx]!;
+  const nextEntry =
+    typeof entry === 'string'
+      ? { id: entry, name: entry, shortName: entry, supportsImages: enabled }
+      : { ...entry, supportsImages: enabled };
+
+  const nextModels = connection.models.slice();
+  nextModels[idx] = nextEntry as ModelDefinition;
+  return { ...connection, models: nextModels };
+}
+
+/**
+ * Resolve whether a given model on a connection accepts image input.
+ */
+export function modelSupportsImages(
+  connection: Pick<LlmConnection, 'providerType' | 'models' | 'customEndpoint'>,
+  modelId: string,
+): boolean {
+  if (!isCompatProvider(connection.providerType)) return true;
+
+  const entry = connection.models?.find((m) => (typeof m === 'string' ? m : m.id) === modelId);
+  const objectEntry =
+    entry && typeof entry !== 'string'
+      ? (entry as ModelDefinition & { supportsImages?: boolean })
+      : null;
+  if (objectEntry && typeof objectEntry.supportsImages === 'boolean') {
+    return objectEntry.supportsImages;
+  }
+  return connection.customEndpoint?.supportsImages ?? false;
 }
 
 /**

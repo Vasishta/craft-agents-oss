@@ -75,6 +75,8 @@ export interface ModelDefinition {
   contextWindow: number;
   /** Whether this model supports thinking/reasoning effort. Defaults to true when undefined. */
   supportsThinking?: boolean;
+  /** Whether this model supports image input. Defaults to provider/runtime fallback when undefined. */
+  supportsImages?: boolean;
 }
 
 // ============================================

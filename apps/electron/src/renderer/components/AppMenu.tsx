@@ -67,9 +67,8 @@ function renderMenuItem(
   }
 
   const Icon = getIcon(item.icon)
-  const shortcut = getShortcutDisplay(item, isMac)
-
   if (item.type === 'role') {
+    const shortcut = getShortcutDisplay(item, isMac)
     const handler = roleHandlers[item.role]
     // Gracefully handle missing role handlers with console warning
     const safeHandler = handler ?? (() => {
@@ -85,6 +84,7 @@ function renderMenuItem(
   }
 
   if (item.type === 'action') {
+    const shortcut = getShortcutDisplay(item, isMac)
     // Map action IDs to handlers
     const handler = item.id === 'toggleFocusMode'
       ? actionHandlers.toggleFocusMode
@@ -96,6 +96,15 @@ function renderMenuItem(
         {Icon && <Icon className="h-3.5 w-3.5" />}
         {t(item.labelKey)}
         {shortcut && <DropdownMenuShortcut className="pl-6">{shortcut}</DropdownMenuShortcut>}
+      </StyledDropdownMenuItem>
+    )
+  }
+
+  if (item.type === 'url') {
+    return (
+      <StyledDropdownMenuItem key={item.id} onClick={() => window.electronAPI.openUrl(item.url)}>
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {t(item.labelKey)}
       </StyledDropdownMenuItem>
     )
   }

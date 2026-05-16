@@ -32,6 +32,18 @@ import type { ModelProvider } from '../../config/models.ts';
 // Import LLM connection types for auth
 import type { LlmAuthType, LlmProviderType } from '../../config/llm-connections.ts';
 export type { LlmAuthType, LlmProviderType } from '../../config/llm-connections.ts';
+export interface BackendRuntimeUpdate {
+  model: string;
+  providerType?: LlmProviderType;
+  authType?: LlmAuthType;
+  runtime?: {
+    baseUrl?: string;
+    piAuthProvider?: string;
+    customEndpoint?: { api: string; supportsImages?: boolean };
+    customModels?: Array<string | { id: string; contextWindow?: number; supportsImages?: boolean }>;
+    [key: string]: unknown;
+  };
+}
 import type { AutomationSystem } from '../../automations/index.ts';
 
 /**
@@ -210,6 +222,9 @@ export interface CoreBackendConfig {
 
   /** Callback when SDK session ID is cleared (e.g., after failed resume) */
   onSdkSessionIdCleared?: () => void;
+
+  /** Callback when persisted branch-fork metadata must be cleared atomically. */
+  onBranchForkInvalidated?: () => void;
 
   /** Callback to get recent messages for recovery context */
   getRecoveryMessages?: () => RecoveryMessage[];
@@ -426,6 +441,12 @@ export interface AgentBackend {
 
   /** Set model (should validate against capabilities) */
   setModel(model: string): void;
+
+  /** Apply runtime-affecting provider config without recreating the backend. */
+  updateRuntimeConfig?(update: BackendRuntimeUpdate): Promise<boolean>;
+
+  /** Dispose resources before an idle backend restart. */
+  disposeForRestart?(): Promise<void>;
 
   /** Get current thinking level */
   getThinkingLevel(): ThinkingLevel;

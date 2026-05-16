@@ -241,6 +241,8 @@ export interface McpSourceConfig {
   transport?: McpTransport;
   url?: string;
   authType?: McpAuthType;
+  /** Optional bearer/OAuth token supplied at validation/runtime time. */
+  accessToken?: string;
   clientId?: string;
   command?: string;
   args?: string[];
@@ -315,7 +317,7 @@ export interface SourceConfig {
   api?: ApiSourceConfig;
   local?: LocalSourceConfig;
   isAuthenticated?: boolean;
-  lastTestedAt?: string; // ISO date string
+  lastTestedAt?: number;
   createdAt?: number;
   updatedAt?: number;
   // Display fields

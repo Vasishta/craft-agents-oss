@@ -6,7 +6,7 @@
  */
 
 import { atom } from 'jotai'
-import { atomFamily } from 'jotai-family'
+import { atomFamily } from 'jotai/utils'
 
 export interface MessagingBinding {
   id: string
@@ -14,9 +14,18 @@ export interface MessagingBinding {
   sessionId: string
   platform: string
   channelId: string
+  /** Telegram supergroup forum topic id; undefined for DMs / non-Telegram. */
+  threadId?: number
   channelName?: string
   enabled: boolean
   createdAt: number
+  /**
+   * Per-binding access policy. Optional in the wire shape so legacy bindings
+   * (created before access control existed) don't break atom updates. The
+   * UI treats missing values as `'open'`.
+   */
+  accessMode?: 'inherit' | 'allow-list' | 'open'
+  allowedSenderIds?: string[]
 }
 
 export const messagingBindingsAtom = atom<MessagingBinding[]>([])
@@ -36,7 +45,7 @@ export const messagingBindingsBySessionAtom = atom((get) => {
 })
 
 export const messagingBindingsForSessionAtomFamily = atomFamily((sessionId: string) =>
-  atom((get) => get(messagingBindingsAtom).filter((binding) => binding.enabled && binding.sessionId === sessionId)),
+  atom((get) => get(messagingBindingsBySessionAtom).get(sessionId) ?? []),
 )
 
 export const setMessagingBindingsAtom = atom(
@@ -56,7 +65,7 @@ export type MessagingDialogState =
   | { kind: 'closed' }
   | {
       kind: 'pairing'
-      platform: 'telegram' | 'whatsapp'
+      platform: 'telegram' | 'whatsapp' | 'lark'
       sessionId: string
       code: string | null
       expiresAt: number | null

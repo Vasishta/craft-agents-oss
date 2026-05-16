@@ -8,8 +8,10 @@
 import type { ModelDefinition } from '@craft-agent/shared/config/models'
 import {
   type LlmConnection,
+  type CustomEndpointApi,
   getDefaultModelsForConnection,
   getDefaultModelForConnection,
+  defaultMidStreamBehavior,
 } from '@craft-agent/shared/config'
 
 // ============================================================
@@ -89,6 +91,28 @@ export function isLoopbackBaseUrl(baseUrl?: string): boolean {
  */
 export function setupTestRequiresApiKey(baseUrl?: string): boolean {
   return !isLoopbackBaseUrl(baseUrl)
+}
+
+/**
+ * Decide how a custom OpenAI/Anthropic-compatible endpoint should be persisted.
+ */
+export function resolveCustomEndpointSetup(input: {
+  baseUrl: string | undefined
+  credential: string | undefined
+  customEndpointApi: CustomEndpointApi
+}): {
+  authType: Extract<LlmConnection['authType'], 'none' | 'api_key_with_endpoint'>
+  name?: 'Local Model'
+  piAuthProvider?: 'openai' | 'anthropic'
+} {
+  const isKeylessLoopback = isLoopbackBaseUrl(input.baseUrl) && !input.credential
+  if (isKeylessLoopback) {
+    return { authType: 'none', name: 'Local Model' }
+  }
+  return {
+    authType: 'api_key_with_endpoint',
+    piAuthProvider: input.customEndpointApi === 'anthropic-messages' ? 'anthropic' : 'openai',
+  }
 }
 
 // ============================================================
@@ -207,6 +231,7 @@ export function createBuiltInConnection(slug: string, baseUrl?: string | null): 
     defaultModel: getDefaultModelForConnection(providerType, template.piAuthProvider),
     modelSelectionMode: providerType === 'pi' ? 'automaticallySyncedFromProvider' : undefined,
     piAuthProvider: template.piAuthProvider,
+    midStreamBehavior: defaultMidStreamBehavior(providerType),
     createdAt: Date.now(),
   }
 }

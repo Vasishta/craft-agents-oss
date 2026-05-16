@@ -79,9 +79,8 @@ function renderMenuItem(
   }
 
   const Icon = getIcon(item.icon)
-  const shortcut = getShortcutDisplay(item, isMac)
-
   if (item.type === 'role') {
+    const shortcut = getShortcutDisplay(item, isMac)
     const handler = roleHandlers[item.role]
     const safeHandler = handler ?? (() => {
       console.warn(`[TopBar] No handler registered for role: ${item.role}`)
@@ -96,6 +95,7 @@ function renderMenuItem(
   }
 
   if (item.type === 'action') {
+    const shortcut = getShortcutDisplay(item, isMac)
     const handler = item.id === 'toggleFocusMode'
       ? actionHandlers.toggleFocusMode
       : item.id === 'toggleSidebar'
@@ -106,6 +106,15 @@ function renderMenuItem(
         {Icon && <Icon className="h-3.5 w-3.5" />}
         {t(item.labelKey)}
         {shortcut && <DropdownMenuShortcut className="pl-6">{shortcut}</DropdownMenuShortcut>}
+      </StyledDropdownMenuItem>
+    )
+  }
+
+  if (item.type === 'url') {
+    return (
+      <StyledDropdownMenuItem key={item.id} onClick={() => window.electronAPI.openUrl(item.url)}>
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {t(item.labelKey)}
       </StyledDropdownMenuItem>
     )
   }

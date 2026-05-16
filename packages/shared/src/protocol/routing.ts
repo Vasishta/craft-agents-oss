@@ -156,6 +156,12 @@ export const LOCAL_ONLY_CHANNELS = new Set<string>([
   RPC_CHANNELS.caching.GET_ENABLE_1M_CONTEXT,
   RPC_CHANNELS.caching.SET_ENABLE_1M_CONTEXT,
 
+  // rtk — token-optimization opt-in
+  RPC_CHANNELS.rtk.GET_ENABLED,
+  RPC_CHANNELS.rtk.SET_ENABLED,
+  RPC_CHANNELS.rtk.GET_STATUS,
+  RPC_CHANNELS.rtk.GET_GAIN,
+
   // tools — local tool settings
   RPC_CHANNELS.tools.GET_BROWSER_TOOL_ENABLED,
   RPC_CHANNELS.tools.SET_BROWSER_TOOL_ENABLED,
@@ -375,42 +381,6 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.labels.DELETE,
   RPC_CHANNELS.labels.CHANGED,
 
-  // pages — workspace document storage
-  RPC_CHANNELS.pages.LIST,
-  RPC_CHANNELS.pages.GET,
-  RPC_CHANNELS.pages.CREATE,
-  RPC_CHANNELS.pages.UPDATE,
-  RPC_CHANNELS.pages.UPDATE_CONTENT,
-  RPC_CHANNELS.pages.DELETE,
-  RPC_CHANNELS.pages.CHANGED,
-
-  // outputs — workspace output storage
-  RPC_CHANNELS.outputs.LIST,
-  RPC_CHANNELS.outputs.GET,
-  RPC_CHANNELS.outputs.CREATE,
-  RPC_CHANNELS.outputs.UPDATE,
-  RPC_CHANNELS.outputs.DELETE,
-  RPC_CHANNELS.outputs.PROMOTE_TO_DOC,
-  RPC_CHANNELS.outputs.CHANGED,
-
-  // projects — workspace project storage
-  RPC_CHANNELS.projects.LIST,
-  RPC_CHANNELS.projects.GET,
-  RPC_CHANNELS.projects.CREATE,
-  RPC_CHANNELS.projects.UPDATE,
-  RPC_CHANNELS.projects.DELETE,
-  RPC_CHANNELS.projects.LINK_OBJECTS,
-  RPC_CHANNELS.projects.UNLINK_OBJECTS,
-  RPC_CHANNELS.projects.CHANGED,
-
-  // workItems - workspace durable task storage
-  RPC_CHANNELS.workItems.LIST,
-  RPC_CHANNELS.workItems.GET,
-  RPC_CHANNELS.workItems.CREATE,
-  RPC_CHANNELS.workItems.UPDATE,
-  RPC_CHANNELS.workItems.DELETE,
-  RPC_CHANNELS.workItems.CHANGED,
-
   // views — workspace UI views
   RPC_CHANNELS.views.LIST,
   RPC_CHANNELS.views.SAVE,
@@ -453,19 +423,34 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.messaging.WA_DISCONNECT,
   RPC_CHANNELS.messaging.BINDING_CHANGED,
   RPC_CHANNELS.messaging.PLATFORM_STATUS,
+  RPC_CHANNELS.messaging.PENDING_CHANGED,
   RPC_CHANNELS.messaging.GET_CONFIG,
   RPC_CHANNELS.messaging.UPDATE_CONFIG,
   RPC_CHANNELS.messaging.TEST_TELEGRAM,
   RPC_CHANNELS.messaging.SAVE_TELEGRAM,
+  RPC_CHANNELS.messaging.TEST_LARK,
+  RPC_CHANNELS.messaging.SAVE_LARK,
   RPC_CHANNELS.messaging.DISCONNECT,
   RPC_CHANNELS.messaging.FORGET,
   RPC_CHANNELS.messaging.GET_BINDINGS,
   RPC_CHANNELS.messaging.GENERATE_CODE,
+  RPC_CHANNELS.messaging.GENERATE_SUPERGROUP_CODE,
+  RPC_CHANNELS.messaging.GET_SUPERGROUP,
+  RPC_CHANNELS.messaging.UNBIND_SUPERGROUP,
   RPC_CHANNELS.messaging.UNBIND,
   RPC_CHANNELS.messaging.UNBIND_BINDING,
   RPC_CHANNELS.messaging.WA_START_CONNECT,
   RPC_CHANNELS.messaging.WA_SUBMIT_PHONE,
   RPC_CHANNELS.messaging.WA_UI_EVENT,
+  // messaging access control — UI ↔ Server, per-platform owners + per-binding allow-list
+  RPC_CHANNELS.messaging.GET_PLATFORM_OWNERS,
+  RPC_CHANNELS.messaging.SET_PLATFORM_OWNERS,
+  RPC_CHANNELS.messaging.GET_PLATFORM_ACCESS_MODE,
+  RPC_CHANNELS.messaging.SET_PLATFORM_ACCESS_MODE,
+  RPC_CHANNELS.messaging.GET_PENDING_SENDERS,
+  RPC_CHANNELS.messaging.DISMISS_PENDING_SENDER,
+  RPC_CHANNELS.messaging.ALLOW_PENDING_SENDER,
+  RPC_CHANNELS.messaging.SET_BINDING_ACCESS,
 ])
 
 // ---------------------------------------------------------------------------

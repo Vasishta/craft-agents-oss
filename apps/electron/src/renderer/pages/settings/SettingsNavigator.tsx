@@ -31,7 +31,7 @@ export const meta: DetailsPageMeta = {
 
 interface SettingsNavigatorProps {
   /** Currently selected settings subpage */
-  selectedSubpage: SettingsSubpage
+  selectedSubpage: SettingsSubpage | null
   /** Called when a subpage is selected */
   onSelectSubpage: (subpage: SettingsSubpage) => void
 }

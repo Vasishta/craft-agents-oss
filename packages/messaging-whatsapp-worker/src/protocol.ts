@@ -125,6 +125,15 @@ export interface DisconnectedEvent {
   reason?: string
 }
 
+export interface WorkerIncomingAttachment {
+  type: 'photo' | 'document' | 'voice' | 'video' | 'audio'
+  fileName?: string
+  mimeType?: string
+  fileSize?: number
+  /** Absolute path of the temp file the worker wrote the media to. */
+  localPath: string
+}
+
 export interface IncomingEvent {
   type: 'incoming'
   channelId: string
@@ -132,6 +141,7 @@ export interface IncomingEvent {
   senderId: string
   senderName?: string
   text: string
+  attachments?: WorkerIncomingAttachment[]
   timestamp: number
 }
 

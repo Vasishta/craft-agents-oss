@@ -10,6 +10,7 @@ import { getProviderMetadata } from '../config/provider-metadata.ts';
 export type ErrorCode =
   | 'invalid_api_key'
   | 'invalid_credentials'    // Generic credential issue (from diagnostics)
+  | 'queued_message_replay_failed'
   | 'expired_oauth_token'
   | 'token_expired'          // Workspace token expired (from diagnostics)
   | 'rate_limited'
@@ -90,6 +91,14 @@ const ERROR_DEFINITIONS: Record<ErrorCode, Omit<AgentError, 'code' | 'originalEr
       { key: 's', label: 'Update credentials', command: '/settings', action: 'settings' },
     ],
     canRetry: false,
+  },
+  queued_message_replay_failed: {
+    title: 'Queued message could not be sent',
+    message: 'A message you sent while the agent was running could not be re-sent automatically. Tap retry to send it now.',
+    actions: [
+      { key: 'r', label: 'Retry', action: 'retry' },
+    ],
+    canRetry: true,
   },
   expired_oauth_token: {
     title: 'Session Expired',
