@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArrowLeft, Flag, Inbox, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Archive, ArrowLeft, Flag, Inbox, LayoutDashboard, Loader2, Plus, Search, SquarePen, Trash2 } from 'lucide-react'
+import { LowContextActions } from '@/components/low-context-actions'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { EntityNotFoundState } from '@/components/entity/EntityPageState'
@@ -184,7 +185,7 @@ function WorkItemCard({
 
 export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePageProps) {
   const { t } = useTranslation()
-  const { sessionStatuses } = useAppShellContext()
+  const { sessionStatuses, openNewChat } = useAppShellContext()
   const { leadingAction, rightSidebarButton } = usePanelChrome()
   const activeWorkspace = useActiveWorkspace()
   const effectiveSessionStatuses = sessionStatuses ?? []
@@ -426,6 +427,16 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
                 <p className="mt-2 max-w-[420px] text-sm leading-6 text-muted-foreground">
                   Select a workspace before creating or reviewing work items.
                 </p>
+                <div className="mt-5 flex flex-col items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-[220px] justify-start gap-3"
+                    onClick={() => navigate(routes.view.home())}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Go to Workspace Home
+                  </Button>
+                </div>
               </div>
             </section>
           ) : (
@@ -544,9 +555,23 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
                     <h2 className="text-sm font-medium text-foreground">No work items in this view</h2>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       {filter === 'all'
-                        ? 'Create a work item to start tracking durable work outside chat sessions.'
+                        ? 'No queued work yet. Start a new chat to create work, revisit Home to orient, or browse the Library for existing context.'
                         : `Move an item into ${WORK_ITEM_STATUS_LABELS[filter]} or switch filters.`}
                     </p>
+                    {filter === 'all' && (
+                      <div className="mt-5 flex flex-col items-center">
+                        <div className="w-56">
+                          <LowContextActions
+                            compact
+                            actions={[
+                              { icon: <SquarePen className="h-4 w-4" />, label: "Start a new chat", onClick: () => { void openNewChat?.() } },
+                              { icon: <LayoutDashboard className="h-4 w-4" />, label: "Go to Workspace Home", onClick: () => navigate(routes.view.home()) },
+                              { icon: <Search className="h-4 w-4" />, label: "Open Library", onClick: () => navigate(routes.view.library()) },
+                            ]}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   filteredWorkItems.map((workItem) => (

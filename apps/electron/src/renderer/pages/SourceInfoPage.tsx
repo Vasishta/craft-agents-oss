@@ -8,10 +8,11 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Cable, LayoutDashboard } from 'lucide-react'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { SourceMenu } from '@/components/app-shell/SourceMenu'
+import { WorkflowActions } from '@/components/workflow-actions'
 import { cn } from '@/lib/utils'
 import { routes, navigate } from '@/lib/navigate'
 import { useNavigation } from '@/contexts/NavigationContext'
@@ -383,6 +384,13 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
             avatar={<SourceAvatar source={source} fluid />}
             title={source.config.name}
             tagline={source.config.tagline}
+          />
+
+          <WorkflowActions
+            actions={[
+              { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
+              { icon: <Cable className="h-4 w-4" />, label: 'Open Sources', onClick: () => navigate(routes.view.sources()) },
+            ]}
           />
 
           {/* Disabled Warning */}

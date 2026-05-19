@@ -14,6 +14,10 @@ export const readFileSync = () => { throw new Error('readFileSync not available 
 export const writeFileSync = () => { throw new Error('writeFileSync not available in browser') }
 export const existsSync = () => false
 export const statSync = () => { throw new Error('statSync not available in browser') }
+export const lstatSync = () => { throw new Error('lstatSync not available in browser') }
+export const openSync = () => { throw new Error('openSync not available in browser') }
+export const closeSync = () => {}
+export const readSync = () => { throw new Error('readSync not available in browser') }
 export const unlinkSync = () => {}
 export const mkdtempSync = () => ''
 export const renameSync = () => {}

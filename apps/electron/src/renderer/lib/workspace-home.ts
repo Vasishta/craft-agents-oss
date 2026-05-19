@@ -84,6 +84,73 @@ function normalizeTitle(value: string | null | undefined, fallback: string): str
   return trimmed && trimmed.length > 0 ? trimmed : fallback
 }
 
+// Scoring weights for the activity feed — active work and recent chats
+// are more actionable than stale reference artifacts, so they get a
+// timestamp multiplier that lets them outrank slightly newer items of
+// lower utility.
+const ACTIVITY_BASE_WEIGHT = 1.0
+const ACTIVITY_WORK_ITEM_WEIGHT = 1.5 // active (non-done) work items
+const ACTIVITY_CHAT_WEIGHT = 1.3
+const ACTIVITY_OUTPUT_WEIGHT = 1.15
+
+function computeActivityScore(
+  timestamp: number,
+  kind: WorkspaceHomeActivityKind,
+  id: string,
+  workItemStatuses: Map<string, string>
+): number {
+  let weight = ACTIVITY_BASE_WEIGHT
+  if (kind === 'workItem' && workItemStatuses.get(id) !== 'done') {
+    weight = ACTIVITY_WORK_ITEM_WEIGHT
+  } else if (kind === 'chat') {
+    weight = ACTIVITY_CHAT_WEIGHT
+  } else if (kind === 'output') {
+    weight = ACTIVITY_OUTPUT_WEIGHT
+  }
+  return timestamp * weight
+}
+
+export function isSparseWorkspace({
+  recentChats,
+  recentDocs,
+  recentOutputs,
+  recentDecisions,
+  recentNotebooks,
+  recentProjects,
+  recentWorkItems,
+  recentSources,
+}: {
+  recentChats: unknown[]
+  recentDocs: unknown[]
+  recentOutputs: unknown[]
+  recentDecisions: unknown[]
+  recentNotebooks: unknown[]
+  recentProjects: unknown[]
+  recentWorkItems: unknown[]
+  recentSources: unknown[]
+}): boolean {
+  const total =
+    recentChats.length +
+    recentDocs.length +
+    recentOutputs.length +
+    recentDecisions.length +
+    recentNotebooks.length +
+    recentProjects.length +
+    recentWorkItems.length +
+    recentSources.length
+
+  if (total === 0) return true
+
+  const activeWorkCount = recentWorkItems.filter((item: any) => item?.status !== 'done').length
+  const durableWorkCount =
+    recentDocs.length +
+    recentOutputs.length +
+    recentProjects.length +
+    recentWorkItems.length
+
+  return total <= 3 && activeWorkCount === 0 && durableWorkCount <= 1
+}
+
 export function buildWorkspaceHomeActivityFeed({
   recentChats,
   recentDocs,
@@ -103,7 +170,13 @@ export function buildWorkspaceHomeActivityFeed({
   recentWorkItems: RecentWorkItemLike[]
   limit?: number
 }): WorkspaceHomeActivityItem[] {
-  return [
+  // Build a status map so we can distinguish active work items from done
+  // ones during scoring (the mapped items lose the original status field).
+  const workItemStatuses = new Map<string, string>(
+    recentWorkItems.map((wi) => [wi.id, wi.status])
+  )
+
+  const items = [
     ...recentChats.map((chat) => ({
       id: chat.id,
       kind: 'chat' as const,
@@ -154,7 +227,13 @@ export function buildWorkspaceHomeActivityFeed({
       detail: `Work item · ${WORK_ITEM_STATUS_LABELS[workItem.status]}`,
     })),
   ]
-    .sort((a, b) => b.timestamp - a.timestamp)
+
+  return items
+    .sort((a, b) => {
+      const scoreA = computeActivityScore(a.timestamp, a.kind, a.id, workItemStatuses)
+      const scoreB = computeActivityScore(b.timestamp, b.kind, b.id, workItemStatuses)
+      return scoreB - scoreA
+    })
     .slice(0, limit)
 }
 

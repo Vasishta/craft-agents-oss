@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeft, BookOpen, Box, FileText, GitBranch, Layers, Loader2, MessageSquareText, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, Box, FileText, GitBranch, LayoutDashboard, Layers, Loader2, MessageSquareText, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { LinkedCountGrid } from '@/components/entity/LinkedCountGrid'
@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteNotebook, useNotebook, useUpdateNotebook } from '@/hooks/useNotebooks'
 import { navigate, routes } from '@/lib/navigate'
+import { WorkflowActions } from '@/components/workflow-actions'
 import type { NotebookSection, NotebookStatus } from '../../shared/types'
 
 interface NotebookDetailPageProps {
@@ -219,6 +220,18 @@ export default function NotebookDetailPage({ workspaceId, notebookId }: Notebook
             <ArrowLeft className="h-4 w-4" />
             Notebooks
           </Button>
+
+          {notebook && (
+            <WorkflowActions
+              actions={[
+                { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
+                { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
+                ...(notebook.links.sessionIds.length > 0
+                  ? [{ icon: <MessageSquareText className="h-4 w-4" />, label: 'Open chat' as const, onClick: () => navigate(routes.view.allSessions(notebook.links.sessionIds[0])) }]
+                  : []),
+              ]}
+            />
+          )}
 
           {isLoading ? (
             <div className="flex min-h-[320px] items-center justify-center text-muted-foreground">

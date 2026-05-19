@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
-import { ArrowLeft, BookOpen, Box, BriefcaseBusiness, FileText, GitPullRequest, Layers, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { ArrowLeft, BookOpen, Box, BriefcaseBusiness, FileText, GitPullRequest, LayoutDashboard, Layers, ListTodo, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { EntityNotFoundState } from '@/components/entity/EntityPageState'
@@ -14,6 +14,7 @@ import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
 import { useDeleteProject, useProject } from '@/hooks/useProjects'
 import { useWorkItemList } from '@/hooks/useWorkItems'
+import { WorkflowActions } from '@/components/workflow-actions'
 import {
   buildProjectChatLink,
   buildProjectDecisionLink,
@@ -146,6 +147,16 @@ export default function ProjectDetailPage({ workspaceId, projectId }: ProjectDet
             <ArrowLeft className="h-4 w-4" />
             Projects
           </Button>
+
+          {project && (
+            <WorkflowActions
+              actions={[
+                { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
+                { icon: <BriefcaseBusiness className="h-4 w-4" />, label: 'Open Projects', onClick: () => navigate(routes.view.projects()) },
+                { icon: <ListTodo className="h-4 w-4" />, label: 'Open Work Queue', onClick: () => navigate(routes.view.workQueue()) },
+              ]}
+            />
+          )}
 
           {isLoading ? (
             <div className="flex min-h-[320px] items-center justify-center text-muted-foreground">

@@ -1,9 +1,11 @@
 import * as React from 'react'
-import { GitBranch, Layers, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { GitBranch, Layers, ListTodo, Loader2, MessageSquareText, Search, SquarePen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EntityCollectionPage } from '@/components/entity/EntityCollectionPage'
 import { EntityListCard } from '@/components/entity/EntityListCard'
 import { Button } from '@/components/ui/button'
+import { WorkflowActions } from '@/components/workflow-actions'
+import { useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useCreateDecision, useDecisionList, useDeleteDecision } from '@/hooks/useDecisions'
 import { useRelativeNow } from '@/hooks/useRelativeNow'
@@ -27,12 +29,15 @@ function getDecisionSummary(decision: DecisionIndexEntry): string {
 
 export default function DecisionsPage({ workspaceId }: DecisionsPageProps) {
   const { leadingAction, rightSidebarButton } = usePanelChrome()
+  const { openNewChat } = useAppShellContext()
   const { decisions, isLoading, refresh } = useDecisionList(workspaceId)
   const createDecision = useCreateDecision(workspaceId)
   const deleteDecision = useDeleteDecision(workspaceId)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [isCreating, setIsCreating] = React.useState(false)
   const now = useRelativeNow()
+
+  const hasDecisions = decisions.length > 0
 
   const handleCreate = React.useCallback(async () => {
     const title = window.prompt('Decision title')
@@ -83,6 +88,34 @@ export default function DecisionsPage({ workspaceId }: DecisionsPageProps) {
       emptyIcon={<GitBranch className="h-5 w-5" />}
       emptyTitle="No decisions yet"
       emptyDescription="Decisions capture durable architecture or product choices without forcing docs or projects to own them."
+      emptyActions={
+        <>
+          <Button
+            variant="outline"
+            className="w-full max-w-[240px] justify-start gap-3"
+            onClick={() => { void openNewChat?.() }}
+          >
+            <SquarePen className="h-4 w-4" />
+            Start a new chat
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full max-w-[240px] justify-start gap-3"
+            onClick={() => navigate(routes.view.library())}
+          >
+            <Search className="h-4 w-4" />
+            Open Library
+          </Button>
+        </>
+      }
+      nextStepArea={hasDecisions ? (
+        <WorkflowActions
+          actions={[
+            { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
+            { icon: <ListTodo className="h-4 w-4" />, label: 'Open Work Queue', onClick: () => navigate(routes.view.workQueue()) },
+          ]}
+        />
+      ) : undefined}
       leadingAction={leadingAction}
       rightSidebarButton={rightSidebarButton}
       renderItem={(decision) => {

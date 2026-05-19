@@ -1,7 +1,10 @@
 import * as React from 'react'
-import { BookOpen, Box, FileText, GitBranch, Loader2 } from 'lucide-react'
+import { BookOpen, Box, FileText, GitBranch, ListTodo, Loader2, SquarePen } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { WorkflowActions } from '@/components/workflow-actions'
+import { useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDecisionList } from '@/hooks/useDecisions'
 import { useNotebookList } from '@/hooks/useNotebooks'
@@ -130,6 +133,8 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
   const [filter, setFilter] = React.useState<LibraryFilter>('all')
   const now = useRelativeNow()
 
+  const { openNewChat } = useAppShellContext()
+
   const items = React.useMemo(() => normalizeLibraryItems({
     pages,
     outputs,
@@ -139,6 +144,8 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
   const counts = React.useMemo(() => buildLibraryCounts(items), [items])
   const filteredItems = React.useMemo(() => filterLibraryItems(items, filter), [filter, items])
   const isLoading = pagesLoading || outputsLoading || decisionsLoading || notebooksLoading
+
+  const hasItems = items.length > 0
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -218,9 +225,38 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
                     ? 'Save docs, outputs, decisions, or notebooks to build durable workspace memory.'
                     : `No ${FILTER_LABELS[filter].toLowerCase()} match this filter yet.`}
                 </p>
+                {filter === 'all' ? (
+                  <div className="mt-5 flex flex-col items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="w-full max-w-[240px] justify-start gap-3"
+                      onClick={() => { void openNewChat?.() }}
+                    >
+                      <SquarePen className="h-4 w-4" />
+                      Start a new chat
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full max-w-[240px] justify-start gap-3"
+                      onClick={() => navigate(routes.view.workQueue())}
+                    >
+                      <ListTodo className="h-4 w-4" />
+                      Open Work Queue
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             ) : (
-              filteredItems.map((item) => (
+              <>
+                {hasItems ? (
+                  <WorkflowActions
+                    actions={[
+                      { icon: <SquarePen className="h-4 w-4" />, label: 'Start a new chat', onClick: () => { void openNewChat?.() } },
+                      { icon: <ListTodo className="h-4 w-4" />, label: 'Open Work Queue', onClick: () => navigate(routes.view.workQueue()) },
+                    ]}
+                  />
+                ) : null}
+                {filteredItems.map((item) => (
                 <div
                   key={`${item.kind}:${item.id}`}
                   role="button"
@@ -254,7 +290,8 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
                     </span>
                   </span>
                 </div>
-              ))
+              ))}
+              </>
             )}
           </section>
         </main>

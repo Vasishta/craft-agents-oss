@@ -18,7 +18,8 @@ import { useWorkItemList } from '@/hooks/useWorkItems'
 import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
 import { getWorkspaceSessionMetas } from '@/lib/session-meta-selectors'
-import { buildWorkspaceHomeActivityFeed, buildWorkspaceHomeFocusItems, type WorkspaceHomeActivityItem, type WorkspaceHomeActivityKind } from '@/lib/workspace-home'
+import { buildWorkspaceHomeActivityFeed, buildWorkspaceHomeFocusItems, isSparseWorkspace, type WorkspaceHomeActivityItem, type WorkspaceHomeActivityKind } from '@/lib/workspace-home'
+import { LowContextActions } from '@/components/low-context-actions'
 import { cn } from '@/lib/utils'
 import type { Workspace } from '../../shared/types'
 
@@ -283,6 +284,20 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
     [recentChats, recentDocs, recentOutputs, recentDecisions, recentNotebooks, recentProjects, recentWorkItems]
   )
 
+  const isSparse = React.useMemo(
+    () => isSparseWorkspace({
+      recentChats,
+      recentDocs,
+      recentOutputs,
+      recentDecisions,
+      recentNotebooks,
+      recentProjects,
+      recentWorkItems,
+      recentSources,
+    }),
+    [recentChats, recentDocs, recentOutputs, recentDecisions, recentNotebooks, recentProjects, recentWorkItems, recentSources]
+  )
+
   const libraryCount = pages.length + outputs.length + decisions.length + notebooks.length
   const activeWorkCount = workItems.filter((item) => item.status !== 'done').length
 
@@ -332,13 +347,13 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                 <div className="mt-6 flex flex-wrap gap-3">
                   <HeroActionButton
                     icon={<SquarePen className="h-4 w-4" />}
-                    label="Start chat"
+                    label="Start a new chat"
                     variant="default"
                     onClick={() => { void openNewChat?.() }}
                   />
                   <HeroActionButton
                     icon={<ListTodo className="h-4 w-4" />}
-                    label="Open work queue"
+                    label="Open Work Queue"
                     variant="secondary"
                     onClick={() => navigate(routes.view.workQueue())}
                   />
@@ -347,6 +362,27 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                     label="Search workspace"
                     variant="outline"
                     onClick={() => navigate(routes.view.search())}
+                  />
+                </div>
+
+                <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                  <SignalButton
+                    label="Active work"
+                    value={String(activeWorkCount)}
+                    detail={`${workItems.length} total`}
+                    onClick={() => navigate(routes.view.workQueue())}
+                  />
+                  <SignalButton
+                    label="Recent chats"
+                    value={String(recentChats.length)}
+                    detail="Latest conversations"
+                    onClick={() => navigate(routes.view.allSessions())}
+                  />
+                  <SignalButton
+                    label="Library"
+                    value={String(libraryCount)}
+                    detail={`${pages.length} docs, ${outputs.length} outputs, ${decisions.length} decisions`}
+                    onClick={() => navigate(routes.view.library())}
                   />
                 </div>
 
@@ -365,72 +401,96 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-[18px] border border-dashed border-border/50 bg-foreground/[0.02] px-4 py-5 text-sm text-muted-foreground">
-                      Start a chat or save a doc, output, project, or work item to turn Home into a real resume surface.
-                    </div>
+                    <LowContextActions
+                      description="Start a chat or save work to make Home a real resume surface."
+                      actions={[
+                        { icon: <SquarePen className="h-4 w-4" />, label: "Start a new chat", detail: "Ask the assistant to help with your work", onClick: () => openNewChat?.() },
+                        { icon: <ListTodo className="h-4 w-4" />, label: "Open Work Queue", detail: "Review and manage durable work items", onClick: () => navigate(routes.view.workQueue()) },
+                        { icon: <FileText className="h-4 w-4" />, label: "Open Library", detail: "Browse saved docs, outputs, and decisions", onClick: () => navigate(routes.view.library()) },
+                      ]}
+                    />
                   )}
                 </div>
               </div>
 
-              <aside className="rounded-[24px] border border-border/40 bg-foreground/[0.02] p-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Workspace signals</p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">A compact read on what is active here now.</p>
-                </div>
-
-                <div className="mt-4 grid gap-2">
-                  <SignalButton
-                    label="Library"
-                    value={String(libraryCount)}
-                    detail={`${pages.length} docs, ${outputs.length} outputs, ${decisions.length} decisions, ${notebooks.length} notebooks`}
-                    onClick={() => navigate(routes.view.library())}
-                  />
-                  <SignalButton
-                    label="Work queue"
-                    value={String(activeWorkCount)}
-                    detail={`${workItems.length} total work items`}
-                    onClick={() => navigate(routes.view.workQueue())}
-                  />
-                  <SignalButton
-                    label="Projects"
-                    value={String(projects.length)}
-                    detail="Curated work containers"
-                    onClick={() => navigate(routes.view.projects())}
-                  />
-                  <SignalButton
-                    label="Context"
-                    value={String(sources.length)}
-                    detail="Connected files, APIs, MCPs, and folders"
-                    onClick={() => navigate(routes.view.sources())}
-                  />
-                </div>
-
-                <div className="mt-5 border-t border-border/45 pt-4">
-                  <div className="mb-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Available context</p>
-                    <p className="mt-1 text-sm text-muted-foreground">Connected sources that can ground the next step.</p>
+              {isSparse ? (
+                <aside className="rounded-[24px] border border-border/40 bg-foreground/[0.02] p-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Start working</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">Jump into a conversation, browse saved artifacts, or review queued work.</p>
+                  </div>
+                  <div className="mt-4">
+                    <LowContextActions
+                      framed={false}
+                      actions={[
+                        { icon: <SquarePen className="h-4 w-4" />, label: "Start a new chat", detail: "Ask the assistant to help with your work", onClick: () => openNewChat?.() },
+                        { icon: <FileText className="h-4 w-4" />, label: "Open Library", detail: "Browse saved docs, outputs, and decisions", onClick: () => navigate(routes.view.library()) },
+                        { icon: <ListTodo className="h-4 w-4" />, label: "Open Work Queue", detail: "Review and manage durable work items", onClick: () => navigate(routes.view.workQueue()) },
+                      ]}
+                    />
+                  </div>
+                </aside>
+              ) : (
+                <aside className="rounded-[24px] border border-border/40 bg-foreground/[0.02] p-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Workspace signals</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">A compact read on what is active here now.</p>
                   </div>
 
-                  <div className="grid gap-2">
-                    {recentSources.length > 0 ? recentSources.map((source) => (
-                      <button
-                        key={source.config.slug}
-                        type="button"
-                        onClick={() => navigate(routes.view.sources({ sourceSlug: source.config.slug }))}
-                        className="flex items-center gap-3 rounded-[14px] px-2 py-2 text-left transition-colors hover:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      >
-                        <SourceAvatar source={source} size="sm" />
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-foreground">{source.config.name}</span>
-                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{source.config.tagline || source.config.provider || source.config.type}</span>
-                        </span>
-                      </button>
-                    )) : (
-                      <p className="text-sm text-muted-foreground">No files or external context connected yet.</p>
-                    )}
+                  <div className="mt-4 grid gap-2">
+                    <SignalButton
+                      label="Library"
+                      value={String(libraryCount)}
+                      detail={`${pages.length} docs, ${outputs.length} outputs, ${decisions.length} decisions, ${notebooks.length} notebooks`}
+                      onClick={() => navigate(routes.view.library())}
+                    />
+                    <SignalButton
+                      label="Work queue"
+                      value={String(activeWorkCount)}
+                      detail={`${workItems.length} total work items`}
+                      onClick={() => navigate(routes.view.workQueue())}
+                    />
+                    <SignalButton
+                      label="Projects"
+                      value={String(projects.length)}
+                      detail="Curated work containers"
+                      onClick={() => navigate(routes.view.projects())}
+                    />
+                    <SignalButton
+                      label="Context"
+                      value={String(sources.length)}
+                      detail="Connected files, APIs, MCPs, and folders"
+                      onClick={() => navigate(routes.view.sources())}
+                    />
                   </div>
-                </div>
-              </aside>
+
+                  <div className="mt-5 border-t border-border/45 pt-4">
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Available context</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Connected sources that can ground the next step.</p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      {recentSources.length > 0 ? recentSources.map((source) => (
+                        <button
+                          key={source.config.slug}
+                          type="button"
+                          onClick={() => navigate(routes.view.sources({ sourceSlug: source.config.slug }))}
+                          className="flex items-center gap-3 rounded-[14px] px-2 py-2 text-left transition-colors hover:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        >
+                          <SourceAvatar source={source} size="sm" />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium text-foreground">{source.config.name}</span>
+                            <span className="mt-0.5 block truncate text-xs text-muted-foreground">{source.config.tagline || source.config.provider || source.config.type}</span>
+                          </span>
+                        </button>
+                      )) : (
+                        <p className="text-sm text-muted-foreground">No files or external context connected yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </aside>
+              )}
             </div>
           </section>
 

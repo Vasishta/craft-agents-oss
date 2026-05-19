@@ -381,6 +381,9 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   Search docs, outputs, decisions, notebooks, projects, work items, and workspace chats from one surface.
                 </p>
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                  Try searching for a feature name, document title, or past decision to get started.
+                </p>
               </div>
             </section>
           ) : showLoadingOnly ? (
@@ -389,11 +392,16 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
             </section>
           ) : filteredResults.length === 0 ? (
             <section className="flex min-h-[calc(100vh-220px)] items-center justify-center">
-              <p className="text-sm text-muted-foreground">
-                {activeFilter === 'all'
-                  ? `No results for "${trimmedQuery}"`
-                  : `No ${filterOptions.find((option) => option.key === activeFilter)?.label.toLowerCase()} matched "${trimmedQuery}"`}
-              </p>
+              <div className="max-w-[420px] text-center">
+                <p className="text-sm text-muted-foreground">
+                  {activeFilter === 'all'
+                    ? `No results for "${trimmedQuery}"`
+                    : `No ${filterOptions.find((option) => option.key === activeFilter)?.label.toLowerCase()} matched "${trimmedQuery}"`}
+                </p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  Try a different search term or browse the Library to explore all saved artifacts.
+                </p>
+              </div>
             </section>
           ) : (
             <div className="mt-6 flex flex-col gap-5">

@@ -1,9 +1,11 @@
 import * as React from 'react'
-import { BookOpen, Layers, Loader2, Trash2 } from 'lucide-react'
+import { BookOpen, Layers, ListTodo, Loader2, Search, SquarePen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EntityCollectionPage } from '@/components/entity/EntityCollectionPage'
 import { EntityListCard } from '@/components/entity/EntityListCard'
 import { Button } from '@/components/ui/button'
+import { WorkflowActions } from '@/components/workflow-actions'
+import { useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useCreateNotebook, useDeleteNotebook, useNotebookList } from '@/hooks/useNotebooks'
 import { useRelativeNow } from '@/hooks/useRelativeNow'
@@ -27,12 +29,15 @@ function getNotebookSummary(notebook: NotebookIndexEntry): string {
 
 export default function NotebooksPage({ workspaceId }: NotebooksPageProps) {
   const { leadingAction, rightSidebarButton } = usePanelChrome()
+  const { openNewChat } = useAppShellContext()
   const { notebooks, isLoading, refresh } = useNotebookList(workspaceId)
   const createNotebook = useCreateNotebook(workspaceId)
   const deleteNotebook = useDeleteNotebook(workspaceId)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [isCreating, setIsCreating] = React.useState(false)
   const now = useRelativeNow()
+
+  const hasNotebooks = notebooks.length > 0
 
   const handleCreate = React.useCallback(async () => {
     const title = window.prompt('Notebook title')
@@ -82,6 +87,34 @@ export default function NotebooksPage({ workspaceId }: NotebooksPageProps) {
       emptyIcon={<BookOpen className="h-5 w-5" />}
       emptyTitle="No notebooks yet"
       emptyDescription="Notebooks curate docs, outputs, decisions, chats, and sources without forcing folder ownership."
+      emptyActions={
+        <>
+          <Button
+            variant="outline"
+            className="w-full max-w-[240px] justify-start gap-3"
+            onClick={() => { void openNewChat?.() }}
+          >
+            <SquarePen className="h-4 w-4" />
+            Start a new chat
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full max-w-[240px] justify-start gap-3"
+            onClick={() => navigate(routes.view.workQueue())}
+          >
+            <ListTodo className="h-4 w-4" />
+            Open Work Queue
+          </Button>
+        </>
+      }
+      nextStepArea={hasNotebooks ? (
+        <WorkflowActions
+          actions={[
+            { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
+            { icon: <SquarePen className="h-4 w-4" />, label: 'Start a new chat', onClick: () => { void openNewChat?.() } },
+          ]}
+        />
+      ) : undefined}
       leadingAction={leadingAction}
       rightSidebarButton={rightSidebarButton}
       renderItem={(notebook) => {

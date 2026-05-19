@@ -112,7 +112,13 @@ if (tlsCertPath || tlsKeyPath) {
 }
 
 // Web UI configuration
-const webuiDir = process.env.CRAFT_WEBUI_DIR || undefined
+// In Vite dev mode, the browser app on :5175 proxies auth/config requests to the
+// headless server. Those endpoints should work even when we are not serving a
+// built dist/ bundle, so allow opting into the source directory as the Web UI
+// asset root for login/static dev assets.
+const devWebuiDir = join(process.cwd(), 'apps', 'webui', 'src')
+const webuiDir = process.env.CRAFT_WEBUI_DIR
+  || (process.env.CRAFT_WEBUI_DEV === 'true' ? devWebuiDir : undefined)
 const webuiEnabled = webuiDir && existsSync(webuiDir)
 const webuiSecureCookies = parseOptionalBooleanEnv('CRAFT_WEBUI_SECURE_COOKIE', process.env.CRAFT_WEBUI_SECURE_COOKIE)
 const webuiWsUrl = parseOptionalWebSocketUrl('CRAFT_WEBUI_WS_URL', process.env.CRAFT_WEBUI_WS_URL)

@@ -21,8 +21,12 @@ import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
 import { Panel } from './Panel'
 import { MultiSelectPanel } from './MultiSelectPanel'
+import { Button } from '@/components/ui/button'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { sessionMetaMapAtom, type SessionMeta } from '@/atoms/sessions'
+import { navigate, routes } from '@/lib/navigate'
+import { SquarePen, LayoutDashboard, ListTodo, Settings } from 'lucide-react'
+import { LowContextActions } from '@/components/low-context-actions'
 import { StoplightProvider } from '@/context/StoplightContext'
 import {
   useNavigationState,
@@ -90,6 +94,7 @@ export function MainContentPanel({
     automationTestResults,
     getAutomationHistory,
     activeSessionWorkingDirectory,
+    openNewChat,
   } = useAppShellContext()
 
   // Session multi-select state
@@ -407,8 +412,28 @@ export function MainContentPanel({
     // No source selected - empty state
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">{t("sourcesList.noSourcesConfigured")}</p>
+        <div className="flex flex-col items-center justify-center h-full px-6">
+          <div className="max-w-[260px] text-center">
+            <p className="text-sm text-muted-foreground">{t("sourcesList.noSourcesConfigured")}</p>
+            <div className="mt-5 flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3 h-10 rounded-xl px-4"
+                onClick={() => navigate(routes.view.settings('workspace'))}
+              >
+                <Settings className="h-4 w-4" />
+                Open workspace settings
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3 h-10 rounded-xl px-4"
+                onClick={() => navigate(routes.view.home())}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Go to Workspace Home
+              </Button>
+            </div>
+          </div>
         </div>
       </Panel>
     )
@@ -442,8 +467,20 @@ export function MainContentPanel({
     // No skill selected - empty state
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">{t("skillsList.noSkillsConfigured")}</p>
+        <div className="flex flex-col items-center justify-center h-full px-6">
+          <div className="max-w-[260px] text-center">
+            <p className="text-sm text-muted-foreground">{t("skillsList.noSkillsConfigured")}</p>
+            <div className="mt-5 flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3 h-10 rounded-xl px-4"
+                onClick={() => navigate(routes.view.home())}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Go to Workspace Home
+              </Button>
+            </div>
+          </div>
         </div>
       </Panel>
     )
@@ -518,12 +555,23 @@ export function MainContentPanel({
           <ChatPage sessionId={navState.details.sessionId} />
         </Panel>
       )
-    }
-    // No session selected - empty state
+    }    // No session selected - empty state with actionable options
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">{t("session.noSessionSelected")}</p>
+        <div className="flex flex-col items-center justify-center h-full px-6">
+          <div className="max-w-[260px] text-center">
+            <p className="text-sm text-muted-foreground">{t("session.noSessionSelected")}</p>
+            <div className="mt-5">
+              <LowContextActions
+                compact
+                actions={[
+                  { icon: <SquarePen className="h-4 w-4" />, label: "Start a new chat", onClick: () => { void openNewChat?.() } },
+                  { icon: <LayoutDashboard className="h-4 w-4" />, label: "Go to Workspace Home", onClick: () => navigate(routes.view.home()) },
+                  { icon: <ListTodo className="h-4 w-4" />, label: "Open Work Queue", onClick: () => navigate(routes.view.workQueue()) },
+                ]}
+              />
+            </div>
+          </div>
         </div>
       </Panel>
     )

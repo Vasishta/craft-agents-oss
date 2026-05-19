@@ -16,6 +16,10 @@ interface EntityCollectionPageProps<T> {
   emptyIcon: React.ReactNode
   emptyTitle: string
   emptyDescription: React.ReactNode
+  /** Extra actions shown below the create button in the empty state. */
+  emptyActions?: React.ReactNode
+  /** Compact action area shown above the list when items exist. */
+  nextStepArea?: React.ReactNode
   leadingAction?: React.ReactNode
   rightSidebarButton?: React.ReactNode
   renderItem: (item: T) => React.ReactNode
@@ -32,6 +36,8 @@ export function EntityCollectionPage<T>({
   emptyIcon,
   emptyTitle,
   emptyDescription,
+  emptyActions,
+  nextStepArea,
   leadingAction,
   rightSidebarButton,
   renderItem,
@@ -67,9 +73,12 @@ export function EntityCollectionPage<T>({
               title={emptyTitle}
               description={emptyDescription}
               action={createAction}
-            />
+            >
+              {emptyActions ? <div className="mt-5 flex flex-col items-center gap-2">{emptyActions}</div> : null}
+            </EntityEmptyState>
           ) : (
             <section aria-label={`${title} list`} className="flex flex-col gap-2">
+              {nextStepArea ? <div className="mb-4">{nextStepArea}</div> : null}
               {items.map(renderItem)}
             </section>
           )}

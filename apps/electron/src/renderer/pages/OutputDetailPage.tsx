@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeft, Archive, FileText, GitBranch, GitPullRequest, Layers, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { ArrowLeft, Archive, FileText, GitBranch, GitPullRequest, LayoutDashboard, Layers, Loader2, MessageSquareText, Search, Trash2 } from 'lucide-react'
 import { Markdown } from '@craft-agent/ui'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
@@ -12,6 +12,7 @@ import { useDeleteOutput, useOutput, usePromoteOutputToDoc } from '@/hooks/useOu
 import { useCreateWorkItem } from '@/hooks/useWorkItems'
 import { buildDecisionFromOutput, buildWorkItemFromOutput } from '@/lib/cross-object-linking'
 import { navigate, routes } from '@/lib/navigate'
+import { WorkflowActions } from '@/components/workflow-actions'
 
 interface OutputDetailPageProps {
   workspaceId: string
@@ -190,6 +191,15 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
             <ArrowLeft className="h-4 w-4" />
             Outputs
           </Button>
+
+          {output && (
+            <WorkflowActions
+              actions={[
+                { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
+                { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
+              ]}
+            />
+          )}
 
           {isLoading ? (
             <div className="flex min-h-[320px] items-center justify-center text-muted-foreground">

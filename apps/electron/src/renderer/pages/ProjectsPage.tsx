@@ -1,9 +1,11 @@
 import * as React from 'react'
-import { BriefcaseBusiness, FileText, Layers, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { BriefcaseBusiness, FileText, Layers, ListTodo, Loader2, MessageSquareText, SquarePen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EntityCollectionPage } from '@/components/entity/EntityCollectionPage'
 import { EntityListCard } from '@/components/entity/EntityListCard'
 import { Button } from '@/components/ui/button'
+import { WorkflowActions } from '@/components/workflow-actions'
+import { useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useCreateProject, useDeleteProject, useProjectList } from '@/hooks/useProjects'
 import { useRelativeNow } from '@/hooks/useRelativeNow'
@@ -30,12 +32,15 @@ function getProjectCountSummary(project: ProjectIndexEntry): string {
 
 export default function ProjectsPage({ workspaceId }: ProjectsPageProps) {
   const { leadingAction, rightSidebarButton } = usePanelChrome()
+  const { openNewChat } = useAppShellContext()
   const { projects, isLoading, refresh } = useProjectList(workspaceId)
   const createProject = useCreateProject(workspaceId)
   const deleteProject = useDeleteProject(workspaceId)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [isCreating, setIsCreating] = React.useState(false)
   const now = useRelativeNow()
+
+  const hasProjects = projects.length > 0
 
   const handleCreate = React.useCallback(async () => {
     const name = window.prompt('Project name')
@@ -81,6 +86,34 @@ export default function ProjectsPage({ workspaceId }: ProjectsPageProps) {
       emptyIcon={<BriefcaseBusiness className="h-5 w-5" />}
       emptyTitle="No projects yet"
       emptyDescription="Projects are optional workspace organizers for linked chats, docs, outputs, work items, decisions, and notebooks."
+      emptyActions={
+        <>
+          <Button
+            variant="outline"
+            className="w-full max-w-[240px] justify-start gap-3"
+            onClick={() => { void openNewChat?.() }}
+          >
+            <SquarePen className="h-4 w-4" />
+            Start a new chat
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full max-w-[240px] justify-start gap-3"
+            onClick={() => navigate(routes.view.workQueue())}
+          >
+            <ListTodo className="h-4 w-4" />
+            Open Work Queue
+          </Button>
+        </>
+      }
+      nextStepArea={hasProjects ? (
+        <WorkflowActions
+          actions={[
+            { icon: <ListTodo className="h-4 w-4" />, label: 'Open Work Queue', onClick: () => navigate(routes.view.workQueue()) },
+            { icon: <SquarePen className="h-4 w-4" />, label: 'Start a new chat', onClick: () => { void openNewChat?.() } },
+          ]}
+        />
+      ) : undefined}
       leadingAction={leadingAction}
       rightSidebarButton={rightSidebarButton}
       renderItem={(project) => {

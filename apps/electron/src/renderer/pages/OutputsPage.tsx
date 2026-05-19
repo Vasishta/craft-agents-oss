@@ -1,9 +1,11 @@
 import * as React from 'react'
-import { Archive, Box, FileText, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { Archive, Box, FileText, Loader2, MessageSquareText, Search, SquarePen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { WorkflowActions } from '@/components/workflow-actions'
+import { useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteOutput, useOutputList } from '@/hooks/useOutputs'
 import { navigate, routes } from '@/lib/navigate'
@@ -44,6 +46,7 @@ function getProvenance(output: OutputIndexEntry): { label: string; icon: React.E
 
 export default function OutputsPage({ workspaceId }: OutputsPageProps) {
   const { leadingAction, rightSidebarButton } = usePanelChrome()
+  const { openNewChat } = useAppShellContext()
   const { outputs, isLoading, refresh } = useOutputList(workspaceId)
   const deleteOutput = useDeleteOutput(workspaceId)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
@@ -94,10 +97,34 @@ export default function OutputsPage({ workspaceId }: OutputsPageProps) {
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   Save useful assistant responses from chat so they can be reviewed or promoted to docs.
                 </p>
+                <div className="mt-5 flex flex-col items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full max-w-[240px] justify-start gap-3"
+                    onClick={() => { void openNewChat?.() }}
+                  >
+                    <SquarePen className="h-4 w-4" />
+                    Start a new chat
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full max-w-[240px] justify-start gap-3"
+                    onClick={() => navigate(routes.view.library())}
+                  >
+                    <Search className="h-4 w-4" />
+                    Open Library
+                  </Button>
+                </div>
               </div>
             </section>
           ) : (
             <section aria-label="Outputs list" className="flex flex-col gap-2">
+              <WorkflowActions
+                actions={[
+                  { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
+                  { icon: <SquarePen className="h-4 w-4" />, label: 'Start a new chat', onClick: () => { void openNewChat?.() } },
+                ]}
+              />
               {outputs.map((output) => {
                 const provenance = getProvenance(output)
                 const ProvenanceIcon = provenance.icon
