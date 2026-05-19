@@ -191,9 +191,9 @@ function ResultRow({
     <button
       type="button"
       onClick={onClick}
-      className="grid min-h-[88px] w-full grid-cols-[auto_1fr] gap-3 rounded-[16px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="grid min-h-[96px] w-full grid-cols-[auto_1fr] gap-3 rounded-[16px] border border-border/55 bg-background px-4 py-3.5 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
-      <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-[11px] bg-foreground/[0.04] text-muted-foreground">
+      <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-[12px] bg-foreground/[0.04] text-muted-foreground">
         {getSearchResultIcon(result.type)}
       </span>
       <span className="min-w-0">
@@ -204,8 +204,9 @@ function ResultRow({
           </span>
         </span>
         <span className="mt-1.5 line-clamp-2 block text-sm leading-5 text-muted-foreground">{result.snippet}</span>
-        <span className="mt-2 block text-xs text-muted-foreground">
-          {result.meta}{timestamp ? ` · Updated ${timestamp}` : ''}
+        <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded-full bg-foreground/[0.05] px-2 py-0.5">{result.meta}</span>
+          {timestamp ? <span>Updated {timestamp}</span> : null}
         </span>
       </span>
     </button>
@@ -382,7 +383,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                   Search docs, outputs, decisions, notebooks, projects, work items, and workspace chats from one surface.
                 </p>
                 <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                  Try searching for a feature name, document title, or past decision to get started.
+                  Try a feature name, object title, or prior decision. Results now favor title matches, stronger provenance, and better-linked durable work.
                 </p>
               </div>
             </section>
@@ -418,14 +419,14 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
               </div>
 
               {isLoadingBodies && (
-                <p className="text-sm text-muted-foreground">Still loading some doc, output, decision, and notebook bodies for deeper matches...</p>
+                <p className="text-sm text-muted-foreground">Still loading some doc, output, decision, and notebook bodies for deeper matches.</p>
               )}
 
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Results</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {filteredResults.length} {activeFilter === 'all' ? 'mixed workspace results' : `${filterOptions.find((option) => option.key === activeFilter)?.label.toLowerCase()} results`}
+                    {filteredResults.length} {activeFilter === 'all' ? 'mixed workspace results ranked by relevance and recency' : `${filterOptions.find((option) => option.key === activeFilter)?.label.toLowerCase()} results`}
                   </p>
                 </div>
               </div>

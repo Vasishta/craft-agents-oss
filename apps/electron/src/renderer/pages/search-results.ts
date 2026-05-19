@@ -30,6 +30,7 @@ export interface SearchResult {
   route: Route
   updatedAt: number | null
   meta: string
+  score: number
 }
 
 export interface SearchableSessionMeta {
@@ -43,7 +44,7 @@ export interface SearchableSessionMeta {
 interface Match<T> {
   item: T
   snippet: string
-  titleMatched: boolean
+  score: number
   updatedAt: number | undefined
 }
 
@@ -53,8 +54,25 @@ interface SearchBuilderConfig<T> {
   getTitle: (item: T) => string
   getContent: (item: T) => string
   getUpdatedAt: (item: T) => number | undefined
+  getRankWeight?: (item: T) => number
   normalizeResult: (item: T, snippet: string) => SearchResult
   emptySnippet: string
+}
+
+function clampScore(value: number, max: number): number {
+  return Math.min(value, max)
+}
+
+function sumCounts(counts: number[]): number {
+  return counts.reduce((total, count) => total + count, 0)
+}
+
+function buildMatchScore(titleMatched: boolean, contentMatched: boolean, rankWeight: number): number {
+  let score = rankWeight
+  if (titleMatched) score += 200
+  if (contentMatched) score += 80
+  if (titleMatched && contentMatched) score += 40
+  return score
 }
 
 function getCountSummary(parts: Array<string | null>, emptyText: string): string {
@@ -122,6 +140,7 @@ export function normalizePageSearchResult(page: PageListEntry, snippet: string):
     route: routes.view.savedPage(page.id),
     updatedAt: page.updatedAt ?? null,
     meta: getPageSearchMeta(page),
+    score: 0,
   }
 }
 
@@ -135,6 +154,7 @@ export function normalizeOutputSearchResult(output: OutputIndexEntry, snippet: s
     route: routes.view.savedOutput(output.id),
     updatedAt: output.updatedAt ?? null,
     meta: getOutputSearchMeta(output),
+    score: 0,
   }
 }
 
@@ -148,6 +168,7 @@ export function normalizeChatSearchResult(session: SearchableSessionMeta, snippe
     route: routes.view.allSessions(session.id),
     updatedAt: session.lastMessageAt ?? session.createdAt ?? null,
     meta: 'Recent workspace chat',
+    score: 0,
   }
 }
 
@@ -161,6 +182,7 @@ export function normalizeDecisionSearchResult(decision: DecisionIndexEntry, snip
     route: routes.view.decision(decision.id),
     updatedAt: decision.updatedAt ?? null,
     meta: getDecisionSearchMeta(decision),
+    score: 0,
   }
 }
 
@@ -174,6 +196,7 @@ export function normalizeNotebookSearchResult(notebook: NotebookIndexEntry, snip
     route: routes.view.notebook(notebook.id),
     updatedAt: notebook.updatedAt ?? null,
     meta: getNotebookSearchMeta(notebook),
+    score: 0,
   }
 }
 
@@ -187,6 +210,7 @@ export function normalizeProjectSearchResult(project: ProjectIndexEntry, snippet
     route: routes.view.project(project.id),
     updatedAt: project.updatedAt ?? null,
     meta: getProjectSearchMeta(project),
+    score: 0,
   }
 }
 
@@ -200,6 +224,7 @@ export function normalizeWorkItemSearchResult(workItem: WorkItemIndexEntry, snip
     route: routes.view.workItem(workItem.id),
     updatedAt: workItem.updatedAt ?? null,
     meta: getWorkItemSearchMeta(workItem),
+    score: 0,
   }
 }
 
@@ -223,7 +248,7 @@ export function makeSearchSnippet(normalizedText: string, query: string, emptyTe
 
 function sortMatches<T>(matches: Match<T>[]): Match<T>[] {
   return [...matches].sort((a, b) => {
-    if (a.titleMatched !== b.titleMatched) return a.titleMatched ? -1 : 1
+    if (a.score !== b.score) return b.score - a.score
     return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
   })
 }
@@ -234,6 +259,7 @@ function buildSearchResults<T>({
   getTitle,
   getContent,
   getUpdatedAt,
+  getRankWeight,
   normalizeResult,
   emptySnippet,
 }: SearchBuilderConfig<T>): SearchResult[] {
@@ -252,12 +278,91 @@ function buildSearchResults<T>({
     matches.push({
       item,
       snippet: normalizedContent ? makeSearchSnippet(normalizedContent, trimmedQuery, emptySnippet) : 'Title match',
-      titleMatched,
+      score: buildMatchScore(titleMatched, contentMatched, getRankWeight?.(item) ?? 0),
       updatedAt: getUpdatedAt(item),
     })
   }
 
-  return sortMatches(matches).map(({ item, snippet }) => normalizeResult(item, snippet))
+  return sortMatches(matches).map(({ item, snippet, score }) => ({
+    ...normalizeResult(item, snippet),
+    score,
+  }))
+}
+
+function getPageRankWeight(page: PageListEntry): number {
+  return clampScore(
+    page.outputIdCount * 18
+      + (page.sourceSessionId || page.sourceMessageId ? 24 : 0)
+      + (page.notebookId ? 10 : 0),
+    70,
+  )
+}
+
+function getOutputRankWeight(output: OutputIndexEntry): number {
+  return clampScore(
+    (output.sourceSessionId || output.sourceMessageId ? 24 : 0)
+      + (output.promotedDocId ? 18 : 0)
+      + (output.status === 'promoted' ? 10 : 0),
+    70,
+  )
+}
+
+function getDecisionRankWeight(decision: DecisionIndexEntry): number {
+  return clampScore(
+    decision.linkCounts.projectCount * 10
+      + decision.linkCounts.outputCount * 12
+      + decision.linkCounts.docCount * 8
+      + decision.linkCounts.notebookCount * 8
+      + decision.linkCounts.sessionCount * 5
+      + decision.linkCounts.workItemCount * 4
+      + (decision.status === 'accepted' ? 12 : decision.status === 'proposed' ? 4 : 0),
+    95,
+  )
+}
+
+function getNotebookRankWeight(notebook: NotebookIndexEntry): number {
+  return clampScore(
+    notebook.sectionCount * 3
+      + notebook.linkCounts.projectCount * 10
+      + notebook.linkCounts.decisionCount * 10
+      + notebook.linkCounts.docCount * 8
+      + notebook.linkCounts.outputCount * 8
+      + notebook.linkCounts.sessionCount * 4,
+    95,
+  )
+}
+
+function getProjectRankWeight(project: ProjectIndexEntry): number {
+  return clampScore(
+    sumCounts([
+      project.linkCounts.workItemCount * 9,
+      project.linkCounts.sessionCount * 7,
+      project.linkCounts.docCount * 7,
+      project.linkCounts.outputCount * 7,
+      project.linkCounts.decisionCount * 8,
+      project.linkCounts.notebookCount * 8,
+    ]),
+    95,
+  )
+}
+
+function getWorkItemRankWeight(workItem: WorkItemIndexEntry): number {
+  const priorityWeight = workItem.priority === 'P0'
+    ? 18
+    : workItem.priority === 'P1'
+      ? 12
+      : workItem.priority === 'P2'
+        ? 6
+        : 0
+
+  return clampScore(
+    priorityWeight
+      + workItem.linkCounts.docCount * 8
+      + workItem.linkCounts.outputCount * 8
+      + workItem.linkCounts.sessionCount * 5
+      + (workItem.status === 'in_progress' ? 10 : workItem.status === 'in_review' ? 7 : 0),
+    80,
+  )
 }
 
 export function buildDocSearchResults(
@@ -271,6 +376,7 @@ export function buildDocSearchResults(
     getTitle: (page) => page.title || 'Untitled Doc',
     getContent: (page) => docContents[page.id] ?? '',
     getUpdatedAt: (page) => page.updatedAt,
+    getRankWeight: getPageRankWeight,
     normalizeResult: normalizePageSearchResult,
     emptySnippet: 'Empty doc',
   })
@@ -287,6 +393,7 @@ export function buildOutputSearchResults(
     getTitle: (output) => output.title || 'Untitled Output',
     getContent: (output) => outputContents[output.id] ?? output.preview ?? '',
     getUpdatedAt: (output) => output.updatedAt,
+    getRankWeight: getOutputRankWeight,
     normalizeResult: normalizeOutputSearchResult,
     emptySnippet: 'Empty output',
   })
@@ -302,6 +409,7 @@ export function buildChatSearchResults(
     getTitle: (session) => session.name || session.preview || 'Untitled Chat',
     getContent: (session) => session.preview || '',
     getUpdatedAt: (session) => session.lastMessageAt ?? session.createdAt,
+    getRankWeight: () => 6,
     normalizeResult: normalizeChatSearchResult,
     emptySnippet: 'No preview available',
   })
@@ -318,6 +426,7 @@ export function buildDecisionSearchResults(
     getTitle: (decision) => decision.title || 'Untitled Decision',
     getContent: (decision) => decisionContents[decision.id] ?? '',
     getUpdatedAt: (decision) => decision.updatedAt,
+    getRankWeight: getDecisionRankWeight,
     normalizeResult: normalizeDecisionSearchResult,
     emptySnippet: 'Decision matched by title',
   })
@@ -334,6 +443,7 @@ export function buildNotebookSearchResults(
     getTitle: (notebook) => notebook.title || 'Untitled Notebook',
     getContent: (notebook) => notebookContents[notebook.id] ?? notebook.description ?? '',
     getUpdatedAt: (notebook) => notebook.updatedAt,
+    getRankWeight: getNotebookRankWeight,
     normalizeResult: normalizeNotebookSearchResult,
     emptySnippet: 'Notebook matched by title',
   })
@@ -349,6 +459,7 @@ export function buildProjectSearchResults(
     getTitle: (project) => project.name || 'Untitled Project',
     getContent: (project) => project.description ?? '',
     getUpdatedAt: (project) => project.updatedAt,
+    getRankWeight: getProjectRankWeight,
     normalizeResult: normalizeProjectSearchResult,
     emptySnippet: 'Project matched by title',
   })
@@ -364,6 +475,7 @@ export function buildWorkItemSearchResults(
     getTitle: (workItem) => workItem.title || 'Untitled Work Item',
     getContent: (workItem) => workItem.description ?? [workItem.area, workItem.type].filter(Boolean).join(' '),
     getUpdatedAt: (workItem) => workItem.updatedAt,
+    getRankWeight: getWorkItemRankWeight,
     normalizeResult: normalizeWorkItemSearchResult,
     emptySnippet: 'Work item matched by title',
   })
@@ -374,7 +486,10 @@ export function buildMixedSearchResults(
 ): SearchResult[] {
   return resultGroups
     .flat()
-    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+    .sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score
+      return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+    })
 }
 
 export function countSearchResultsByType(results: SearchResult[]): Record<SearchResultType, number> {

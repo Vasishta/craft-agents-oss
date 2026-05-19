@@ -257,6 +257,42 @@ describe('search result builders', () => {
     })
   })
 
+  it('prefers provenance-rich and better-linked results over newer but weaker matches', () => {
+    const results = buildMixedSearchResults([
+      buildDocSearchResults(
+        [
+          page('plain_newer', { title: 'Architecture', updatedAt: 300 }),
+          page('linked_older', { title: 'Architecture', updatedAt: 100, outputIdCount: 2, sourceSessionId: 'chat_1' }),
+        ],
+        {},
+        'architecture',
+      ),
+      buildDecisionSearchResults(
+        [
+          decision('decision_1', {
+            title: 'Architecture',
+            updatedAt: 200,
+            status: 'accepted',
+            linkCounts: {
+              projectCount: 1,
+              sessionCount: 1,
+              docCount: 2,
+              outputCount: 1,
+              workItemCount: 0,
+              sourceCount: 0,
+              notebookCount: 0,
+              supersedesDecisionCount: 0,
+            },
+          }),
+        ],
+        {},
+        'architecture',
+      ),
+    ])
+
+    expect(results.map((result) => result.id)).toEqual(['linked_older', 'decision_1', 'plain_newer'])
+  })
+
   it('uses consistent fallback copy and ignores blank queries', () => {
     expect(buildDocSearchResults([page('doc', { title: '', sourceSessionId: 'chat_1' })], {}, 'untitled')[0]).toMatchObject({
       title: 'Untitled Doc',
