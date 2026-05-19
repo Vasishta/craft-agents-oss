@@ -1,8 +1,9 @@
 import * as React from 'react'
-import { GitBranch, Layers, ListTodo, Loader2, MessageSquareText, Search, SquarePen, Trash2 } from 'lucide-react'
+import { Box, FileText, GitBranch, Layers, ListTodo, Loader2, MessageSquareText, Search, SquarePen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EntityCollectionPage } from '@/components/entity/EntityCollectionPage'
 import { EntityListCard } from '@/components/entity/EntityListCard'
+import { RelationshipBadgeRow } from '@/components/entity/RelationshipBadgeRow'
 import { Button } from '@/components/ui/button'
 import { WorkflowActions } from '@/components/workflow-actions'
 import { useAppShellContext } from '@/context/AppShellContext'
@@ -25,6 +26,15 @@ function getDecisionSummary(decision: DecisionIndexEntry): string {
     decision.linkCounts.notebookCount > 0 ? `${decision.linkCounts.notebookCount} notebooks` : null,
   ].filter(Boolean)
   return parts.length > 0 ? parts.join(' · ') : 'No linked durable objects'
+}
+
+function getDecisionRelationshipItems(decision: DecisionIndexEntry) {
+  return [
+    { label: 'Projects', count: decision.linkCounts.projectCount, icon: Layers },
+    { label: 'Docs', count: decision.linkCounts.docCount, icon: FileText },
+    { label: 'Outputs', count: decision.linkCounts.outputCount, icon: Box },
+    { label: 'Chats', count: decision.linkCounts.sessionCount, icon: MessageSquareText },
+  ]
 }
 
 export default function DecisionsPage({ workspaceId }: DecisionsPageProps) {
@@ -126,6 +136,7 @@ export default function DecisionsPage({ workspaceId }: DecisionsPageProps) {
             key={decision.id}
             title={decision.title}
             description={getDecisionSummary(decision)}
+            badges={<RelationshipBadgeRow items={getDecisionRelationshipItems(decision)} emptyLabel="No linked durable objects" />}
             meta={(
               <>
                 <span>Updated {formatUpdatedTime(decision.updatedAt, now)}</span>

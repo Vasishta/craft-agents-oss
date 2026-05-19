@@ -1,8 +1,9 @@
 import * as React from 'react'
-import { BriefcaseBusiness, FileText, Layers, ListTodo, Loader2, MessageSquareText, SquarePen, Trash2 } from 'lucide-react'
+import { Box, BriefcaseBusiness, FileText, Layers, ListTodo, Loader2, MessageSquareText, SquarePen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EntityCollectionPage } from '@/components/entity/EntityCollectionPage'
 import { EntityListCard } from '@/components/entity/EntityListCard'
+import { RelationshipBadgeRow } from '@/components/entity/RelationshipBadgeRow'
 import { Button } from '@/components/ui/button'
 import { WorkflowActions } from '@/components/workflow-actions'
 import { useAppShellContext } from '@/context/AppShellContext'
@@ -28,6 +29,15 @@ function getProjectCountSummary(project: ProjectIndexEntry): string {
     counts.notebookCount > 0 ? `${counts.notebookCount} notebooks` : null,
   ].filter(Boolean)
   return parts.length > 0 ? parts.join(' · ') : 'No linked objects yet'
+}
+
+function getProjectRelationshipItems(project: ProjectIndexEntry) {
+  return [
+    { label: 'Work', count: project.linkCounts.workItemCount, icon: ListTodo },
+    { label: 'Chats', count: project.linkCounts.sessionCount, icon: MessageSquareText },
+    { label: 'Docs', count: project.linkCounts.docCount, icon: FileText },
+    { label: 'Outputs', count: project.linkCounts.outputCount, icon: Box },
+  ]
 }
 
 export default function ProjectsPage({ workspaceId }: ProjectsPageProps) {
@@ -124,6 +134,7 @@ export default function ProjectsPage({ workspaceId }: ProjectsPageProps) {
             key={project.id}
             title={project.name}
             description={project.description || getProjectCountSummary(project)}
+            badges={<RelationshipBadgeRow items={getProjectRelationshipItems(project)} />}
             meta={(
               <>
                 <span>Updated {formatUpdatedTime(project.updatedAt, now)}</span>

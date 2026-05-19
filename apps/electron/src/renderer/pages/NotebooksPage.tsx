@@ -1,8 +1,9 @@
 import * as React from 'react'
-import { BookOpen, Layers, ListTodo, Loader2, Search, SquarePen, Trash2 } from 'lucide-react'
+import { BookOpen, Box, FileText, GitBranch, Layers, ListTodo, Loader2, Search, SquarePen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { EntityCollectionPage } from '@/components/entity/EntityCollectionPage'
 import { EntityListCard } from '@/components/entity/EntityListCard'
+import { RelationshipBadgeRow } from '@/components/entity/RelationshipBadgeRow'
 import { Button } from '@/components/ui/button'
 import { WorkflowActions } from '@/components/workflow-actions'
 import { useAppShellContext } from '@/context/AppShellContext'
@@ -25,6 +26,15 @@ function getNotebookSummary(notebook: NotebookIndexEntry): string {
     notebook.linkCounts.decisionCount > 0 ? `${notebook.linkCounts.decisionCount} decisions` : null,
   ].filter(Boolean)
   return parts.length > 0 ? parts.join(' · ') : 'Curated durable collection'
+}
+
+function getNotebookRelationshipItems(notebook: NotebookIndexEntry) {
+  return [
+    { label: 'Sections', count: notebook.sectionCount, icon: Layers },
+    { label: 'Docs', count: notebook.linkCounts.docCount, icon: FileText },
+    { label: 'Outputs', count: notebook.linkCounts.outputCount, icon: Box },
+    { label: 'Decisions', count: notebook.linkCounts.decisionCount, icon: GitBranch },
+  ]
 }
 
 export default function NotebooksPage({ workspaceId }: NotebooksPageProps) {
@@ -125,6 +135,7 @@ export default function NotebooksPage({ workspaceId }: NotebooksPageProps) {
             key={notebook.id}
             title={notebook.title}
             description={notebook.description || getNotebookSummary(notebook)}
+            badges={<RelationshipBadgeRow items={getNotebookRelationshipItems(notebook)} emptyLabel="Curated durable workspace collection" />}
             meta={(
               <>
                 <span>Updated {formatUpdatedTime(notebook.updatedAt, now)}</span>

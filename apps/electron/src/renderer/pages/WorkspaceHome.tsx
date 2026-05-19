@@ -316,7 +316,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
             <section className="max-w-[360px] text-center">
               <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Open or create a workspace to begin.</h1>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Workspace Home will show chats, docs, search, and available context once a workspace is active.
+                Workspace Home will surface recent chats, saved work, search, and available context once a workspace is active.
               </p>
             </section>
           </main>
@@ -353,7 +353,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Workspace</p>
                 <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.03em] text-foreground sm:text-[40px]">{workspaceName}</h1>
                 <p className="mt-4 max-w-[680px] text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                  Pick up active work, reopen recent artifacts, and move across chats, docs, outputs, decisions, notebooks, and work items without digging through every surface.
+                  Pick up active work, reopen recent artifacts, and move across chats, docs, outputs, decisions, notebooks, and work items without reconstructing the workspace from scratch.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -402,7 +402,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Resume</p>
-                      <p className="mt-1 text-sm text-muted-foreground">The next useful places to continue work.</p>
+                      <p className="mt-1 text-sm text-muted-foreground">The strongest places to continue work right now.</p>
                     </div>
                   </div>
 
@@ -446,7 +446,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                 <aside className="rounded-[24px] border border-border/40 bg-foreground/[0.02] p-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Workspace signals</p>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">A compact read on what is active here now.</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">A compact read on what is active, linked, and reusable here now.</p>
                   </div>
 
                   <div className="mt-4 grid gap-2">

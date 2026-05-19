@@ -5,6 +5,7 @@ import { BookOpen, Box } from 'lucide-react'
 import { EntityListCard } from '../EntityListCard'
 import { EntityEmptyState, EntityLoadingState, EntityNotFoundState } from '../EntityPageState'
 import { LinkedCountGrid } from '../LinkedCountGrid'
+import { RelationshipBadgeRow } from '../RelationshipBadgeRow'
 
 describe('entity primitives', () => {
   it('renders a keyboard-accessible list card shell', () => {
@@ -12,6 +13,7 @@ describe('entity primitives', () => {
       <EntityListCard
         title="Notebook"
         description="Curated durable collection"
+        badges={<RelationshipBadgeRow items={[{ label: 'Docs', count: 2, icon: BookOpen }]} />}
         meta={<span>Updated 2 hours ago</span>}
         icon={<BookOpen className="h-4 w-4" />}
         trailing={<span>Actions</span>}
@@ -22,6 +24,7 @@ describe('entity primitives', () => {
     expect(markup).toContain('role="button"')
     expect(markup).toContain('Notebook')
     expect(markup).toContain('Curated durable collection')
+    expect(markup).toContain('Docs')
     expect(markup).toContain('Actions')
   })
 

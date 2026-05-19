@@ -165,7 +165,7 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
           <section className="mb-6">
             <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Library</h1>
             <p className="mt-2 max-w-[680px] text-sm leading-6 text-muted-foreground">
-              Durable workspace knowledge lives here across docs, outputs, decisions, and notebooks, without forcing Project or Notebook to be the hard parent of everything.
+              Durable workspace knowledge lives here across docs, outputs, decisions, and notebooks so saved work stays reusable without forcing everything into one project or notebook.
             </p>
           </section>
 
@@ -222,7 +222,7 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
                 <h2 className="text-sm font-medium text-foreground">No library items in this view</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {filter === 'all'
-                    ? 'Save docs, outputs, decisions, or notebooks to build durable workspace memory.'
+                    ? 'Save docs, outputs, decisions, or notebooks to build durable workspace memory you can reopen and reuse.'
                     : `No ${FILTER_LABELS[filter].toLowerCase()} match this filter yet.`}
                 </p>
                 {filter === 'all' ? (
