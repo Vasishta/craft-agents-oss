@@ -27,6 +27,7 @@ import {
 } from '@/lib/workitem-meta'
 import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
+import { RecommendedNextStep } from '@/components/recommended-next-step'
 import {
   useCreateWorkItem,
   useDeleteWorkItem,
@@ -419,6 +420,40 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
               Work items are durable tasks independent of chat sessions. Legacy session-status views remain below during the transition.
             </p>
           </section>
+
+          {(() => {
+            const openItems = workItems.filter((item) => item.status !== 'done')
+            if (openItems.length > 0) {
+              const priorityOrder: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
+              const topItem = [...openItems].sort((a, b) => {
+                const pa = a.priority ? (priorityOrder[a.priority] ?? 4) : 4
+                const pb = b.priority ? (priorityOrder[b.priority] ?? 4) : 4
+                return pa - pb
+              })[0]
+              return (
+                <RecommendedNextStep
+                  primaryAction={{
+                    label: topItem.title,
+                    onClick: () => navigate(routes.view.workItem(topItem.id)),
+                  }}
+                  secondaryAction={{
+                    icon: <SquarePen className="h-3.5 w-3.5" />,
+                    label: 'Start a new chat',
+                    onClick: () => { void openNewChat?.() },
+                  }}
+                />
+              )
+            }
+            return (
+              <RecommendedNextStep
+                primaryAction={{
+                  icon: <SquarePen className="h-3.5 w-3.5" />,
+                  label: 'Start a new chat',
+                  onClick: () => { void openNewChat?.() },
+                }}
+              />
+            )
+          })()}
 
           {!workspaceId ? (
             <section className="flex min-h-[280px] items-center justify-center text-center">

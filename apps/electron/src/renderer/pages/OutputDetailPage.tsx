@@ -194,11 +194,11 @@ export default function OutputDetailPage({ workspaceId, outputId }: OutputDetail
 
           {output && (
             <WorkflowActions
-              actions={[
-                { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
-                { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
-              ]}
-            />
+                actions={[
+                  { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
+                  { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
+                ]}
+              />
           )}
 
           {isLoading ? (

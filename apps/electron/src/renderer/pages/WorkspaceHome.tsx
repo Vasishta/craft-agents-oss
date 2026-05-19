@@ -20,6 +20,7 @@ import { navigate, routes } from '@/lib/navigate'
 import { getWorkspaceSessionMetas } from '@/lib/session-meta-selectors'
 import { buildWorkspaceHomeActivityFeed, buildWorkspaceHomeFocusItems, isSparseWorkspace, type WorkspaceHomeActivityItem, type WorkspaceHomeActivityKind } from '@/lib/workspace-home'
 import { LowContextActions } from '@/components/low-context-actions'
+import { RecommendedNextStep } from '@/components/recommended-next-step'
 import { cn } from '@/lib/utils'
 import type { Workspace } from '../../shared/types'
 
@@ -324,6 +325,8 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
     )
   }
 
+  const shouldRecommendQueue = activeWorkCount > 0
+
   return (
     <div className="flex h-full flex-col bg-background">
       <PanelHeader
@@ -334,6 +337,15 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
 
       <ScrollArea className="min-h-0 flex-1">
         <main className="mx-auto flex w-full max-w-[1040px] flex-col gap-6 px-5 py-7 sm:px-8">
+          <RecommendedNextStep
+            primaryAction={{
+              icon: shouldRecommendQueue ? <ListTodo className="h-3.5 w-3.5" /> : <SquarePen className="h-3.5 w-3.5" />,
+              label: shouldRecommendQueue ? 'Open Work Queue' : 'Start a new chat',
+              onClick: shouldRecommendQueue
+                ? () => navigate(routes.view.workQueue())
+                : () => { void openNewChat?.() },
+            }}
+          />
           <section className="relative overflow-hidden rounded-[28px] border border-border/45 bg-background px-6 py-6 sm:px-8">
             <div className="absolute inset-y-0 right-0 w-[42%] bg-[radial-gradient(circle_at_top_right,rgba(148,163,184,0.16),transparent_62%)]" aria-hidden="true" />
             <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.7fr)_320px]">

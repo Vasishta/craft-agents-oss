@@ -1,12 +1,13 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
-import { ArrowLeft, BookOpen, Box, BriefcaseBusiness, FileText, GitPullRequest, LayoutDashboard, Layers, ListTodo, Loader2, MessageSquareText, Trash2 } from 'lucide-react'
+import { ArrowLeft, BookOpen, Box, BriefcaseBusiness, FileText, GitPullRequest, LayoutDashboard, Layers, ListTodo, Loader2, MessageSquareText, SquarePen, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { EntityNotFoundState } from '@/components/entity/EntityPageState'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
+import { useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDecisionList } from '@/hooks/useDecisions'
 import { useNotebookList } from '@/hooks/useNotebooks'
@@ -14,6 +15,7 @@ import { useOutputList } from '@/hooks/useOutputs'
 import { usePageList } from '@/hooks/usePages'
 import { useDeleteProject, useProject } from '@/hooks/useProjects'
 import { useWorkItemList } from '@/hooks/useWorkItems'
+import { RecommendedNextStep } from '@/components/recommended-next-step'
 import { WorkflowActions } from '@/components/workflow-actions'
 import {
   buildProjectChatLink,
@@ -79,6 +81,7 @@ function LinkedResourceSection({
 
 export default function ProjectDetailPage({ workspaceId, projectId }: ProjectDetailPageProps) {
   const { leadingAction, rightSidebarButton } = usePanelChrome()
+  const { openNewChat } = useAppShellContext()
   const { project, isLoading } = useProject(workspaceId, projectId)
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const { pages } = usePageList(workspaceId)
@@ -149,13 +152,41 @@ export default function ProjectDetailPage({ workspaceId, projectId }: ProjectDet
           </Button>
 
           {project && (
-            <WorkflowActions
+            <>
+              {project.links.workItemIds.length > 0 ? (
+                <RecommendedNextStep
+                  primaryAction={{
+                    icon: <ListTodo className="h-3.5 w-3.5" />,
+                    label: 'Open Work Queue',
+                    onClick: () => navigate(routes.view.workQueue()),
+                  }}
+                  secondaryAction={{
+                    icon: <SquarePen className="h-3.5 w-3.5" />,
+                    label: 'Start a new chat',
+                    onClick: () => { void openNewChat?.() },
+                  }}
+                />
+              ) : (
+                <RecommendedNextStep
+                  primaryAction={{
+                    icon: <SquarePen className="h-3.5 w-3.5" />,
+                    label: 'Start a new chat',
+                    onClick: () => { void openNewChat?.() },
+                  }}
+                  secondaryAction={{
+                    icon: <ListTodo className="h-3.5 w-3.5" />,
+                    label: 'Open Work Queue',
+                    onClick: () => navigate(routes.view.workQueue()),
+                  }}
+                />
+              )}
+              <WorkflowActions
               actions={[
                 { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
                 { icon: <BriefcaseBusiness className="h-4 w-4" />, label: 'Open Projects', onClick: () => navigate(routes.view.projects()) },
-                { icon: <ListTodo className="h-4 w-4" />, label: 'Open Work Queue', onClick: () => navigate(routes.view.workQueue()) },
               ]}
             />
+            </>
           )}
 
           {isLoading ? (

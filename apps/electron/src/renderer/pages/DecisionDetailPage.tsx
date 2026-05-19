@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeft, BookOpen, Box, FileText, GitBranch, LayoutDashboard, Layers, Loader2, MessageSquareText, Pencil, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, Box, FileText, GitBranch, LayoutDashboard, Layers, ListTodo, Loader2, MessageSquareText, Pencil, Search, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { LinkedCountGrid } from '@/components/entity/LinkedCountGrid'
@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDecision, useDeleteDecision, useUpdateDecision } from '@/hooks/useDecisions'
 import { navigate, routes } from '@/lib/navigate'
+import { RecommendedNextStep } from '@/components/recommended-next-step'
 import { WorkflowActions } from '@/components/workflow-actions'
 import type { DecisionDocument, DecisionStatus } from '../../shared/types'
 
@@ -182,15 +183,40 @@ export default function DecisionDetailPage({ workspaceId, decisionId }: Decision
           </Button>
 
           {decision && (
-            <WorkflowActions
+            <>
+              {decision.links.sessionIds.length > 0 ? (
+                <RecommendedNextStep
+                  primaryAction={{
+                    icon: <MessageSquareText className="h-3.5 w-3.5" />,
+                    label: 'Open chat',
+                    onClick: () => navigate(routes.view.allSessions(decision.links.sessionIds[0])),
+                  }}
+                  secondaryAction={{
+                    icon: <Search className="h-3.5 w-3.5" />,
+                    label: 'Open Library',
+                    onClick: () => navigate(routes.view.library()),
+                  }}
+                />
+              ) : (
+                <RecommendedNextStep
+                  primaryAction={{
+                    icon: <ListTodo className="h-3.5 w-3.5" />,
+                    label: 'Open Work Queue',
+                    onClick: () => navigate(routes.view.workQueue()),
+                  }}
+                  secondaryAction={{
+                    icon: <LayoutDashboard className="h-3.5 w-3.5" />,
+                    label: 'Go to Workspace Home',
+                    onClick: () => navigate(routes.view.home()),
+                  }}
+                />
+              )}
+              <WorkflowActions
               actions={[
                 { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
-                { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
-                ...(decision.links.sessionIds.length > 0
-                  ? [{ icon: <MessageSquareText className="h-4 w-4" />, label: 'Open chat' as const, onClick: () => navigate(routes.view.allSessions(decision.links.sessionIds[0])) }]
-                  : []),
               ]}
             />
+            </>
           )}
 
           {isLoading ? (

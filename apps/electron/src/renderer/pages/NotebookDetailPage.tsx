@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeft, BookOpen, Box, FileText, GitBranch, LayoutDashboard, Layers, Loader2, MessageSquareText, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, Box, FileText, GitBranch, LayoutDashboard, Layers, Loader2, MessageSquareText, Pencil, Plus, Search, SquarePen, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { LinkedCountGrid } from '@/components/entity/LinkedCountGrid'
@@ -10,9 +10,11 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteNotebook, useNotebook, useUpdateNotebook } from '@/hooks/useNotebooks'
 import { navigate, routes } from '@/lib/navigate'
+import { RecommendedNextStep } from '@/components/recommended-next-step'
 import { WorkflowActions } from '@/components/workflow-actions'
 import type { NotebookSection, NotebookStatus } from '../../shared/types'
 
@@ -23,6 +25,7 @@ interface NotebookDetailPageProps {
 
 export default function NotebookDetailPage({ workspaceId, notebookId }: NotebookDetailPageProps) {
   const { leadingAction, rightSidebarButton } = usePanelChrome()
+  const { openNewChat } = useAppShellContext()
   const { notebook, isLoading } = useNotebook(workspaceId, notebookId)
   const deleteNotebook = useDeleteNotebook(workspaceId)
   const updateNotebook = useUpdateNotebook(workspaceId)
@@ -222,15 +225,49 @@ export default function NotebookDetailPage({ workspaceId, notebookId }: Notebook
           </Button>
 
           {notebook && (
-            <WorkflowActions
+            <>
+              {(() => {
+                const hasArtifacts =
+                  notebook.links.docIds.length +
+                  notebook.links.decisionIds.length +
+                  notebook.links.outputIds.length > 0
+                return hasArtifacts ? (
+                  <RecommendedNextStep
+                    primaryAction={{
+                      icon: <Search className="h-3.5 w-3.5" />,
+                      label: 'Open Library',
+                      onClick: () => navigate(routes.view.library()),
+                    }}
+                    secondaryAction={{
+                      icon: <SquarePen className="h-3.5 w-3.5" />,
+                      label: 'Start a new chat',
+                      onClick: () => { void openNewChat?.() },
+                    }}
+                  />
+                ) : (
+                  <RecommendedNextStep
+                    primaryAction={{
+                      icon: <SquarePen className="h-3.5 w-3.5" />,
+                      label: 'Start a new chat',
+                      onClick: () => { void openNewChat?.() },
+                    }}
+                    secondaryAction={{
+                      icon: <Search className="h-3.5 w-3.5" />,
+                      label: 'Open Library',
+                      onClick: () => navigate(routes.view.library()),
+                    }}
+                  />
+                )
+              })()}
+              <WorkflowActions
               actions={[
                 { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
-                { icon: <Search className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
                 ...(notebook.links.sessionIds.length > 0
                   ? [{ icon: <MessageSquareText className="h-4 w-4" />, label: 'Open chat' as const, onClick: () => navigate(routes.view.allSessions(notebook.links.sessionIds[0])) }]
                   : []),
               ]}
             />
+            </>
           )}
 
           {isLoading ? (
