@@ -1,11 +1,12 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArrowLeft, Flag, Inbox, LayoutDashboard, Loader2, Plus, Search, SquarePen, Trash2 } from 'lucide-react'
+import { Archive, ArrowLeft, Box, FileText, Flag, Inbox, LayoutDashboard, Loader2, MessageSquareText, Plus, Search, SquarePen, Trash2 } from 'lucide-react'
 import { LowContextActions } from '@/components/low-context-actions'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { EntityNotFoundState } from '@/components/entity/EntityPageState'
+import { RelationshipBadgeRow } from '@/components/entity/RelationshipBadgeRow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -75,6 +76,14 @@ function QueueRow({ icon, title, description, count, onClick }: QueueRowProps) {
       </span>
     </button>
   )
+}
+
+function getWorkItemRelationshipItems(workItem: WorkItemIndexEntry) {
+  return [
+    { label: 'Chats', count: workItem.linkCounts.sessionCount, icon: MessageSquareText },
+    { label: 'Docs', count: workItem.linkCounts.docCount, icon: FileText },
+    { label: 'Outputs', count: workItem.linkCounts.outputCount, icon: Box },
+  ]
 }
 
 function getWorkItemTypeLabel(type: WorkItemType | undefined): string {
@@ -619,8 +628,8 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
                         onStatusChange={(status) => { void handleStatusChange(workItem.id, status) }}
                         onDelete={() => { void handleDelete(workItem) }}
                       />
-                      <div className="mt-3 text-xs text-muted-foreground">
-                        {getWorkItemLinkSummary(workItem)}
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <RelationshipBadgeRow items={getWorkItemRelationshipItems(workItem)} emptyLabel="No linked objects yet" />
                       </div>
                     </div>
                   ))

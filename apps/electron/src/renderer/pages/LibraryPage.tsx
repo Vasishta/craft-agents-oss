@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { BookOpen, Box, FileText, GitBranch, ListTodo, Loader2, SquarePen } from 'lucide-react'
+import { BookOpen, Box, FileText, GitBranch, Layers, ListTodo, Loader2, SquarePen } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { RelationshipBadgeRow } from '@/components/entity/RelationshipBadgeRow'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WorkflowActions } from '@/components/workflow-actions'
@@ -21,6 +22,7 @@ import {
 } from '@/lib/library-meta'
 import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
+import type { DecisionIndexEntry, NotebookIndexEntry, PageListEntry } from '../../shared/types'
 
 interface LibraryPageProps {
   workspaceId: string
@@ -108,6 +110,43 @@ function getItemIcon(kind: LibraryItem['kind']) {
   }
 }
 
+function getLibraryItemRelationships(
+  item: LibraryItem,
+  pageLookup: Map<string, PageListEntry>,
+  decisionLookup: Map<string, DecisionIndexEntry>,
+  notebookLookup: Map<string, NotebookIndexEntry>,
+) {
+  switch (item.kind) {
+    case 'doc': {
+      const page = pageLookup.get(item.id)
+      if (!page || page.outputIdCount === 0) return []
+      return [{ label: 'Outputs', count: page.outputIdCount, icon: Box }]
+    }
+    case 'decision': {
+      const decision = decisionLookup.get(item.id)
+      if (!decision) return []
+      return [
+        { label: 'Projects', count: decision.linkCounts.projectCount, icon: Layers },
+        { label: 'Docs', count: decision.linkCounts.docCount, icon: FileText },
+        { label: 'Outputs', count: decision.linkCounts.outputCount, icon: Box },
+        { label: 'Notebooks', count: decision.linkCounts.notebookCount, icon: BookOpen },
+      ]
+    }
+    case 'notebook': {
+      const notebook = notebookLookup.get(item.id)
+      if (!notebook) return []
+      return [
+        { label: 'Sections', count: notebook.sectionCount, icon: Layers },
+        { label: 'Docs', count: notebook.linkCounts.docCount, icon: FileText },
+        { label: 'Outputs', count: notebook.linkCounts.outputCount, icon: Box },
+        { label: 'Decisions', count: notebook.linkCounts.decisionCount, icon: GitBranch },
+      ]
+    }
+    default:
+      return []
+  }
+}
+
 function openLibraryItem(item: LibraryItem) {
   switch (item.kind) {
     case 'doc':
@@ -144,6 +183,11 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
   const counts = React.useMemo(() => buildLibraryCounts(items), [items])
   const filteredItems = React.useMemo(() => filterLibraryItems(items, filter), [filter, items])
   const isLoading = pagesLoading || outputsLoading || decisionsLoading || notebooksLoading
+
+  // Build lookup maps for relationship badges from the raw data
+  const pageLookup = React.useMemo(() => new Map(pages.map((p) => [p.id, p])), [pages])
+  const decisionLookup = React.useMemo(() => new Map(decisions.map((d) => [d.id, d])), [decisions])
+  const notebookLookup = React.useMemo(() => new Map(notebooks.map((n) => [n.id, n])), [notebooks])
 
   const hasItems = items.length > 0
 
@@ -256,41 +300,49 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
                     ]}
                   />
                 ) : null}
-                {filteredItems.map((item) => (
-                <div
-                  key={`${item.kind}:${item.id}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openLibraryItem(item)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      openLibraryItem(item)
-                    }
-                  }}
-                  className="group grid min-h-[92px] cursor-pointer grid-cols-[1fr_auto] gap-4 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <span className="flex min-w-0 gap-3">
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
-                      {getItemIcon(item.kind)}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-foreground">{item.title}</span>
-                      <span className="mt-1.5 line-clamp-2 block text-sm leading-5 text-muted-foreground">{item.description}</span>
-                      <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <span>Updated {formatUpdatedTime(item.updatedAt, now)}</span>
-                        <span>{item.metaLabel}</span>
-                        <span>{item.provenance}</span>
+                {filteredItems.map((item) => {
+                  const badgeItems = getLibraryItemRelationships(item, pageLookup, decisionLookup, notebookLookup)
+                  return (
+                  <div
+                    key={`${item.kind}:${item.id}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openLibraryItem(item)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        openLibraryItem(item)
+                      }
+                    }}
+                    className="group grid min-h-[92px] cursor-pointer grid-cols-[1fr_auto] gap-4 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <span className="flex min-w-0 gap-3">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
+                        {getItemIcon(item.kind)}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-foreground">{item.title}</span>
+                        <span className="mt-1.5 line-clamp-2 block text-sm leading-5 text-muted-foreground">{item.description}</span>
+                        {badgeItems.length > 0 && (
+                          <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                            <RelationshipBadgeRow items={badgeItems} />
+                          </span>
+                        )}
+                        <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span>Updated {formatUpdatedTime(item.updatedAt, now)}</span>
+                          <span>{item.metaLabel}</span>
+                          <span>{item.provenance}</span>
+                        </span>
                       </span>
                     </span>
-                  </span>
-                  <span className="flex items-start">
-                    <span className="rounded-[4px] border border-border/55 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      {formatKindLabel(item.kind)}
+                    <span className="flex items-start">
+                      <span className="rounded-[4px] border border-border/55 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {formatKindLabel(item.kind)}
+                      </span>
                     </span>
-                  </span>
-                </div>
-              ))}
+                  </div>
+                  )}
+              )}
               </>
             )}
           </section>

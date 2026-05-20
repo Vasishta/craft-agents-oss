@@ -67,14 +67,17 @@ export function formatKindLabel(kind: LibraryItemKind): string {
 
 function normalizePageItem(page: PageListEntry): LibraryItem {
   const title = page.title?.trim() || 'Untitled Doc'
-  const outputSummary = page.outputIdCount > 0 ? `${page.outputIdCount} linked outputs` : 'Standalone doc'
   return {
     id: page.id,
     kind: 'doc',
     title,
     updatedAt: page.updatedAt,
     createdAt: page.createdAt,
-    description: outputSummary,
+    description: page.outputIdCount > 0
+      ? 'Doc created from saved output'
+      : page.notebookId
+        ? 'Notebook doc'
+        : 'Workspace doc',
     metaLabel: 'Doc',
     provenance: getPageProvenance(page),
   }
@@ -104,12 +107,7 @@ function normalizeDecisionItem(decision: DecisionIndexEntry): LibraryItem {
     title: decision.title,
     updatedAt: decision.updatedAt,
     createdAt: decision.createdAt,
-    description: buildLinkSummary([
-      countLabel(decision.linkCounts.projectCount, 'project'),
-      countLabel(decision.linkCounts.docCount, 'doc'),
-      countLabel(decision.linkCounts.outputCount, 'output'),
-      countLabel(decision.linkCounts.notebookCount, 'notebook'),
-    ], 'No linked durable objects'),
+    description: 'Durable product or architecture decision',
     metaLabel: snakeToTitleCase(decision.status),
     provenance: decision.linkCounts.outputCount > 0
       ? 'Created from output or linked durable work'
@@ -126,12 +124,7 @@ function normalizeNotebookItem(notebook: NotebookIndexEntry): LibraryItem {
     title: notebook.title,
     updatedAt: notebook.updatedAt,
     createdAt: notebook.createdAt,
-    description: notebook.description || buildLinkSummary([
-      countLabel(notebook.sectionCount, 'section'),
-      countLabel(notebook.linkCounts.docCount, 'doc'),
-      countLabel(notebook.linkCounts.outputCount, 'output'),
-      countLabel(notebook.linkCounts.decisionCount, 'decision'),
-    ], 'Curated durable workspace collection'),
+    description: notebook.description || 'Curated collection of related workspace artifacts',
     metaLabel: snakeToTitleCase(notebook.status),
     provenance: notebook.projectIds.length > 0
       ? 'Linked project notebook'
@@ -150,15 +143,6 @@ function getPageProvenance(page: PageListEntry): string {
     return 'Linked notebook doc'
   }
   return 'Saved directly in the workspace'
-}
-
-function countLabel(count: number, label: string): string | null {
-  return count > 0 ? `${count} ${label}${count === 1 ? '' : 's'}` : null
-}
-
-function buildLinkSummary(parts: Array<string | null>, fallback: string): string {
-  const filtered = parts.filter((part): part is string => Boolean(part))
-  return filtered.length > 0 ? filtered.join(' · ') : fallback
 }
 
 function snakeToTitleCase(value: string): string {
