@@ -257,6 +257,11 @@
 }
 
 /* Basic table parity for markdown tables parsed by TipTap extensions. */
+.tiptap-editor .tiptap-prose .tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .tiptap-editor .tiptap-prose table {
   width: 100%;
   border-collapse: separate;
@@ -290,6 +295,10 @@
   color: color-mix(in oklch, var(--foreground) 80%, transparent);
   font-weight: 600;
   text-align: left;
+}
+
+.tiptap-editor .tiptap-prose .selectedCell {
+  background: color-mix(in oklch, var(--accent) 8%, transparent);
 }
 
 /* Official TipTap image loading placeholder (no custom node-view) */

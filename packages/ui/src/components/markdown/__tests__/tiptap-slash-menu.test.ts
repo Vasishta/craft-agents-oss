@@ -39,6 +39,10 @@ function createMockEditor() {
       calls.push('setHorizontalRule')
       return chainApi
     },
+    insertTable: ({ rows, cols, withHeaderRow }: { rows: number; cols: number; withHeaderRow: boolean }) => {
+      calls.push(`insertTable:${rows}x${cols}:header=${withHeaderRow}`)
+      return chainApi
+    },
     setCodeBlock: ({ language }: { language: string }) => {
       calls.push(`setCodeBlock:${language}`)
       return chainApi
@@ -74,6 +78,9 @@ function createMockEditor() {
         nodesBetween: () => {},
       },
     },
+    commands: {
+      insertTable: () => true,
+    },
     can: () => ({
       setCodeBlock: () => true,
     }),
@@ -100,6 +107,7 @@ describe('tiptap slash menu', () => {
     expect(filterSlashCommandItems(items, 'divider').some((item) => item.id === 'horizontal-rule')).toBe(true)
     expect(filterSlashCommandItems(items, 'flow').some((item) => item.id === 'mermaid-code-block')).toBe(true)
     expect(filterSlashCommandItems(items, 'checklist').some((item) => item.id === 'task-list')).toBe(true)
+    expect(filterSlashCommandItems(items, 'grid').some((item) => item.id === 'table')).toBe(true)
   })
 
   it('returns all items for empty query and includes icons', () => {
@@ -124,6 +132,10 @@ describe('tiptap slash menu', () => {
     code?.run(editor)
     expect(calls).toContain('insertContentAt:5:{"type":"codeBlock","attrs":{"language":"plaintext"},"content":[{"type":"text","text":" "}]}')
     expect(calls).toContain('setTextSelection:{"from":6,"to":6}')
+
+    const table = items.find((item) => item.id === 'table')
+    table?.run(editor, 5)
+    expect(calls).toContain('insertTable:3x3:header=true')
 
     const taskList = items.find((item) => item.id === 'task-list')
     taskList?.run(editor)

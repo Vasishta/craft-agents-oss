@@ -127,3 +127,12 @@ git diff --check
 Prefer short, durable planning documents over long transcripts. If a task becomes too big, split it before implementation rather than after the PR becomes hard to review.
 
 Do not create a repo-local `TASK-*` file for every GitHub issue. Add one only when the next implementation agent needs a durable, detailed handoff that should survive outside GitHub issue comments.
+
+Use `CURRENT-STATE.md` for the live execution snapshot, and keep this index focused on the stable path from epic to story to task. When a task is really a backlog bucket rather than active execution, link it here so it stays discoverable without pretending it is the current source of truth.
+
+Backlog references:
+
+```text
+TASK-009-docs-editor-table-polish-backlog.md
+  Docs/editor/table polish backlog and follow-up items.
+```

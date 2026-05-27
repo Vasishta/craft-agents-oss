@@ -38,19 +38,26 @@ docs/PRD-001-craft-agents-local-first-ai-workspace.md
   Product ambition, vocabulary, current reality, target shape, success criteria.
 
 docs/ARB-001-navigation-and-migration-roadmap.md
-  Navigation decisions, migration sequence, near/mid/long-term hierarchy.
+  Canonical architecture / navigation reasoning and migration sequence.
+  Update this when the product model or hierarchy changes.
 
 docs/WIREFRAMES-001-craft-agents-workspace-surfaces.md
   Markdown wireframes for workspace home, docs, outputs, search, projects, library, work queue.
+
+docs/planning/README.md
+  Planning index for epics, stories, and tasks. Use it for execution-oriented handoffs.
 
 docs/planning/EPIC-001-durable-knowledge-workspace.md
   First major product epic that translates the PRD/ARB into stories and milestone tasks.
 
 docs/planning/CURRENT-STATE.md
-  Short execution snapshot that reconciles durable docs with the live GitHub issue queue.
+  Live execution snapshot that reconciles durable docs with the GitHub issue queue.
 
 docs/planning/TASK-008-output-polish-and-provenance-hardening.md
   Historical task handoff for Output polish/provenance; GitHub issue #8 is the execution source.
+
+docs/planning/TASK-009-docs-editor-table-polish-backlog.md
+  Backlog for docs/editor/table polish work that should stay visible alongside active planning.
 ```
 
 ## Folder policy
@@ -110,3 +117,12 @@ These markdown docs are the durable product memory. GitHub Issues are the live e
 Do not duplicate every tiny issue as a markdown file. Write markdown for durable reasoning, epic/story/task definitions, and complex implementation handoffs that need to survive context switches.
 
 When a GitHub issue and a markdown planning document disagree, treat the issue as the fresher execution state and update the markdown docs with a short reconciliation note instead of rewriting the north-star product model.
+
+In practice:
+
+```text
+README.md            = docs landing page and map
+ARB-*                = canonical architecture/navigation reasoning
+planning/README.md   = execution index for epics/stories/tasks
+CURRENT-STATE.md     = live bridge to GitHub issue status
+```

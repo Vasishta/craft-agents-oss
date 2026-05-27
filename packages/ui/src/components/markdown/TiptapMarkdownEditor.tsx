@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
+import { TableKit } from '@tiptap/extension-table'
 import TaskItem from './extensions/AnimatedTaskItem'
 import { Mathematics } from '@tiptap/extension-mathematics'
 import Image from '@tiptap/extension-image'
@@ -286,6 +287,11 @@ export function TiptapMarkdownEditor({
     if (useOfficialMarkdown) {
       return [
         ...base,
+        TableKit.configure({
+          table: {
+            renderWrapper: true,
+          },
+        }),
         Mathematics.configure({
           inlineOptions: {
             onClick: (_node, pos) => {

@@ -28,6 +28,7 @@ type SlashIconName =
   | 'quote'
   | 'text-quote'
   | 'minus'
+  | 'table'
   | 'code-xml'
   | 'square-code'
   | 'workflow'
@@ -92,6 +93,14 @@ const LUCIDE_ICON_NODES: Record<SlashIconName, Array<[string, Record<string, str
     ['path', { d: 'M3 12v7' }],
   ],
   minus: [['path', { d: 'M5 12h14' }]],
+  table: [
+    ['path', { d: 'M3 6h18' }],
+    ['path', { d: 'M3 12h18' }],
+    ['path', { d: 'M3 18h18' }],
+    ['path', { d: 'M8 6v12' }],
+    ['path', { d: 'M16 6v12' }],
+    ['rect', { x: '3', y: '4', width: '18', height: '16', rx: '2' }],
+  ],
   'code-xml': [
     ['path', { d: 'm18 16 4-4-4-4' }],
     ['path', { d: 'm6 8-4 4 4 4' }],
@@ -213,8 +222,18 @@ function insertCodeBlockWithPlaceholder(editor: Editor, insertPos?: number) {
   rememberCodeLanguage(editor, language)
 }
 
-export function createSlashCommandItems(_editor: Editor): SlashCommandItem[] {
-  return [
+function editorSupportsTables(editor: Editor): boolean {
+  return typeof (editor as Editor & { commands?: { insertTable?: unknown } }).commands?.insertTable === 'function'
+}
+
+function insertTableWithDefaults(editor: Editor, insertPos?: number) {
+  const chain = editor.chain().focus()
+  if (typeof insertPos === 'number') chain.setTextSelection(insertPos)
+  chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+}
+
+export function createSlashCommandItems(editor: Editor): SlashCommandItem[] {
+  const items: SlashCommandItem[] = [
     {
       id: 'paragraph',
       title: 'Text',
@@ -316,6 +335,21 @@ export function createSlashCommandItems(_editor: Editor): SlashCommandItem[] {
         e.chain().focus().setHorizontalRule().run()
       },
     },
+    ...(editorSupportsTables(editor)
+      ? [
+          {
+            id: 'table',
+            title: 'Table',
+            description: 'Insert a markdown table with headers',
+            icon: 'table' as const,
+            group: 'Blocks' as const,
+            aliases: ['table', 'grid', 'spreadsheet'],
+            run: (e: Editor, insertPos?: number) => {
+              insertTableWithDefaults(e, insertPos)
+            },
+          },
+        ]
+      : []),
     {
       id: 'code-block',
       title: 'Code Block',
@@ -350,6 +384,8 @@ export function createSlashCommandItems(_editor: Editor): SlashCommandItem[] {
       },
     },
   ]
+
+  return items
 }
 
 export function filterSlashCommandItems(items: SlashCommandItem[], query: string): SlashCommandItem[] {

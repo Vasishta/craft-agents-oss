@@ -2,6 +2,7 @@ import { describe, it, expect } from 'bun:test'
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { Mathematics } from '@tiptap/extension-mathematics'
+import { TableKit } from '@tiptap/extension-table'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
@@ -158,6 +159,48 @@ describe('official markdown + mathematics foundation', () => {
     expect(md).toContain('- [ ] Draft release notes')
     expect(md).toContain('- [x] Ship task list slash command')
     expect(md).toContain('  - [ ] Add follow-up docs')
+
+    editor.destroy()
+  })
+
+  it('round-trips markdown tables in official markdown mode', () => {
+    const source = [
+      '| Surface | Status | Notes |',
+      '| --- | --- | --- |',
+      '| Docs | Ready | Durable markdown planning |',
+      '| Editor | In Progress | TipTap table authoring |',
+      '| Tables | Next | Responsive polish |',
+    ].join('\n')
+
+    const editor = new Editor({
+      extensions: [
+        StarterKit,
+        TableKit.configure({
+          table: {
+            renderWrapper: true,
+          },
+        }),
+        Markdown.configure({
+          markedOptions: {
+            gfm: true,
+          },
+        }),
+      ],
+      content: source,
+      contentType: 'markdown',
+    })
+
+    const json = editor.getJSON()
+    const md = editor.getMarkdown()
+    const jsonText = JSON.stringify(json)
+
+    expect(jsonText).toContain('"type":"table"')
+    expect(jsonText).toContain('"type":"tableRow"')
+    expect(jsonText).toContain('"type":"tableHeader"')
+    expect(jsonText).toContain('"type":"tableCell"')
+    expect(md).toContain('| Surface | Status')
+    expect(md).toContain('| Docs    | Ready')
+    expect(md).toContain('| Tables  | Next')
 
     editor.destroy()
   })
