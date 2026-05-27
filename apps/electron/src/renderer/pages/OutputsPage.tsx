@@ -8,29 +8,13 @@ import { WorkflowActions } from '@/components/workflow-actions'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
 import { useDeleteOutput, useOutputList } from '@/hooks/useOutputs'
+import { formatUpdatedTime } from '@/lib/format-updated-time'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
 import type { OutputIndexEntry } from '../../shared/types'
 
 interface OutputsPageProps {
   workspaceId: string
-}
-
-function formatUpdatedTime(timestamp: number): string {
-  const diffMs = timestamp - Date.now()
-  const absMs = Math.abs(diffMs)
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
-
-  if (absMs < 60_000) return 'just now'
-  if (absMs < 3_600_000) return rtf.format(Math.round(diffMs / 60_000), 'minute')
-  if (absMs < 86_400_000) return rtf.format(Math.round(diffMs / 3_600_000), 'hour')
-  if (absMs < 604_800_000) return rtf.format(Math.round(diffMs / 86_400_000), 'day')
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: new Date(timestamp).getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
-  }).format(timestamp)
 }
 
 function formatKind(kind: OutputIndexEntry['kind']): string {
@@ -95,7 +79,7 @@ export default function OutputsPage({ workspaceId }: OutputsPageProps) {
                 </div>
                 <h1 className="text-[22px] font-semibold tracking-normal text-foreground">No outputs yet</h1>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Save useful assistant responses from chat so they can be reviewed or promoted to docs.
+                  Save useful assistant responses from chat so they can be reviewed, linked into follow-on work, or promoted into docs.
                 </p>
                 <div className="mt-5 flex flex-col items-center gap-2">
                   <Button
@@ -162,7 +146,7 @@ export default function OutputsPage({ workspaceId }: OutputsPageProps) {
                         <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           <span>Updated {formatUpdatedTime(output.updatedAt)}</span>
                           <span>{formatKind(output.kind)}</span>
-                          <span>{output.status}</span>
+                          {output.status ? <span>{output.status}</span> : null}
                           <span className="inline-flex items-center gap-1">
                             <ProvenanceIcon className="h-3.5 w-3.5" />
                             {provenance.label}

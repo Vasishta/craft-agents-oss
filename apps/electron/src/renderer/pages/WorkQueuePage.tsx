@@ -357,7 +357,7 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
         />
 
         <ScrollArea className="min-h-0 flex-1">
-          <main className="mx-auto flex w-full max-w-[920px] flex-col px-5 py-7 sm:px-8">
+          <main className="mx-auto flex w-full max-w-[980px] flex-col px-5 py-7 sm:px-8">
             <Button
               type="button"
               variant="ghost"
@@ -422,11 +422,11 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
       />
 
       <ScrollArea className="min-h-0 flex-1">
-        <main className="mx-auto flex w-full max-w-[920px] flex-col px-5 py-7 sm:px-8">
-          <section className="mb-5">
+        <main className="mx-auto flex w-full max-w-[980px] flex-col px-5 py-7 sm:px-8">
+          <section className="mb-6">
             <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Work Queue</h1>
             <p className="mt-2 max-w-[640px] text-sm leading-6 text-muted-foreground">
-              Work items are durable tasks independent of chat sessions. Legacy session-status views remain below during the transition.
+              Work items are durable tasks independent of chat sessions. Session views below let you browse conversations alongside work items.
             </p>
           </section>
 
@@ -599,7 +599,7 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
                     <h2 className="text-sm font-medium text-foreground">No work items in this view</h2>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       {filter === 'all'
-                        ? 'No queued work yet. Start a new chat to create work, revisit Home to orient, or browse the Library for existing context.'
+                        ? 'No queued work yet. Start a new chat to create work, open Home for a quick workspace overview, or browse the Library for saved context.'
                         : `Move an item into ${WORK_ITEM_STATUS_LABELS[filter]} or switch filters.`}
                     </p>
                     {filter === 'all' && (
@@ -610,7 +610,7 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
                             actions={[
                               { icon: <SquarePen className="h-4 w-4" />, label: "Start a new chat", onClick: () => { void openNewChat?.() } },
                               { icon: <LayoutDashboard className="h-4 w-4" />, label: "Go to Workspace Home", onClick: () => navigate(routes.view.home()) },
-                              { icon: <Search className="h-4 w-4" />, label: "Open Library", onClick: () => navigate(routes.view.library()) },
+                              { icon: <FileText className="h-4 w-4" />, label: "Open Library", onClick: () => navigate(routes.view.library()) },
                             ]}
                           />
                         </div>
@@ -628,9 +628,16 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
                         onStatusChange={(status) => { void handleStatusChange(workItem.id, status) }}
                         onDelete={() => { void handleDelete(workItem) }}
                       />
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                        <RelationshipBadgeRow items={getWorkItemRelationshipItems(workItem)} emptyLabel="No linked objects yet" />
-                      </div>
+                      {(() => {
+                        const relItems = getWorkItemRelationshipItems(workItem)
+                        const hasLinks = relItems.some((item) => item.count > 0)
+                        if (!hasLinks) return null
+                        return (
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                            <RelationshipBadgeRow items={relItems} />
+                          </div>
+                        )
+                      })()}
                     </div>
                   ))
                 )}
@@ -639,17 +646,17 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
               <Separator className="my-6" />
 
               <section className="mb-3">
-                <h2 className="text-sm font-medium text-foreground">Legacy session views</h2>
+                <h2 className="text-sm font-medium text-foreground">Session views</h2>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Session-status filters stay available while WorkItems replace status-as-task usage.
+                  Browse active sessions, flagged conversations, and archived history alongside work items.
                 </p>
               </section>
 
-              <section aria-label="Legacy session views" className="flex flex-col gap-2">
+              <section aria-label="Session views" className="flex flex-col gap-2">
                 <QueueRow
                   icon={<Inbox className="h-4 w-4" />}
                   title="All Sessions"
-                  description="Compatibility view for all active chat sessions."
+                  description="Browse all active chat sessions."
                   count={activeSessionMetas.length}
                   onClick={() => navigate(routes.view.allSessions())}
                 />
@@ -658,7 +665,7 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
                     key={status.id}
                     icon={status.icon}
                     title={t(`status.${status.id}`, status.label)}
-                    description="Legacy session-status filter."
+                    description="Filter sessions by status."
                     count={statusCounts[status.id] || 0}
                     onClick={() => navigate(routes.view.state(status.id))}
                   />
@@ -673,7 +680,7 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
                 <QueueRow
                   icon={<Archive className="h-4 w-4" />}
                   title="Archived"
-                  description="Archived sessions preserved during the migration."
+                  description="Review archived sessions."
                   count={archivedCount}
                   onClick={() => navigate(routes.view.archived())}
                 />

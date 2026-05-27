@@ -25,7 +25,7 @@ function getDecisionSummary(decision: DecisionIndexEntry): string {
     decision.linkCounts.outputCount > 0 ? `${decision.linkCounts.outputCount} outputs` : null,
     decision.linkCounts.notebookCount > 0 ? `${decision.linkCounts.notebookCount} notebooks` : null,
   ].filter(Boolean)
-  return parts.length > 0 ? parts.join(' · ') : 'No linked durable objects'
+  return parts.length > 0 ? parts.join(' · ') : 'Durable decision record'
 }
 
 function getDecisionRelationshipItems(decision: DecisionIndexEntry) {
@@ -97,7 +97,7 @@ export default function DecisionsPage({ workspaceId }: DecisionsPageProps) {
       onCreate={handleCreate}
       emptyIcon={<GitBranch className="h-5 w-5" />}
       emptyTitle="No decisions yet"
-      emptyDescription="Decisions capture durable architecture or product choices without forcing docs or projects to own them."
+      emptyDescription="Decisions capture durable product and architecture choices so the workspace can remember why a path was chosen."
       emptyActions={
         <>
           <Button
@@ -136,7 +136,7 @@ export default function DecisionsPage({ workspaceId }: DecisionsPageProps) {
             key={decision.id}
             title={decision.title}
             description={getDecisionSummary(decision)}
-            badges={<RelationshipBadgeRow items={getDecisionRelationshipItems(decision)} emptyLabel="No linked durable objects" />}
+            badges={<RelationshipBadgeRow items={getDecisionRelationshipItems(decision)} emptyLabel="Durable decision record" />}
             meta={(
               <>
                 <span>Updated {formatUpdatedTime(decision.updatedAt, now)}</span>

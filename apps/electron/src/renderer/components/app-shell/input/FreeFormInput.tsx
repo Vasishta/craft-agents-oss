@@ -594,6 +594,7 @@ export function FreeFormInput({
 
   const dragCounterRef = React.useRef(0)
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const bottomBarRef = React.useRef<HTMLDivElement>(null)
   const sourceButtonRef = React.useRef<HTMLButtonElement>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -1035,8 +1036,10 @@ export function FreeFormInput({
   React.useEffect(() => {
     if (!onHeightChange || !compactMode) return
     if (isProcessing) {
-      // Collapsed state - only bottom bar visible (~44px)
-      onHeightChange(44)
+      // Collapsed state - only bottom bar visible.
+      // Measure the bottom bar's current height dynamically via bottomBarRef to support responsive touch scaling.
+      const height = bottomBarRef.current?.getBoundingClientRect().height ?? 44
+      onHeightChange(height > 0 ? height : 44)
     }
     // When not processing, ResizeObserver will report the full height
   }, [compactMode, isProcessing, onHeightChange])
@@ -1707,7 +1710,10 @@ export function FreeFormInput({
           skills={skills}
           sources={sources}
           workspaceId={workspaceSlug}
-          className="pl-5 pr-4 pt-4 pb-3 overflow-y-auto min-h-[88px]"
+          className={cn(
+            "pl-5 pr-4 pt-4 pb-3 overflow-y-auto min-h-[88px]",
+            compactMode && "pl-3.5 pr-3.5 pt-2.5 pb-2 min-h-[40px] text-sm"
+          )}
           style={{ maxHeight: inputMaxHeight }}
           data-tutorial="chat-input"
           spellCheck={spellCheck}
@@ -1715,7 +1721,7 @@ export function FreeFormInput({
         )}
 
         {/* Bottom Row: Controls - wrapped in relative container for status slot overlay */}
-        <div className="relative">
+        <div ref={bottomBarRef} className="relative">
           {/* Status slot overlay - escape interrupt (highest priority), browser status, etc. */}
           <ToolbarStatusSlot
             showEscapeOverlay={isProcessing && showEscapeOverlay}
@@ -1949,8 +1955,8 @@ export function FreeFormInput({
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Right side: Model + Send - never shrink so they're always visible */}
-          <div className="flex items-center shrink-0">
+          {/* Right side: Model + Send - keep controls visible while letting labels collapse in narrow panels */}
+          <div className="flex min-w-0 items-center">
           {/* 5. Model/Connection Selector - Hidden in compact mode (EditPopover embedding) */}
           {!compactMode && (
           <DropdownMenu open={modelDropdownOpen} onOpenChange={setModelDropdownOpen}>
@@ -1960,20 +1966,21 @@ export function FreeFormInput({
                   <button
                     type="button"
                     className={cn(
-                      "input-toolbar-btn inline-flex items-center h-7 px-1.5 gap-0.5 text-[13px] shrink-0 rounded-[6px] hover:bg-foreground/5 transition-colors select-none",
+                      "input-toolbar-btn inline-flex h-7 max-w-full min-w-0 items-center gap-0.5 rounded-[6px] px-1.5 text-[13px] transition-colors select-none",
                       modelDropdownOpen && "bg-foreground/5",
+                      !modelDropdownOpen && "hover:bg-foreground/5",
                       connectionUnavailable && "text-destructive",
                     )}
                   >
                     {connectionUnavailable ? (
                       <>
                         <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                        {t('common.unavailable')}
+                        <span className="input-toolbar-btn-label truncate">{t('common.unavailable')}</span>
                       </>
                     ) : (
                       <>
                         {effectiveConnectionDetails && llmConnections.length > 1 && storage.get(storage.KEYS.showConnectionIcons, true) && <ConnectionIcon connection={effectiveConnectionDetails} size={14} showTooltip />}
-                        {currentModelDisplayName}
+                        <span className="input-toolbar-btn-label truncate">{currentModelDisplayName}</span>
                         {!connectionDefaultModel && <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />}
                       </>
                     )}

@@ -414,11 +414,11 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                     </div>
                   ) : (
                     <LowContextActions
-                      description="Start a chat or save work to make Home a real resume surface."
+                      description="Start a chat or save work to build up Home as a place to resume from wherever you left off."
                       actions={[
                         { icon: <SquarePen className="h-4 w-4" />, label: "Start a new chat", detail: "Ask the assistant to help with your work", onClick: () => openNewChat?.() },
                         { icon: <ListTodo className="h-4 w-4" />, label: "Open Work Queue", detail: "Review and manage durable work items", onClick: () => navigate(routes.view.workQueue()) },
-                        { icon: <FileText className="h-4 w-4" />, label: "Open Library", detail: "Browse saved docs, outputs, and decisions", onClick: () => navigate(routes.view.library()) },
+                        { icon: <FileText className="h-4 w-4" />, label: "Open Library", detail: "Browse saved docs, outputs, decisions, and notebooks", onClick: () => navigate(routes.view.library()) },
                       ]}
                     />
                   )}
@@ -436,7 +436,7 @@ export default function WorkspaceHome({ workspaceId }: WorkspaceHomeProps) {
                       framed={false}
                       actions={[
                         { icon: <SquarePen className="h-4 w-4" />, label: "Start a new chat", detail: "Ask the assistant to help with your work", onClick: () => openNewChat?.() },
-                        { icon: <FileText className="h-4 w-4" />, label: "Open Library", detail: "Browse saved docs, outputs, and decisions", onClick: () => navigate(routes.view.library()) },
+                        { icon: <FileText className="h-4 w-4" />, label: "Open Library", detail: "Browse saved docs, outputs, decisions, and notebooks", onClick: () => navigate(routes.view.library()) },
                         { icon: <ListTodo className="h-4 w-4" />, label: "Open Work Queue", detail: "Review and manage durable work items", onClick: () => navigate(routes.view.workQueue()) },
                       ]}
                     />

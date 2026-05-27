@@ -142,6 +142,137 @@ function session(id: string, overrides: Partial<SearchableSessionMeta> = {}): Se
   }
 }
 
+describe('scoring model: provenance tiebreaker beats recency on equal scores', () => {
+  it('ranks a well-connected older doc above a newer plain doc when both are title-matched with same rankWeight', () => {
+    const results = buildMixedSearchResults([
+      buildDocSearchResults(
+        [
+          page('plain_new', { title: 'Design system', updatedAt: 200 }),
+          page('linked_old', { title: 'Design system', updatedAt: 50, outputIdCount: 3, sourceSessionId: 'chat_1' }),
+        ],
+        {},
+        'design system',
+      ),
+    ])
+
+    // Both are title-matched. score = 0 + 200 = 200 for both (same rankWeight).
+    // linked_old has provenanceTiebreaker = 3 + 1 = 4.
+    // plain_new has provenanceTiebreaker = 0.
+    // linked_old should rank higher despite being much older.
+    expect(results.map((r) => r.id)).toEqual(['linked_old', 'plain_new'])
+  })
+
+  it('ranks a connected output above a plain output when both are content-matched with same score', () => {
+    const results = buildMixedSearchResults([
+      buildOutputSearchResults(
+        [
+          output('plain_out', { title: 'Other', updatedAt: 300, preview: 'design system components and patterns', sourceSessionId: undefined }),
+          output('linked_out', { title: 'Other', updatedAt: 100, preview: 'design system components and patterns', sourceSessionId: 'chat_1', promotedDocId: 'doc_1' }),
+        ],
+        {},
+        'design system',
+      ),
+    ])
+
+    // Both content-matched. score = 0 + 80 = 80 for both (same rankWeight since no rankWeight signals on content-matched simple outputs).
+    // linked_out has provenanceTiebreaker = 1 + 1 = 2.
+    // plain_out has provenanceTiebreaker = 0.
+    // linked_out should rank higher even though it's older.
+    expect(results.map((r) => r.id)).toEqual(['linked_out', 'plain_out'])
+  })
+
+  it('ranks a linked decision above a plain decision on equal title-match score', () => {
+    const results = buildMixedSearchResults([
+      buildDecisionSearchResults(
+        [
+          decision('plain_dec', { title: 'API choice', updatedAt: 200, linkCounts: { projectCount: 0, sessionCount: 0, docCount: 0, outputCount: 0, workItemCount: 0, sourceCount: 0, notebookCount: 0, supersedesDecisionCount: 0 } }),
+          decision('linked_dec', { title: 'API choice', updatedAt: 100, linkCounts: { projectCount: 2, sessionCount: 1, docCount: 3, outputCount: 0, workItemCount: 0, sourceCount: 0, notebookCount: 0, supersedesDecisionCount: 0 }, status: 'accepted' }),
+        ],
+        {},
+        'api choice',
+      ),
+    ])
+
+    // Both title-matched. linked_dec has higher rankWeight (provenance), so higher score.
+    // But even if rankWeight equal, tiebreaker would split them.
+    // linked_dec has provenanceTiebreaker = 2 + 1 + 3 = 6.
+    // This test ensures the primary score (with rankWeight) also prefers linked.
+    expect(results.map((r) => r.id)).toEqual(['linked_dec', 'plain_dec'])
+  })
+
+  it('does not let provenance tiebreaker override match-tier gaps', () => {
+    const results = buildMixedSearchResults([
+      buildDocSearchResults(
+        [
+          page('content_heavy', { title: 'Unrelated', updatedAt: 150, outputIdCount: 5, sourceSessionId: 'chat_1' }),
+          page('title_only', { title: 'Exact design match', updatedAt: 50 }),
+        ],
+        { content_heavy: 'design system architecture decisions and long discussion' },
+        'design',
+      ),
+    ])
+
+    // title_only: title-matched, score = 0 + 200 = 200.
+    // content_heavy: content-matched, score = 0 + 80 = 80.
+    // title_only wins regardless of content_heavy's high provenance tiebreaker.
+    expect(results.map((r) => r.id)).toEqual(['title_only', 'content_heavy'])
+  })
+
+  it('ranks a linked work item above another with same rankWeight but newer when tiebreaker is higher', () => {
+    const results = buildMixedSearchResults([
+      buildWorkItemSearchResults(
+        [
+          workItem('work_plain', { title: 'Refactor auth', updatedAt: 200, linkCounts: { sessionCount: 0, docCount: 0, outputCount: 0 }, priority: undefined }),
+          workItem('work_linked', { title: 'Refactor auth', updatedAt: 50, linkCounts: { sessionCount: 5, docCount: 2, outputCount: 0 }, priority: 'P1' }),
+        ],
+        'refactor auth',
+      ),
+    ])
+
+    // Both are title-matched. work_linked has higher rankWeight, so higher score.
+    expect(results.map((r) => r.id)).toEqual(['work_linked', 'work_plain'])
+  })
+
+  it('cross-type: a title-matched decision outranks a title-matched chat due to status-derived rankWeight', () => {
+    const results = buildMixedSearchResults([
+      buildChatSearchResults([
+        { id: 'chat_1', name: 'Design review', lastMessageAt: 300, preview: '' },
+      ], 'design review'),
+      buildDecisionSearchResults(
+        [
+          decision('decision_1', {
+            title: 'Design review',
+            updatedAt: 100,
+            linkCounts: { projectCount: 0, sessionCount: 0, docCount: 0, outputCount: 0, workItemCount: 0, sourceCount: 0, notebookCount: 0, supersedesDecisionCount: 0 },
+            status: 'accepted',
+          }),
+        ],
+        {},
+        'design review',
+      ),
+    ])
+
+    // Chat: score = 2 (baseline) + 200 = 202.
+    // Decision: score = 0 + 200 = 200 (no provenance signals, but status 'accepted' gives 12, so 12+200=212).
+    // Actually decision has status='accepted' which gives a rankWeight of 12. So score = 12 + 200 = 212.
+    // Decision outranks chat on score alone.
+    expect(results[0].id).toBe('decision_1')
+  })
+
+  it('uses recency as tertiary sort when score and provenance tiebreaker are equal', () => {
+    const results = buildDocSearchResults(
+      [
+        page('older', { title: 'Same title', updatedAt: 10 }),
+        page('newer', { title: 'Same title', updatedAt: 20 }),
+      ],
+      {},
+      'same title',
+    )
+
+    expect(results.map((r) => r.id)).toEqual(['newer', 'older'])
+  })
+})
+
 describe('search result builders', () => {
   it('returns representative normalized results for every supported object type', () => {
     const docResults = buildDocSearchResults(

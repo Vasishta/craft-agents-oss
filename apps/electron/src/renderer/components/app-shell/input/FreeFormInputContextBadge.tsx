@@ -96,12 +96,12 @@ export const FreeFormInputContextBadge = React.forwardRef<HTMLButtonElement, Fre
         {showLabel && (
           isExpanded ? (
             // Expanded: simple truncate, placeholder (no selection) gets 60% opacity
-            <span className={cn("truncate max-w-[120px] min-w-0 shrink", !hasSelection && "opacity-50")}>
+            <span className={cn("input-toolbar-btn-label truncate max-w-[120px] min-w-0 shrink", !hasSelection && "opacity-50")}>
               {label}
             </span>
           ) : (
             // Collapsed with selection: fading text with max width
-            <FadingText className="max-w-[140px] min-w-0 shrink" fadeWidth={20}>
+            <FadingText className="input-toolbar-btn-label max-w-[140px] min-w-0 shrink" fadeWidth={20}>
               {label}
             </FadingText>
           )

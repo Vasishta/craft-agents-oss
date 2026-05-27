@@ -1371,3 +1371,29 @@ html.dark[data-scenic] .fullscreen-overlay-background {
   min-height: 31px;
   padding: 6px 8px;
 }
+
+/* Input toolbar items: attach, task, workspace pill, model picker */
+.input-toolbar-btn {
+  justify-content: center; /* Center icon and text */
+}
+
+/* Responsive constraints for input badge labels in narrow panel layouts */
+@container panel (max-width: 400px) {
+  /* Restrict badge text labels to prevent horizontal overflow */
+  .input-toolbar-btn .input-toolbar-btn-label {
+    max-width: 64px;
+  }
+}
+
+@container panel (max-width: 340px) {
+  /* On extremely narrow panels, hide badge labels entirely to keep row clean */
+  .input-toolbar-btn .input-toolbar-btn-label {
+    display: none;
+  }
+
+  /* Reset padding when showing icons only */
+  .input-toolbar-btn {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}

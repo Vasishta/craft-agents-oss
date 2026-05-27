@@ -25,7 +25,7 @@ const TRANSITION_EASE = [0.4, 0, 0.2, 1] as const
 // Fallback heights (used on first render before measurement)
 const FALLBACK_HEIGHTS: Record<InputMode | string, number> = {
   freeform: 114,
-  'freeform-compact': 70,  // Smaller for compact mode
+  'freeform-compact': 84,  // Smaller for compact mode (40px textarea + 44px bottom bar)
   permission: 200,
   credential: 240,  // Taller for form fields + hint
   admin_approval: 220,

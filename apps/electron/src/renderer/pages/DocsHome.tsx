@@ -160,7 +160,7 @@ export default function DocsHome({ workspaceId }: DocsHomeProps) {
                 </div>
                 <h1 className="text-[22px] font-semibold tracking-normal text-foreground">No docs yet</h1>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Docs can be created manually or captured from chat.
+                  Save useful responses from chat as durable docs, or create one from scratch to capture knowledge that stays accessible across the workspace.
                 </p>
                 <Button className="mt-5" onClick={handleNewDoc} disabled={isCreating || !workspaceId}>
                   {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}

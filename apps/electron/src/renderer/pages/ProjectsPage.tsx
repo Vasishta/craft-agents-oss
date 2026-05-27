@@ -28,7 +28,7 @@ function getProjectCountSummary(project: ProjectIndexEntry): string {
     counts.decisionCount > 0 ? `${counts.decisionCount} decisions` : null,
     counts.notebookCount > 0 ? `${counts.notebookCount} notebooks` : null,
   ].filter(Boolean)
-  return parts.length > 0 ? parts.join(' · ') : 'No linked objects yet'
+  return parts.length > 0 ? parts.join(' · ') : 'Ready to gather linked work'
 }
 
 function getProjectRelationshipItems(project: ProjectIndexEntry) {
@@ -95,7 +95,7 @@ export default function ProjectsPage({ workspaceId }: ProjectsPageProps) {
       onCreate={handleCreate}
       emptyIcon={<BriefcaseBusiness className="h-5 w-5" />}
       emptyTitle="No projects yet"
-      emptyDescription="Projects are optional workspace organizers for linked chats, docs, outputs, work items, decisions, and notebooks."
+      emptyDescription="Projects gather related chats, docs, outputs, work items, decisions, and notebooks into one reusable workspace container."
       emptyActions={
         <>
           <Button

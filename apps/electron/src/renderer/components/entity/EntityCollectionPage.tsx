@@ -78,7 +78,7 @@ export function EntityCollectionPage<T>({
             </EntityEmptyState>
           ) : (
             <section aria-label={`${title} list`} className="flex flex-col gap-2">
-              {nextStepArea ? <div className="mb-4">{nextStepArea}</div> : null}
+              {nextStepArea ? <div className="mb-5">{nextStepArea}</div> : null}
               {items.map(renderItem)}
             </section>
           )}

@@ -96,7 +96,7 @@ export default function NotebooksPage({ workspaceId }: NotebooksPageProps) {
       onCreate={handleCreate}
       emptyIcon={<BookOpen className="h-5 w-5" />}
       emptyTitle="No notebooks yet"
-      emptyDescription="Notebooks curate docs, outputs, decisions, chats, and sources without forcing folder ownership."
+      emptyDescription="Notebooks curate related docs, outputs, decisions, chats, and sources into reusable workspace collections."
       emptyActions={
         <>
           <Button
@@ -135,7 +135,7 @@ export default function NotebooksPage({ workspaceId }: NotebooksPageProps) {
             key={notebook.id}
             title={notebook.title}
             description={notebook.description || getNotebookSummary(notebook)}
-            badges={<RelationshipBadgeRow items={getNotebookRelationshipItems(notebook)} emptyLabel="Curated durable workspace collection" />}
+            badges={<RelationshipBadgeRow items={getNotebookRelationshipItems(notebook)} emptyLabel="Curated workspace collection" />}
             meta={(
               <>
                 <span>Updated {formatUpdatedTime(notebook.updatedAt, now)}</span>

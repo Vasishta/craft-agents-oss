@@ -209,7 +209,7 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
           <section className="mb-6">
             <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Library</h1>
             <p className="mt-2 max-w-[680px] text-sm leading-6 text-muted-foreground">
-              Durable workspace knowledge lives here across docs, outputs, decisions, and notebooks so saved work stays reusable without forcing everything into one project or notebook.
+              Durable workspace knowledge lives here across docs, outputs, decisions, and notebooks so saved work stays easy to reopen, connect, and reuse.
             </p>
           </section>
 
@@ -330,7 +330,7 @@ export default function LibraryPage({ workspaceId }: LibraryPageProps) {
                         )}
                         <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           <span>Updated {formatUpdatedTime(item.updatedAt, now)}</span>
-                          <span>{item.metaLabel}</span>
+                          {item.kind !== 'doc' ? <span>{item.metaLabel}</span> : null}
                           <span>{item.provenance}</span>
                         </span>
                       </span>

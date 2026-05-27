@@ -31,6 +31,7 @@ export interface SearchResult {
   updatedAt: number | null
   meta: string
   score: number
+  provenanceTiebreaker: number
 }
 
 export interface SearchableSessionMeta {
@@ -45,6 +46,7 @@ interface Match<T> {
   item: T
   snippet: string
   score: number
+  provenanceTiebreaker: number
   updatedAt: number | undefined
 }
 
@@ -55,6 +57,7 @@ interface SearchBuilderConfig<T> {
   getContent: (item: T) => string
   getUpdatedAt: (item: T) => number | undefined
   getRankWeight?: (item: T) => number
+  getProvenanceTiebreaker?: (item: T) => number
   normalizeResult: (item: T, snippet: string) => SearchResult
   emptySnippet: string
 }
@@ -141,6 +144,7 @@ export function normalizePageSearchResult(page: PageListEntry, snippet: string):
     updatedAt: page.updatedAt ?? null,
     meta: getPageSearchMeta(page),
     score: 0,
+    provenanceTiebreaker: 0,
   }
 }
 
@@ -155,6 +159,7 @@ export function normalizeOutputSearchResult(output: OutputIndexEntry, snippet: s
     updatedAt: output.updatedAt ?? null,
     meta: getOutputSearchMeta(output),
     score: 0,
+    provenanceTiebreaker: 0,
   }
 }
 
@@ -169,6 +174,7 @@ export function normalizeChatSearchResult(session: SearchableSessionMeta, snippe
     updatedAt: session.lastMessageAt ?? session.createdAt ?? null,
     meta: 'Recent workspace chat',
     score: 0,
+    provenanceTiebreaker: 0,
   }
 }
 
@@ -183,6 +189,7 @@ export function normalizeDecisionSearchResult(decision: DecisionIndexEntry, snip
     updatedAt: decision.updatedAt ?? null,
     meta: getDecisionSearchMeta(decision),
     score: 0,
+    provenanceTiebreaker: 0,
   }
 }
 
@@ -197,6 +204,7 @@ export function normalizeNotebookSearchResult(notebook: NotebookIndexEntry, snip
     updatedAt: notebook.updatedAt ?? null,
     meta: getNotebookSearchMeta(notebook),
     score: 0,
+    provenanceTiebreaker: 0,
   }
 }
 
@@ -211,6 +219,7 @@ export function normalizeProjectSearchResult(project: ProjectIndexEntry, snippet
     updatedAt: project.updatedAt ?? null,
     meta: getProjectSearchMeta(project),
     score: 0,
+    provenanceTiebreaker: 0,
   }
 }
 
@@ -225,6 +234,7 @@ export function normalizeWorkItemSearchResult(workItem: WorkItemIndexEntry, snip
     updatedAt: workItem.updatedAt ?? null,
     meta: getWorkItemSearchMeta(workItem),
     score: 0,
+    provenanceTiebreaker: 0,
   }
 }
 
@@ -249,6 +259,8 @@ export function makeSearchSnippet(normalizedText: string, query: string, emptyTe
 function sortMatches<T>(matches: Match<T>[]): Match<T>[] {
   return [...matches].sort((a, b) => {
     if (a.score !== b.score) return b.score - a.score
+    const tiebreak = b.provenanceTiebreaker - a.provenanceTiebreaker
+    if (tiebreak !== 0) return tiebreak
     return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
   })
 }
@@ -260,6 +272,7 @@ function buildSearchResults<T>({
   getContent,
   getUpdatedAt,
   getRankWeight,
+  getProvenanceTiebreaker,
   normalizeResult,
   emptySnippet,
 }: SearchBuilderConfig<T>): SearchResult[] {
@@ -279,13 +292,15 @@ function buildSearchResults<T>({
       item,
       snippet: normalizedContent ? makeSearchSnippet(normalizedContent, trimmedQuery, emptySnippet) : 'Title match',
       score: buildMatchScore(titleMatched, contentMatched, getRankWeight?.(item) ?? 0),
+      provenanceTiebreaker: getProvenanceTiebreaker?.(item) ?? 0,
       updatedAt: getUpdatedAt(item),
     })
   }
 
-  return sortMatches(matches).map(({ item, snippet, score }) => ({
+  return sortMatches(matches).map(({ item, snippet, score, provenanceTiebreaker }) => ({
     ...normalizeResult(item, snippet),
     score,
+    provenanceTiebreaker,
   }))
 }
 
@@ -294,8 +309,14 @@ function getPageRankWeight(page: PageListEntry): number {
     page.outputIdCount * 18
       + (page.sourceSessionId || page.sourceMessageId ? 24 : 0)
       + (page.notebookId ? 10 : 0),
-    70,
+    80,
   )
+}
+
+function getPageProvenanceTiebreaker(page: PageListEntry): number {
+  return page.outputIdCount
+    + (page.sourceSessionId || page.sourceMessageId ? 1 : 0)
+    + (page.notebookId ? 1 : 0)
 }
 
 function getOutputRankWeight(output: OutputIndexEntry): number {
@@ -303,8 +324,13 @@ function getOutputRankWeight(output: OutputIndexEntry): number {
     (output.sourceSessionId || output.sourceMessageId ? 24 : 0)
       + (output.promotedDocId ? 18 : 0)
       + (output.status === 'promoted' ? 10 : 0),
-    70,
+    80,
   )
+}
+
+function getOutputProvenanceTiebreaker(output: OutputIndexEntry): number {
+  return (output.sourceSessionId || output.sourceMessageId ? 1 : 0)
+    + (output.promotedDocId ? 1 : 0)
 }
 
 function getDecisionRankWeight(decision: DecisionIndexEntry): number {
@@ -316,8 +342,19 @@ function getDecisionRankWeight(decision: DecisionIndexEntry): number {
       + decision.linkCounts.sessionCount * 5
       + decision.linkCounts.workItemCount * 4
       + (decision.status === 'accepted' ? 12 : decision.status === 'proposed' ? 4 : 0),
-    95,
+    80,
   )
+}
+
+function getDecisionProvenanceTiebreaker(decision: DecisionIndexEntry): number {
+  return sumCounts([
+    decision.linkCounts.projectCount,
+    decision.linkCounts.sessionCount,
+    decision.linkCounts.docCount,
+    decision.linkCounts.outputCount,
+    decision.linkCounts.workItemCount,
+    decision.linkCounts.notebookCount,
+  ])
 }
 
 function getNotebookRankWeight(notebook: NotebookIndexEntry): number {
@@ -328,8 +365,17 @@ function getNotebookRankWeight(notebook: NotebookIndexEntry): number {
       + notebook.linkCounts.docCount * 8
       + notebook.linkCounts.outputCount * 8
       + notebook.linkCounts.sessionCount * 4,
-    95,
+    80,
   )
+}
+
+function getNotebookProvenanceTiebreaker(notebook: NotebookIndexEntry): number {
+  return Math.round(notebook.sectionCount * 0.5)
+    + notebook.linkCounts.projectCount
+    + notebook.linkCounts.decisionCount
+    + notebook.linkCounts.docCount
+    + notebook.linkCounts.outputCount
+    + notebook.linkCounts.sessionCount
 }
 
 function getProjectRankWeight(project: ProjectIndexEntry): number {
@@ -342,8 +388,19 @@ function getProjectRankWeight(project: ProjectIndexEntry): number {
       project.linkCounts.decisionCount * 8,
       project.linkCounts.notebookCount * 8,
     ]),
-    95,
+    80,
   )
+}
+
+function getProjectProvenanceTiebreaker(project: ProjectIndexEntry): number {
+  return sumCounts([
+    project.linkCounts.workItemCount,
+    project.linkCounts.sessionCount,
+    project.linkCounts.docCount,
+    project.linkCounts.outputCount,
+    project.linkCounts.decisionCount,
+    project.linkCounts.notebookCount,
+  ])
 }
 
 function getWorkItemRankWeight(workItem: WorkItemIndexEntry): number {
@@ -365,6 +422,17 @@ function getWorkItemRankWeight(workItem: WorkItemIndexEntry): number {
   )
 }
 
+function getWorkItemProvenanceTiebreaker(workItem: WorkItemIndexEntry): number {
+  const priorityPoints = workItem.priority === 'P0' ? 3
+    : workItem.priority === 'P1' ? 2
+    : workItem.priority === 'P2' ? 1
+    : 0
+  return priorityPoints
+    + workItem.linkCounts.docCount
+    + workItem.linkCounts.outputCount
+    + workItem.linkCounts.sessionCount
+}
+
 export function buildDocSearchResults(
   pages: PageListEntry[],
   docContents: Record<string, string>,
@@ -377,6 +445,7 @@ export function buildDocSearchResults(
     getContent: (page) => docContents[page.id] ?? '',
     getUpdatedAt: (page) => page.updatedAt,
     getRankWeight: getPageRankWeight,
+    getProvenanceTiebreaker: getPageProvenanceTiebreaker,
     normalizeResult: normalizePageSearchResult,
     emptySnippet: 'Empty doc',
   })
@@ -394,6 +463,7 @@ export function buildOutputSearchResults(
     getContent: (output) => outputContents[output.id] ?? output.preview ?? '',
     getUpdatedAt: (output) => output.updatedAt,
     getRankWeight: getOutputRankWeight,
+    getProvenanceTiebreaker: getOutputProvenanceTiebreaker,
     normalizeResult: normalizeOutputSearchResult,
     emptySnippet: 'Empty output',
   })
@@ -409,7 +479,7 @@ export function buildChatSearchResults(
     getTitle: (session) => session.name || session.preview || 'Untitled Chat',
     getContent: (session) => session.preview || '',
     getUpdatedAt: (session) => session.lastMessageAt ?? session.createdAt,
-    getRankWeight: () => 6,
+    getRankWeight: () => 2,
     normalizeResult: normalizeChatSearchResult,
     emptySnippet: 'No preview available',
   })
@@ -427,6 +497,7 @@ export function buildDecisionSearchResults(
     getContent: (decision) => decisionContents[decision.id] ?? '',
     getUpdatedAt: (decision) => decision.updatedAt,
     getRankWeight: getDecisionRankWeight,
+    getProvenanceTiebreaker: getDecisionProvenanceTiebreaker,
     normalizeResult: normalizeDecisionSearchResult,
     emptySnippet: 'Decision matched by title',
   })
@@ -444,6 +515,7 @@ export function buildNotebookSearchResults(
     getContent: (notebook) => notebookContents[notebook.id] ?? notebook.description ?? '',
     getUpdatedAt: (notebook) => notebook.updatedAt,
     getRankWeight: getNotebookRankWeight,
+    getProvenanceTiebreaker: getNotebookProvenanceTiebreaker,
     normalizeResult: normalizeNotebookSearchResult,
     emptySnippet: 'Notebook matched by title',
   })
@@ -460,6 +532,7 @@ export function buildProjectSearchResults(
     getContent: (project) => project.description ?? '',
     getUpdatedAt: (project) => project.updatedAt,
     getRankWeight: getProjectRankWeight,
+    getProvenanceTiebreaker: getProjectProvenanceTiebreaker,
     normalizeResult: normalizeProjectSearchResult,
     emptySnippet: 'Project matched by title',
   })
@@ -476,6 +549,7 @@ export function buildWorkItemSearchResults(
     getContent: (workItem) => workItem.description ?? [workItem.area, workItem.type].filter(Boolean).join(' '),
     getUpdatedAt: (workItem) => workItem.updatedAt,
     getRankWeight: getWorkItemRankWeight,
+    getProvenanceTiebreaker: getWorkItemProvenanceTiebreaker,
     normalizeResult: normalizeWorkItemSearchResult,
     emptySnippet: 'Work item matched by title',
   })
@@ -487,7 +561,12 @@ export function buildMixedSearchResults(
   return resultGroups
     .flat()
     .sort((a, b) => {
+      // Primary sort: score (text match tier + rank weight)
       if (a.score !== b.score) return b.score - a.score
+      // Secondary sort: provenance tiebreaker (linkage density)
+      const tiebreak = b.provenanceTiebreaker - a.provenanceTiebreaker
+      if (tiebreak !== 0) return tiebreak
+      // Tertiary sort: recency
       return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
     })
 }

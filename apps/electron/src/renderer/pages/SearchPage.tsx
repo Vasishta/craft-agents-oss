@@ -383,7 +383,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                   Search docs, outputs, decisions, notebooks, projects, work items, and workspace chats from one surface.
                 </p>
                 <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                  Try a feature name, object title, or prior decision. Results now favor title matches, stronger provenance, and better-linked durable work.
+                  Try a feature name, object title, or prior decision. Results are ranked by relevance, with title matches ranked highest.
                 </p>
               </div>
             </section>
@@ -400,7 +400,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                     : `No ${filterOptions.find((option) => option.key === activeFilter)?.label.toLowerCase()} matched "${trimmedQuery}"`}
                 </p>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  Try a different search term or browse the Library to explore all saved artifacts.
+                  Try a different search term or browse Library, Projects, or Work Queue to explore saved work from another angle.
                 </p>
               </div>
             </section>
@@ -426,7 +426,7 @@ export default function SearchPage({ workspaceId }: SearchPageProps) {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Results</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {filteredResults.length} {activeFilter === 'all' ? 'mixed workspace results ranked by relevance and recency' : `${filterOptions.find((option) => option.key === activeFilter)?.label.toLowerCase()} results`}
+                    {filteredResults.length} {activeFilter === 'all' ? 'mixed workspace results ranked by relevance and provenance' : `${filterOptions.find((option) => option.key === activeFilter)?.label.toLowerCase()} results`}
                   </p>
                 </div>
               </div>

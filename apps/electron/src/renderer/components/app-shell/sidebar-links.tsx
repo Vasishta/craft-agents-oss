@@ -407,7 +407,7 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
         { id: 'separator:queue-legacy', type: 'separator' as const },
         {
           id: 'nav:legacySessions',
-          title: t('sidebar.legacySessions', 'Legacy Sessions'),
+          title: t('sidebar.legacySessions', 'Session Views'),
           label: String(workspaceSessionCount),
           icon: Inbox,
           variant: isSessionsNavigation(navState) ? 'default' : 'ghost',
