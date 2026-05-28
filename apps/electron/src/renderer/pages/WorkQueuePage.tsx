@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArrowLeft, Box, FileText, Flag, Inbox, LayoutDashboard, Loader2, MessageSquareText, Plus, Search, SquarePen, Trash2 } from 'lucide-react'
+import { Archive, ArrowLeft, Box, FileText, Flag, Inbox, LayoutDashboard, Loader2, MessageSquareText, Plus, SquarePen, Trash2 } from 'lucide-react'
 import { LowContextActions } from '@/components/low-context-actions'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
 import { usePanelChrome } from '@/context/PanelChromeContext'
@@ -57,12 +56,42 @@ interface QueueRowProps {
   onClick: () => void
 }
 
+function QueueSummaryButton({
+  label,
+  value,
+  detail,
+  onClick,
+}: {
+  label: string
+  value: string
+  detail: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="grid min-h-[74px] w-full grid-cols-[1fr_auto] gap-3 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    >
+      <span className="min-w-0">
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          {label}
+        </span>
+        <span className="mt-1.5 block text-sm leading-5 text-muted-foreground">{detail}</span>
+      </span>
+      <span className="rounded-[4px] bg-foreground/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground self-start">
+        {value}
+      </span>
+    </button>
+  )
+}
+
 function QueueRow({ icon, title, description, count, onClick }: QueueRowProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="grid min-h-[76px] w-full grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="grid min-h-[72px] w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[8px] border border-border/55 bg-background px-4 py-3 text-left transition-colors hover:border-border hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <span className="flex h-9 w-9 items-center justify-center rounded-[7px] bg-foreground/[0.04] text-muted-foreground">
         {icon}
@@ -424,9 +453,10 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
       <ScrollArea className="min-h-0 flex-1">
         <main className="mx-auto flex w-full max-w-[980px] flex-col px-5 py-7 sm:px-8">
           <section className="mb-6">
-            <h1 className="text-[22px] font-semibold tracking-normal text-foreground">Work Queue</h1>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Work Queue</p>
+            <h1 className="mt-2 text-[22px] font-semibold tracking-normal text-foreground">Durable tasks in motion</h1>
             <p className="mt-2 max-w-[640px] text-sm leading-6 text-muted-foreground">
-              Work items are durable tasks independent of chat sessions. Session views below let you browse conversations alongside work items.
+              Work items are durable tasks independent of chat sessions. Keep the queue dense, editable, and close to the session views that feed it.
             </p>
           </section>
 
@@ -485,205 +515,252 @@ export default function WorkQueuePage({ workspaceId, workItemId }: WorkQueuePage
             </section>
           ) : (
             <>
-              <section className="mb-6 flex flex-col gap-3 rounded-[8px] border border-border/55 bg-background p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusFilterButton
-                    active={filter === 'all'}
-                    label="All"
-                    count={workItems.length}
-                    onClick={() => setFilter('all')}
-                  />
-                  {WORK_ITEM_STATUS_ORDER.map((status) => (
-                    <StatusFilterButton
-                      key={status}
-                      active={filter === status}
-                      label={WORK_ITEM_STATUS_LABELS[status]}
-                      count={workItemCounts[status]}
-                      onClick={() => setFilter(status)}
-                    />
-                  ))}
-                </div>
-
-                {(isComposerOpen || workItems.length === 0) && (
-                  <div className="grid gap-3 rounded-[8px] border border-dashed border-border/70 bg-foreground/[0.02] p-4 lg:grid-cols-[minmax(0,1fr)_180px_140px]">
-                    <div className="lg:col-span-3">
-                      <Input
-                        value={draft.title || ''}
-                        placeholder="Work item title"
-                        onChange={(event) => handleDraftChange({ title: event.target.value })}
-                      />
-                    </div>
-                    <div className="lg:col-span-3">
-                      <Textarea
-                        value={draft.description || ''}
-                        placeholder="Description or acceptance notes"
-                        onChange={(event) => handleDraftChange({ description: event.target.value })}
-                      />
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-3 lg:col-span-3">
-                      <Select value={draft.status || 'backlog'} onValueChange={(value) => handleDraftChange({ status: value as WorkItemStatus })}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {WORK_ITEM_STATUS_ORDER.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {WORK_ITEM_STATUS_LABELS[status]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={draft.priority || 'none'} onValueChange={(value) => handleDraftChange({ priority: value === 'none' ? undefined : value as WorkItemPriority })}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Priority" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No priority</SelectItem>
-                          <SelectItem value="P0">P0</SelectItem>
-                          <SelectItem value="P1">P1</SelectItem>
-                          <SelectItem value="P2">P2</SelectItem>
-                          <SelectItem value="P3">P3</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={draft.type || 'task'} onValueChange={(value) => handleDraftChange({ type: value as WorkItemType })}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="task">Task</SelectItem>
-                          <SelectItem value="bug">Bug</SelectItem>
-                          <SelectItem value="tech_debt">Tech Debt</SelectItem>
-                          <SelectItem value="spike">Spike</SelectItem>
-                          <SelectItem value="story">Story</SelectItem>
-                          <SelectItem value="epic">Epic</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="lg:col-span-2">
-                      <Input
-                        value={draft.area || ''}
-                        placeholder="Area or ownership"
-                        onChange={(event) => handleDraftChange({ area: event.target.value })}
-                      />
-                    </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          resetDraft()
-                          setIsComposerOpen(false)
-                        }}
-                        disabled={isCreating}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="button" onClick={() => { void handleCreate() }} disabled={isCreating || !draft.title?.trim()}>
-                        {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        Create
-                      </Button>
-                    </div>
-                  </div>
-                )}
+              <section aria-label="Queue summary" className="mb-6 grid gap-2 md:grid-cols-4">
+                <QueueSummaryButton
+                  label="All items"
+                  value={String(workItems.length)}
+                  detail="Every durable task in this workspace."
+                  onClick={() => setFilter('all')}
+                />
+                <QueueSummaryButton
+                  label="In motion"
+                  value={String(workItems.filter((item) => item.status !== 'done').length)}
+                  detail="Open, ready, in progress, in review, and blocked."
+                  onClick={() => setFilter('all')}
+                />
+                <QueueSummaryButton
+                  label="Done"
+                  value={String(workItemCounts.done)}
+                  detail="Completed work kept for reference."
+                  onClick={() => setFilter('done')}
+                />
+                <QueueSummaryButton
+                  label="Sessions"
+                  value={String(activeSessionMetas.length)}
+                  detail="Active chat views that can feed new queue items."
+                  onClick={() => navigate(routes.view.allSessions())}
+                />
               </section>
 
-              <section aria-label="Work items" className="flex flex-col gap-2">
-                {isLoading && workItems.length === 0 ? (
-                  <div className="flex min-h-[180px] items-center justify-center text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                ) : filteredWorkItems.length === 0 ? (
-                  <div className="rounded-[8px] border border-border/55 bg-background px-4 py-8 text-center">
-                    <h2 className="text-sm font-medium text-foreground">No work items in this view</h2>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {filter === 'all'
-                        ? 'No queued work yet. Start a new chat to create work, open Home for a quick workspace overview, or browse the Library for saved context.'
-                        : `Move an item into ${WORK_ITEM_STATUS_LABELS[filter]} or switch filters.`}
-                    </p>
-                    {filter === 'all' && (
-                      <div className="mt-5 flex flex-col items-center">
-                        <div className="w-56">
-                          <LowContextActions
-                            compact
-                            actions={[
-                              { icon: <SquarePen className="h-4 w-4" />, label: "Start a new chat", onClick: () => { void openNewChat?.() } },
-                              { icon: <LayoutDashboard className="h-4 w-4" />, label: "Go to Workspace Home", onClick: () => navigate(routes.view.home()) },
-                              { icon: <FileText className="h-4 w-4" />, label: "Open Library", onClick: () => navigate(routes.view.library()) },
-                            ]}
+              <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+                <div className="min-w-0">
+                  <section className="mb-6">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Queue</p>
+                        <h2 className="text-sm font-medium text-foreground">Manage current work</h2>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                          Keep the queue dense and editable. Filters, creation, and status changes should feel operational, not ceremonial.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={isComposerOpen ? 'secondary' : 'outline'}
+                        onClick={() => setIsComposerOpen((current) => !current)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {isComposerOpen ? 'Hide composer' : 'New item'}
+                      </Button>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <StatusFilterButton
+                        active={filter === 'all'}
+                        label="All"
+                        count={workItems.length}
+                        onClick={() => setFilter('all')}
+                      />
+                      {WORK_ITEM_STATUS_ORDER.map((status) => (
+                        <StatusFilterButton
+                          key={status}
+                          active={filter === status}
+                          label={WORK_ITEM_STATUS_LABELS[status]}
+                          count={workItemCounts[status]}
+                          onClick={() => setFilter(status)}
+                        />
+                      ))}
+                    </div>
+
+                    {(isComposerOpen || workItems.length === 0) && (
+                      <div className="mt-3 grid gap-3 rounded-[8px] border border-dashed border-border/70 bg-foreground/[0.02] p-4">
+                        <Input
+                          value={draft.title || ''}
+                          placeholder="Work item title"
+                          onChange={(event) => handleDraftChange({ title: event.target.value })}
+                        />
+                        <Textarea
+                          value={draft.description || ''}
+                          placeholder="Description or acceptance notes"
+                          onChange={(event) => handleDraftChange({ description: event.target.value })}
+                        />
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <Select value={draft.status || 'backlog'} onValueChange={(value) => handleDraftChange({ status: value as WorkItemStatus })}>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {WORK_ITEM_STATUS_ORDER.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {WORK_ITEM_STATUS_LABELS[status]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <Select value={draft.priority || 'none'} onValueChange={(value) => handleDraftChange({ priority: value === 'none' ? undefined : value as WorkItemPriority })}>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="Priority" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No priority</SelectItem>
+                              <SelectItem value="P0">P0</SelectItem>
+                              <SelectItem value="P1">P1</SelectItem>
+                              <SelectItem value="P2">P2</SelectItem>
+                              <SelectItem value="P3">P3</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Select value={draft.type || 'task'} onValueChange={(value) => handleDraftChange({ type: value as WorkItemType })}>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="task">Task</SelectItem>
+                              <SelectItem value="bug">Bug</SelectItem>
+                              <SelectItem value="tech_debt">Tech Debt</SelectItem>
+                              <SelectItem value="spike">Spike</SelectItem>
+                              <SelectItem value="story">Story</SelectItem>
+                              <SelectItem value="epic">Epic</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                          <Input
+                            value={draft.area || ''}
+                            placeholder="Area or ownership"
+                            onChange={(event) => handleDraftChange({ area: event.target.value })}
                           />
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => {
+                                resetDraft()
+                                setIsComposerOpen(false)
+                              }}
+                              disabled={isCreating}
+                            >
+                              Cancel
+                            </Button>
+                            <Button type="button" onClick={() => { void handleCreate() }} disabled={isCreating || !draft.title?.trim()}>
+                              {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                              Create
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
-                  </div>
-                ) : (
-                  filteredWorkItems.map((workItem) => (
-                    <div key={workItem.id} className="rounded-[8px] border border-border/55 bg-background px-4 py-3">
-                      <WorkItemCard
-                        workItem={workItem}
-                        now={now}
-                        isUpdating={updatingId === workItem.id}
-                        isDeleting={deletingId === workItem.id}
-                        onStatusChange={(status) => { void handleStatusChange(workItem.id, status) }}
-                        onDelete={() => { void handleDelete(workItem) }}
-                      />
-                      {(() => {
-                        const relItems = getWorkItemRelationshipItems(workItem)
-                        const hasLinks = relItems.some((item) => item.count > 0)
-                        if (!hasLinks) return null
-                        return (
-                          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                            <RelationshipBadgeRow items={relItems} />
+                  </section>
+
+                  <section aria-label="Work items" className="flex flex-col gap-2">
+                    {isLoading && workItems.length === 0 ? (
+                      <div className="flex min-h-[180px] items-center justify-center text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    ) : filteredWorkItems.length === 0 ? (
+                      <div className="rounded-[8px] border border-border/55 bg-background px-4 py-8 text-center">
+                        <h2 className="text-sm font-medium text-foreground">No work items in this view</h2>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {filter === 'all'
+                            ? 'No queued work yet. Start a chat, capture a task, or reopen Home and Library to gather context first.'
+                            : `Move an item into ${WORK_ITEM_STATUS_LABELS[filter]} or switch filters.`}
+                        </p>
+                        {filter === 'all' && (
+                          <div className="mt-5 flex flex-col items-center">
+                            <div className="w-56">
+                              <LowContextActions
+                                compact
+                                actions={[
+                                  { icon: <SquarePen className="h-4 w-4" />, label: 'Start a new chat', onClick: () => { void openNewChat?.() } },
+                                  { icon: <LayoutDashboard className="h-4 w-4" />, label: 'Go to Workspace Home', onClick: () => navigate(routes.view.home()) },
+                                  { icon: <FileText className="h-4 w-4" />, label: 'Open Library', onClick: () => navigate(routes.view.library()) },
+                                ]}
+                              />
+                            </div>
                           </div>
-                        )
-                      })()}
-                    </div>
-                  ))
-                )}
-              </section>
+                        )}
+                      </div>
+                    ) : (
+                      filteredWorkItems.map((workItem) => (
+                        <div key={workItem.id} className="rounded-[8px] border border-border/55 bg-background px-4 py-3">
+                          <WorkItemCard
+                            workItem={workItem}
+                            now={now}
+                            isUpdating={updatingId === workItem.id}
+                            isDeleting={deletingId === workItem.id}
+                            onStatusChange={(status) => { void handleStatusChange(workItem.id, status) }}
+                            onDelete={() => { void handleDelete(workItem) }}
+                          />
+                          {(() => {
+                            const relItems = getWorkItemRelationshipItems(workItem)
+                            const hasLinks = relItems.some((item) => item.count > 0)
+                            if (!hasLinks) return null
+                            return (
+                              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                                <RelationshipBadgeRow items={relItems} />
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      ))
+                    )}
+                  </section>
+                </div>
 
-              <Separator className="my-6" />
+                <aside className="min-w-0">
+                  <section className="mb-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Session views</p>
+                    <h2 className="text-sm font-medium text-foreground">Chats that feed the queue</h2>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      Browse active sessions, flagged conversations, and archived history alongside work items.
+                    </p>
+                  </section>
 
-              <section className="mb-3">
-                <h2 className="text-sm font-medium text-foreground">Session views</h2>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Browse active sessions, flagged conversations, and archived history alongside work items.
-                </p>
-              </section>
-
-              <section aria-label="Session views" className="flex flex-col gap-2">
-                <QueueRow
-                  icon={<Inbox className="h-4 w-4" />}
-                  title="All Sessions"
-                  description="Browse all active chat sessions."
-                  count={activeSessionMetas.length}
-                  onClick={() => navigate(routes.view.allSessions())}
-                />
-                {effectiveSessionStatuses.map(status => (
-                  <QueueRow
-                    key={status.id}
-                    icon={status.icon}
-                    title={t(`status.${status.id}`, status.label)}
-                    description="Filter sessions by status."
-                    count={statusCounts[status.id] || 0}
-                    onClick={() => navigate(routes.view.state(status.id))}
-                  />
-                ))}
-                <QueueRow
-                  icon={<Flag className="h-4 w-4" />}
-                  title="Flagged"
-                  description="Sessions marked for follow-up."
-                  count={flaggedCount}
-                  onClick={() => navigate(routes.view.flagged())}
-                />
-                <QueueRow
-                  icon={<Archive className="h-4 w-4" />}
-                  title="Archived"
-                  description="Review archived sessions."
-                  count={archivedCount}
-                  onClick={() => navigate(routes.view.archived())}
-                />
+                  <section aria-label="Session views" className="flex flex-col gap-2">
+                    <QueueRow
+                      icon={<Inbox className="h-4 w-4" />}
+                      title="All Sessions"
+                      description="Browse all active chat sessions."
+                      count={activeSessionMetas.length}
+                      onClick={() => navigate(routes.view.allSessions())}
+                    />
+                    {effectiveSessionStatuses.map(status => (
+                      <QueueRow
+                        key={status.id}
+                        icon={status.icon}
+                        title={t(`status.${status.id}`, status.label)}
+                        description="Filter sessions by status."
+                        count={statusCounts[status.id] || 0}
+                        onClick={() => navigate(routes.view.state(status.id))}
+                      />
+                    ))}
+                    <QueueRow
+                      icon={<Flag className="h-4 w-4" />}
+                      title="Flagged"
+                      description="Sessions marked for follow-up."
+                      count={flaggedCount}
+                      onClick={() => navigate(routes.view.flagged())}
+                    />
+                    <QueueRow
+                      icon={<Archive className="h-4 w-4" />}
+                      title="Archived"
+                      description="Review archived sessions."
+                      count={archivedCount}
+                      onClick={() => navigate(routes.view.archived())}
+                    />
+                  </section>
+                </aside>
               </section>
             </>
           )}
