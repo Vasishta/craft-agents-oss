@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'bun:test'
 import {
   buildCollapsedGroupsScopeSuffix,
+  readCollapsedGroupsStorage,
   serializeSessionFilterForScope,
 } from '../session-list-collapse'
 
@@ -56,5 +57,36 @@ describe('buildCollapsedGroupsScopeSuffix', () => {
     })
 
     expect(ws1).not.toBe(ws2)
+  })
+})
+
+describe('readCollapsedGroupsStorage', () => {
+  it('prefers scoped storage when present', () => {
+    const result = readCollapsedGroupsStorage(JSON.stringify(['today', 'yesterday']), ['legacy'])
+
+    expect(Array.from(result.groups)).toEqual(['today', 'yesterday'])
+    expect(result.source).toBe('scoped')
+  })
+
+  it('falls back to legacy storage only when the scoped key is missing', () => {
+    const result = readCollapsedGroupsStorage(null, ['legacy-a', 'legacy-b'])
+
+    expect(Array.from(result.groups)).toEqual(['legacy-a', 'legacy-b'])
+    expect(result.source).toBe('legacy-fallback')
+  })
+
+  it('filters malformed persisted entries instead of keeping non-string keys', () => {
+    const scoped = readCollapsedGroupsStorage(JSON.stringify(['keep', 7, null, { bad: true }]), [])
+    const legacy = readCollapsedGroupsStorage(null, ['legacy', 1, false])
+
+    expect(Array.from(scoped.groups)).toEqual(['keep'])
+    expect(Array.from(legacy.groups)).toEqual(['legacy'])
+  })
+
+  it('treats invalid scoped JSON as an empty scoped payload', () => {
+    const result = readCollapsedGroupsStorage('{not-json', ['legacy'])
+
+    expect(Array.from(result.groups)).toEqual([])
+    expect(result.source).toBe('scoped')
   })
 })

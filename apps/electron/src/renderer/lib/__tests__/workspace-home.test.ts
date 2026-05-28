@@ -93,6 +93,21 @@ describe('buildWorkspaceHomeActivityFeed', () => {
     expect(feed.find((i) => i.kind === 'project')?.detail).toBe('Project · active')
     expect(feed.find((i) => i.kind === 'workItem')?.detail).toBe('Work item · In Progress')
   })
+
+  it('falls back gracefully for legacy project titles and unknown work item statuses', () => {
+    const feed = buildWorkspaceHomeActivityFeed({
+      recentChats: [],
+      recentDocs: [],
+      recentOutputs: [],
+      recentDecisions: [],
+      recentNotebooks: [],
+      recentProjects: [{ id: 'project-1', title: 'Legacy project title', updatedAt: 260, status: 'active' }],
+      recentWorkItems: [{ id: 'work-1', title: 'Prep QA pass', updatedAt: 290, status: 'custom_review' }],
+    })
+
+    expect(feed.find((i) => i.kind === 'project')?.title).toBe('Legacy project title')
+    expect(feed.find((i) => i.kind === 'workItem')?.detail).toBe('Work item · Custom Review')
+  })
 })
 
 describe('buildWorkspaceHomeFocusItems', () => {
@@ -178,6 +193,31 @@ describe('buildWorkspaceHomeFocusItems', () => {
     expect(focus).toHaveLength(2)
     expect(focus[0].kind).toBe('chat')
     expect(focus[1].kind).toBe('doc')
+  })
+
+  it('uses project title fallback and readable work item status labels in focus cards', () => {
+    const focus = buildWorkspaceHomeFocusItems({
+      recentChats: [],
+      recentDocs: [],
+      recentOutputs: [],
+      recentProjects: [{ id: 'project-1', title: 'Fallback project', updatedAt: 470, status: 'active' }],
+      recentWorkItems: [{ id: 'work-1', title: 'Prep QA pass', updatedAt: 490, status: 'custom_review' }],
+    })
+
+    expect(focus).toEqual([
+      {
+        id: 'work-1',
+        kind: 'workItem',
+        title: 'Prep QA pass',
+        detail: 'Move forward in Custom Review',
+      },
+      {
+        id: 'project-1',
+        kind: 'project',
+        title: 'Fallback project',
+        detail: 'Project · active',
+      },
+    ])
   })
 })
 

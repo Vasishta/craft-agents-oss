@@ -10,13 +10,13 @@ import { SessionListProvider, type SessionListContextValue } from '@/context/Ses
 import { ActionRegistryProvider } from '@/actions/registry'
 
 // ============================================================================
-// Mock Todo States (minimal set for playground)
+// Mock Session Statuses (minimal set for playground)
 // ============================================================================
 
 const mockSessionStatuses: SessionStatus[] = [
   {
     id: 'todo',
-    label: 'Todo',
+    label: 'Open',
     resolvedColor: 'var(--muted-foreground)',
     icon: <Circle className="h-3.5 w-3.5" strokeWidth={1.5} />,
     iconColorable: true,
@@ -278,7 +278,7 @@ function SessionItemPreview({
 export const sessionListComponents: ComponentEntry[] = [
   {
     id: 'session-list-search',
-    name: 'SessionList Search States',
+    name: 'Session List Search States',
     category: 'Session List',
     description: 'Session list using real SessionItem components with search and badges',
     component: SessionListSearchPreview,
@@ -336,7 +336,7 @@ export const sessionListComponents: ComponentEntry[] = [
         },
       },
       {
-        name: 'Search Active',
+        name: 'Search Visible',
         description: 'Search input visible, no query yet',
         props: {
           searchQuery: '',
@@ -344,7 +344,7 @@ export const sessionListComponents: ComponentEntry[] = [
         },
       },
       {
-        name: 'Title Match Highlight',
+        name: 'Title Match',
         description: 'Search query matching session titles',
         props: {
           searchQuery: 'auth',
@@ -388,9 +388,9 @@ export const sessionListComponents: ComponentEntry[] = [
   },
   {
     id: 'session-item-search',
-    name: 'SessionItem States',
+    name: 'Session Item States',
     category: 'Session List',
-    description: 'Individual real SessionItem showing visual states with search and badges',
+    description: 'Individual real SessionItem showing durable visual states with search and badges',
     component: SessionItemPreview,
     props: [
       {
@@ -450,8 +450,8 @@ export const sessionListComponents: ComponentEntry[] = [
         },
       },
       {
-        name: 'Plan Pending',
-        description: 'Session has a pending plan (shows compass icon)',
+        name: 'Plan',
+        description: 'Session has a plan state (shows compass icon)',
         props: {
           item: sampleSessions[0],
           state: 'plan',

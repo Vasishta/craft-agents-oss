@@ -362,7 +362,7 @@ Recommended next tasks:
 27. Consolidate remaining durable entity UI scaffolds (#39)
 ```
 
-Current-state rule: GitHub Issues on `Vasishta/craft-agents-oss` are the live execution tracker. This ARB captures the migration rationale and should be updated when issue execution materially changes the product posture.
+Current-state rule: GitHub Issues on `Vasishta/craft-agents-oss` are the live execution tracker. This ARB captures the migration rationale and should be updated when issue execution materially changes the product posture, including the legacy-transition cleanup umbrella that now carries the remaining compatibility seam follow-ons.
 
 ## 13. Task 8 candidate: Output polish and provenance hardening
 

@@ -40,6 +40,7 @@ type RecentNotebookLike = {
 type RecentProjectLike = {
   id: string
   name?: string | null
+  title?: string | null
   updatedAt: number
   status?: string | null
 }
@@ -48,7 +49,7 @@ type RecentWorkItemLike = {
   id: string
   title: string
   updatedAt: number
-  status: keyof typeof WORK_ITEM_STATUS_LABELS
+  status: string
 }
 
 export type WorkspaceHomeActivityKind =
@@ -82,6 +83,19 @@ function resolveChatTimestamp(chat: RecentChatLike): number {
 function normalizeTitle(value: string | null | undefined, fallback: string): string {
   const trimmed = value?.trim()
   return trimmed && trimmed.length > 0 ? trimmed : fallback
+}
+
+function normalizeProjectTitle(project: RecentProjectLike): string {
+  return normalizeTitle(project.name ?? project.title, 'Untitled Project')
+}
+
+function normalizeWorkItemStatusLabel(status: string): string {
+  return WORK_ITEM_STATUS_LABELS[status as keyof typeof WORK_ITEM_STATUS_LABELS]
+    ?? status
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
 }
 
 // Scoring weights for the activity feed — active work and recent chats
@@ -215,7 +229,7 @@ export function buildWorkspaceHomeActivityFeed({
     ...recentProjects.map((project) => ({
       id: project.id,
       kind: 'project' as const,
-      title: normalizeTitle(project.name, 'Untitled Project'),
+      title: normalizeProjectTitle(project),
       timestamp: project.updatedAt,
       detail: project.status ? `Project · ${project.status}` : 'Project',
     })),
@@ -224,7 +238,7 @@ export function buildWorkspaceHomeActivityFeed({
       kind: 'workItem' as const,
       title: normalizeTitle(workItem.title, 'Untitled Work Item'),
       timestamp: workItem.updatedAt,
-      detail: `Work item · ${WORK_ITEM_STATUS_LABELS[workItem.status]}`,
+      detail: `Work item · ${normalizeWorkItemStatusLabel(workItem.status)}`,
     })),
   ]
 
@@ -271,7 +285,7 @@ export function buildWorkspaceHomeFocusItems({
       id: activeWorkItem.id,
       kind: 'workItem' as const,
       title: normalizeTitle(activeWorkItem.title, 'Untitled Work Item'),
-      detail: `Move forward in ${WORK_ITEM_STATUS_LABELS[activeWorkItem.status]}`,
+      detail: `Move forward in ${normalizeWorkItemStatusLabel(activeWorkItem.status)}`,
     } : null,
     recentChat ? {
       id: recentChat.id,
@@ -282,7 +296,7 @@ export function buildWorkspaceHomeFocusItems({
     recentProject ? {
       id: recentProject.id,
       kind: 'project' as const,
-      title: normalizeTitle(recentProject.name, 'Untitled Project'),
+      title: normalizeProjectTitle(recentProject),
       detail: recentProject.status ? `Project · ${recentProject.status}` : 'Open project workspace',
     } : null,
     recentDoc ? {

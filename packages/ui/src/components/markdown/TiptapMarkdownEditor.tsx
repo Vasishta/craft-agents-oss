@@ -22,7 +22,12 @@ import './tiptap-editor.css'
 import './extensions/animated-task-item.css'
 
 export type MarkdownEngine = 'legacy' | 'official'
+export const DEFAULT_MARKDOWN_ENGINE: MarkdownEngine = 'legacy'
 
+export function resolveMarkdownEngine(markdownEngine?: MarkdownEngine | null): MarkdownEngine {
+  if (markdownEngine === 'official') return 'official'
+  return DEFAULT_MARKDOWN_ENGINE
+}
 
 function getLegacyMarkdown(editor: { storage: { markdown?: { getMarkdown?: () => string } } }): string {
   return editor.storage.markdown?.getMarkdown?.() ?? ''
@@ -227,7 +232,7 @@ export interface TiptapMarkdownEditorProps {
   editable?: boolean
   /**
    * Migration flag for markdown engine foundations.
-   * - `legacy`: tiptap-markdown (default for safe rollout)
+   * - `legacy`: tiptap-markdown (temporary compatibility path)
    * - `official`: @tiptap/markdown + mathematics extension
    */
   markdownEngine?: MarkdownEngine
@@ -239,7 +244,7 @@ export function TiptapMarkdownEditor({
   placeholder = 'Write something...',
   className,
   editable = true,
-  markdownEngine = 'legacy',
+  markdownEngine = DEFAULT_MARKDOWN_ENGINE,
 }: TiptapMarkdownEditorProps) {
   const onUpdateRef = React.useRef(onUpdate)
   onUpdateRef.current = onUpdate
@@ -248,7 +253,8 @@ export function TiptapMarkdownEditor({
   // which is created at extension-configure time (before useEditor returns).
   const editorRef = React.useRef<ReturnType<typeof useEditor>>(null!)
 
-  const useOfficialMarkdown = markdownEngine === 'official'
+  const resolvedMarkdownEngine = resolveMarkdownEngine(markdownEngine)
+  const useOfficialMarkdown = resolvedMarkdownEngine === 'official'
 
   const extensions = React.useMemo(() => {
     const base = [

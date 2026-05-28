@@ -81,6 +81,13 @@ Current implementation state:
 - #46 is complete: Decisions, Notebooks, and Projects now share a reusable durable-collection page shell with common empty/loading/create behavior, while preserving object-specific summaries and row actions.
 ```
 
+Follow-on cleanup backlog:
+
+```text
+The durable workspace model is in place, but a small legacy-transition cleanup batch remains open to retire transitional copy, navigation buckets, hook aliases, editor shims, and other compatibility seams that are still intentionally carried for now.
+See `docs/planning/TASK-010-legacy-transition-cleanup-batch.md` for the current umbrella and follow-on slices.
+```
+
 ## Tracker Normalization
 
 ```text
@@ -101,7 +108,7 @@ Transition feature queue is complete.
 Pi runtime follow-on is complete: `@mariozechner/pi-ai`, `@mariozechner/pi-coding-agent`, and `@mariozechner/pi-agent-core` are now aligned on `0.73.1`, picking up the upstream Codex/OpenAI long-running transport fixes.
 Selected upstream adaptation landed: skill "Show in Finder" / reveal actions now target the authoritative skill folder path instead of fabricating a `SKILL.md` path.
 Remaining follow-on: any additional upstream shell/menu cherry-picks from `v0.9.3` / `v0.9.4` that still fit the calmer post-transition shell without importing the full compact/mobile rewrite.
-Post-transition grooming: project-aware relationship badges, provenance-weighted result ranking, empty-state/copy cleanup, compact-mode polish, and any remaining product-rhythm cleanup revealed by the now-complete durable workspace model.
+Post-transition grooming and the legacy-transition cleanup batch are the remaining deliberate follow-ons: project-aware relationship badges, provenance-weighted result ranking, empty-state/copy cleanup, compact-mode polish, and any remaining compatibility seams revealed by the now-complete durable workspace model.
 ```
 
 ## Documentation Rules

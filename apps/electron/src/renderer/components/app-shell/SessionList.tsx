@@ -30,7 +30,7 @@ import { useFocusContext } from "@/context/FocusContext"
 import { sendToWorkspaceAtom, type SessionMeta } from "@/atoms/sessions"
 import type { ViewConfig } from "@craft-agent/shared/views"
 import type { SessionStatusId, SessionStatus } from "@/config/session-status-config"
-import { buildCollapsedGroupsScopeSuffix } from "@/utils/session-list-collapse"
+import { buildCollapsedGroupsScopeSuffix, readCollapsedGroupsStorage } from "@/utils/session-list-collapse"
 
 export interface SessionListRow {
   item: SessionMeta
@@ -188,20 +188,15 @@ export function SessionList({
   ])
 
   const readCollapsedGroupsForScope = useCallback((scopeSuffix: string): Set<string> => {
-    const scopedRaw = storage.getRaw(KEYS.collapsedSessionGroups, scopeSuffix)
-    if (scopedRaw !== null) {
-      try {
-        const parsed = JSON.parse(scopedRaw)
-        return new Set(Array.isArray(parsed) ? parsed : [])
-      } catch {
-        return new Set()
-      }
-    }
+    const readResult = readCollapsedGroupsStorage(
+      storage.getRaw(KEYS.collapsedSessionGroups, scopeSuffix),
+      storage.get<unknown>(KEYS.collapsedSessionGroups, [])
+    )
 
     // Legacy fallback: previous versions used a single global key with no scope suffix.
-    // Use as migration source only when this scope has never been written.
-    const legacy = storage.get<string[]>(KEYS.collapsedSessionGroups, [])
-    return new Set(legacy)
+    // The persistence effect below immediately writes the scoped value after mount or
+    // scope-switch hydration, so this remains a one-time compatibility bridge per scope.
+    return readResult.groups
   }, [])
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => readCollapsedGroupsForScope(collapseScopeSuffix))

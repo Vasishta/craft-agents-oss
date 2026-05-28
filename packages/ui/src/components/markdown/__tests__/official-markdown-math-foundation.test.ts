@@ -8,14 +8,24 @@ import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
 import { Markdown } from '@tiptap/markdown'
 import {
+  DEFAULT_MARKDOWN_ENGINE,
   preprocessMarkdownForOfficial,
   postprocessMarkdownFromOfficial,
+  resolveMarkdownEngine,
 } from '../TiptapMarkdownEditor'
 import { tiptapCodeBlock } from '../TiptapCodeBlockView'
 import { MermaidBlock } from '../extensions/MermaidBlock'
 import { LatexBlock } from '../extensions/LatexBlock'
 
 describe('official markdown + mathematics foundation', () => {
+  it('keeps engine resolution centralized while legacy remains the default', () => {
+    expect(DEFAULT_MARKDOWN_ENGINE).toBe('legacy')
+    expect(resolveMarkdownEngine()).toBe('legacy')
+    expect(resolveMarkdownEngine(null)).toBe('legacy')
+    expect(resolveMarkdownEngine('legacy')).toBe('legacy')
+    expect(resolveMarkdownEngine('official')).toBe('official')
+  })
+
   it('parses markdown content when contentType is markdown', () => {
     const editor = new Editor({
       extensions: [StarterKit, Markdown],
@@ -42,6 +52,16 @@ describe('official markdown + mathematics foundation', () => {
     const restored = postprocessMarkdownFromOfficial(normalized)
     expect(restored).toContain('$100')
     expect(restored).toContain('$2M–$4M')
+  })
+
+  it('preserves multiline $$...$$ blocks while still protecting currency amounts', () => {
+    const source = ['$$', 'E = mc^2', '$$', '', 'Budget: $100'].join('\n')
+
+    const normalized = preprocessMarkdownForOfficial(source)
+
+    expect(normalized).toContain('$$\nE = mc^2\n$$')
+    expect(normalized).toContain('Budget: ¤100')
+    expect(postprocessMarkdownFromOfficial(normalized)).toContain('Budget: $100')
   })
 
   it('round-trips official math without inlineMath placeholder leakage', () => {

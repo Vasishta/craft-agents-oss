@@ -5,7 +5,7 @@ Base branch: `feature/dev`
 Expected branch: `codex/legacy-transition-cleanup`
 Related epic/story: `docs/planning/EPIC-001-durable-knowledge-workspace.md` / `docs/ARB-001-navigation-and-migration-roadmap.md`
 
-This task batch stays intentionally repo-native and migration-shaped. It targets the remaining cleanup seams that still read as transitional instead of durable: session-first terminology, legacy navigation buckets, deprecated hooks, markdown editor legacy paths, and compatibility code that should only survive while migration is still in flight.
+This task batch stays intentionally repo-native and migration-shaped. It is the umbrella for the remaining cleanup seams that still read as transitional instead of durable: session-first terminology, legacy navigation buckets, deprecated hooks, markdown editor legacy paths, and compatibility code that should only survive while migration is still in flight.
 
 For current-state context, see `docs/planning/CURRENT-STATE.md`.
 
@@ -15,7 +15,7 @@ Create a focused follow-on batch for the next cleanup pass so the repo can keep 
 
 ## Why now
 
-The main workspace surfaces already reflect the durable model. The remaining risk is drift: old names and compatibility code can linger in UI copy, navigation structure, and shared hooks long after the migration intent is clear. This batch keeps those seams moving in small, safe slices.
+The main workspace surfaces already reflect the durable model. The remaining risk is drift: old names and compatibility code can linger in UI copy, navigation structure, and shared hooks long after the migration intent is clear. This batch keeps those seams moving in small, safe follow-on slices.
 
 ## Scope
 
@@ -105,6 +105,12 @@ These slices are intentionally small enough to map to separate issues or PRs. Pa
    - Scope: `docs/planning/CURRENT-STATE.md`, this task file, and `docs/ARB-001-navigation-and-migration-roadmap.md`.
    - Thinking: low.
    - Parallel-safe: yes, and best done after the code slices settle.
+
+Follow-on issue flow:
+
+- Treat this file as the umbrella handoff for the remaining legacy-transition cleanup work.
+- Open new child issues or PRs for individual slices when they are ready to be executed.
+- Keep `CURRENT-STATE.md` and `ARB-001` aligned when a slice materially changes what is still transitional.
 
 ## Markdown engine follow-up note
 

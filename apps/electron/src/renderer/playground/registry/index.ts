@@ -21,6 +21,7 @@ import { transportBannerComponents } from './transport-banner'
 import { containerTransitionsComponents } from './container-transitions'
 import { apiKeyInputComponents } from './api-key-input'
 import { messagingComponents } from './messaging'
+import { workspaceHomeComponents } from './workspace-home'
 
 export * from './types'
 
@@ -48,6 +49,7 @@ export const componentRegistry: ComponentEntry[] = [
   ...transportBannerComponents,
   ...containerTransitionsComponents,
   ...messagingComponents,
+  ...workspaceHomeComponents,
 ]
 
 export function getCategories(): CategoryGroup[] {
