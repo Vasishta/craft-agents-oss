@@ -78,7 +78,7 @@ import { MainContentPanel } from "./MainContentPanel"
 import { PanelStackContainer } from "./PanelStackContainer"
 import type { ChatDisplayHandle } from "./ChatDisplay"
 import { LeftSidebar } from "./LeftSidebar"
-import { useSession } from "@/hooks/useSession"
+import { useSessionSelectionStore } from "@/hooks/useSession"
 import { ensureSessionMessagesLoadedAtom } from "@/atoms/sessions"
 import { AppShellProvider, type AppShellContextType } from "@/context/AppShellContext"
 import { createPanelChromeValue, PanelChromeProvider } from "@/context/PanelChromeContext"
@@ -161,6 +161,7 @@ import {
 import { hasOpenOverlay } from "@/lib/overlay-detection"
 import { clearSourceIconCaches } from "@/lib/icon-cache"
 import { dispatchFocusInputEvent } from "./input/focus-input-events"
+import { createInitialState } from "@/hooks/useMultiSelect"
 
 /**
  * AppShellProps - Minimal props interface for AppShell component
@@ -598,7 +599,7 @@ function AppShellContent({
   const [sessionListHandleY, setSessionListHandleY] = React.useState<number | null>(null)
   const resizeHandleRef = React.useRef<HTMLDivElement>(null)
   const sessionListHandleRef = React.useRef<HTMLDivElement>(null)
-  const [session, setSession] = useSession()
+  const { state: sessionSelection, setState: setSessionSelectionState } = useSessionSelectionStore()
   const { resolvedMode, isDark, setMode } = useTheme()
   const { canGoBack, canGoForward, goBack, goForward, navigateToSource, navigateToSession } = useNavigation()
 
@@ -1086,7 +1087,7 @@ function AppShellContent({
 
   // Shift+Tab cycles permission mode through enabled modes (textarea handles its own, this handles when focus is elsewhere)
   // In multi-panel, targets the focused panel's session
-  const effectiveSessionId = focusedSessionId ?? session.selected
+  const effectiveSessionId = focusedSessionId ?? sessionSelection.selected
 
   // Focus chat input for the target session only (multi-panel safe).
   const focusChatInputForSession = useCallback((targetSessionId?: string | null) => {
@@ -1218,7 +1219,7 @@ function AppShellContent({
 
       // Dispatch custom event for FreeFormInput to handle (target focused session only)
       const filesArray = Array.from(files)
-      const targetSessionId = focusedSessionId ?? session.selected
+      const targetSessionId = focusedSessionId ?? sessionSelection.selected
       if (!targetSessionId) return
       window.dispatchEvent(new CustomEvent('craft:paste-files', {
         detail: { files: filesArray, sessionId: targetSessionId }
@@ -1227,7 +1228,7 @@ function AppShellContent({
 
     document.addEventListener('paste', handleGlobalPaste, { passive: false })
     return () => document.removeEventListener('paste', handleGlobalPaste)
-  }, [focusedSessionId, session.selected])
+  }, [focusedSessionId, sessionSelection.selected])
 
   // Resize effect for sidebar, session list, browser host lane, and metadata right sidebar.
   React.useEffect(() => {
@@ -1305,8 +1306,8 @@ function AppShellContent({
 
   // Reload skills when active session's workingDirectory changes (for project-level skills)
   // Skills are loaded from: global (~/.agents/skills/), workspace, and project ({workingDirectory}/.agents/skills/)
-  const activeSessionWorkingDirectory = session.selected
-    ? sessionMetaMap.get(session.selected)?.workingDirectory
+  const activeSessionWorkingDirectory = sessionSelection.selected
+    ? sessionMetaMap.get(sessionSelection.selected)?.workingDirectory
     : undefined
   React.useEffect(() => {
     if (!activeWorkspaceId) return
@@ -1555,20 +1556,20 @@ function AppShellContent({
 
   // Ensure session messages are loaded when selected
   React.useEffect(() => {
-    if (session.selected) {
-      ensureMessagesLoaded(session.selected)
+    if (sessionSelection.selected) {
+      ensureMessagesLoaded(sessionSelection.selected)
     }
-  }, [session.selected, ensureMessagesLoaded])
+  }, [sessionSelection.selected, ensureMessagesLoaded])
 
   // Wrap delete handler to clear selection when deleting the currently selected session
   // This prevents stale state during re-renders that could cause crashes
   const handleDeleteSession = useCallback(async (sessionId: string, skipConfirmation?: boolean): Promise<boolean> => {
     // Clear selection first if this is the selected session
-    if (session.selected === sessionId) {
-      setSession({ selected: null })
+    if (sessionSelection.selected === sessionId) {
+      setSessionSelectionState(createInitialState())
     }
     return onDeleteSession(sessionId, skipConfirmation)
-  }, [session.selected, setSession, onDeleteSession])
+  }, [sessionSelection.selected, setSessionSelectionState, onDeleteSession])
 
   // Extend context value with local overrides (wrapped onDeleteSession, sources, skills, labels, enabledModes, rightSidebarOpenButton, effectiveSessionStatuses)
   const appShellContextValue = React.useMemo<AppShellContextType>(() => ({
@@ -3044,7 +3045,7 @@ function AppShellContent({
                   onSessionStatusChange={onSessionStatusChange}
                   onRename={onRenameSession}
                   onFocusChatInput={(targetSessionId) => {
-                    focusChatInputForSession(targetSessionId ?? focusedSessionId ?? session.selected)
+                    focusChatInputForSession(targetSessionId ?? focusedSessionId ?? sessionSelection.selected)
                   }}
                   onSessionSelect={(selectedMeta) => {
                     navigateToSession(selectedMeta.id)

@@ -61,10 +61,10 @@ describe('flattenVisibleSidebarFocusableItems', () => {
         expandable: true,
         items: [
           { id: 'nav:workItems', title: 'Work Items', icon: 'WI', variant: 'ghost', onClick: () => undefined },
-          { id: 'separator:queue-legacy', type: 'separator' },
+          { id: 'separator:queue-session-views', type: 'separator' },
           {
-            id: 'nav:legacySessions',
-            title: 'Legacy Sessions',
+            id: 'nav:sessionViews',
+            title: 'Session Views',
             icon: 'LS',
             variant: 'ghost',
             expanded: true,
@@ -89,7 +89,7 @@ describe('flattenVisibleSidebarFocusableItems', () => {
       'nav:notebooks',
       'nav:workQueue',
       'nav:workItems',
-      'nav:legacySessions',
+      'nav:sessionViews',
       'nav:allSessions',
       'nav:flagged',
     ])

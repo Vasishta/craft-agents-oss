@@ -135,4 +135,7 @@ Backlog references:
 ```text
 TASK-009-docs-editor-table-polish-backlog.md
   Docs/editor/table polish backlog and follow-up items.
+
+TASK-010-legacy-transition-cleanup-batch.md
+  Legacy transition cleanup batch for session-first terminology, nav buckets, hooks, editor shims, and migration-only compatibility code.
 ```

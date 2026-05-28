@@ -39,7 +39,8 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { useSession } from '@/hooks/useSession'
+import { useSessionSelectionStore } from '@/hooks/useSession'
+import { singleSelect } from '@/hooks/useMultiSelect'
 import {
   parseRoute,
   parseRouteToNavigationState,
@@ -173,7 +174,7 @@ export function NavigationProvider({
   remoteWorkspaceId,
 }: NavigationProviderProps) {
   const { t } = useTranslation()
-  const [, setSession] = useSession()
+  const { setState: setSessionSelectionState } = useSessionSelectionStore()
 
   // Read session metadata directly from atom (reactive to session changes)
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
@@ -483,7 +484,7 @@ export function NavigationProvider({
   // Keep the global session selection in sync with the focused panel
   useEffect(() => {
     if (isSessionsNavigation(navigationState) && navigationState.details) {
-      setSession({ selected: navigationState.details.sessionId })
+      setSessionSelectionState(singleSelect(navigationState.details.sessionId, -1))
       if (workspaceId) {
         // Only persist if the session belongs to this workspace (prevents cross-workspace
         // pollution during workspace switch, when workspaceId changed but navigationState
@@ -494,7 +495,7 @@ export function NavigationProvider({
         }
       }
     }
-  }, [navigationState, setSession, workspaceId, store])
+  }, [navigationState, setSessionSelectionState, workspaceId, store])
 
   // =========================================================================
   // HELPERS

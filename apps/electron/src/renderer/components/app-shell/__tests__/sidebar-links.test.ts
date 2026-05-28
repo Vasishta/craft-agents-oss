@@ -68,7 +68,7 @@ function buildLinks({
     activeWorkspaceHasId: true,
     renderLabelIcon: () => 'L',
     renderLabelValueTypeBadge: () => '#',
-    isExpanded: (id) => new Set(['nav:projects', 'nav:library', 'nav:workQueue', 'nav:legacySessions', 'nav:labels', 'nav:sources', 'nav:automations']).has(id),
+    isExpanded: (id) => new Set(['nav:projects', 'nav:library', 'nav:workQueue', 'nav:sessionViews', 'nav:labels', 'nav:sources', 'nav:automations']).has(id),
     toggleExpanded: () => undefined,
     onHomeClick: () => undefined,
     onSearchClick: () => undefined,
@@ -115,8 +115,8 @@ describe('buildAppSidebarLinks', () => {
 
     const library = links.find((item) => 'title' in item && item.id === 'nav:library')
     const workQueue = links.find((item) => 'title' in item && item.id === 'nav:workQueue')
-    const legacySessions = workQueue && 'items' in workQueue
-      ? workQueue.items?.find((item) => 'title' in item && item.id === 'nav:legacySessions')
+    const sessionViews = workQueue && 'items' in workQueue
+      ? workQueue.items?.find((item) => 'title' in item && item.id === 'nav:sessionViews')
       : null
 
     expect(library && 'items' in library ? library.items?.map((item) => item.id) : []).toEqual([
@@ -127,10 +127,10 @@ describe('buildAppSidebarLinks', () => {
     ])
     expect(workQueue && 'items' in workQueue ? workQueue.items?.map((item) => item.id) : []).toEqual([
       'nav:workItems',
-      'separator:queue-legacy',
-      'nav:legacySessions',
+      'separator:queue-session-views',
+      'nav:sessionViews',
     ])
-    expect(legacySessions && 'items' in legacySessions ? legacySessions.items?.map((item) => item.id) : []).toEqual([
+    expect(sessionViews && 'items' in sessionViews ? sessionViews.items?.map((item) => item.id) : []).toEqual([
       'nav:allSessions',
       'nav:state:todo',
       'separator:states-flagged',
@@ -148,11 +148,11 @@ describe('buildAppSidebarLinks', () => {
     })
 
     const workQueue = links.find((item) => 'title' in item && item.id === 'nav:workQueue')
-    const legacySessions = workQueue && 'items' in workQueue
-      ? workQueue.items?.find((item) => 'title' in item && item.id === 'nav:legacySessions')
+    const sessionViews = workQueue && 'items' in workQueue
+      ? workQueue.items?.find((item) => 'title' in item && item.id === 'nav:sessionViews')
       : null
-    const statusItem = legacySessions && 'items' in legacySessions
-      ? legacySessions.items?.find((item) => 'title' in item && item.id === 'nav:state:todo')
+    const statusItem = sessionViews && 'items' in sessionViews
+      ? sessionViews.items?.find((item) => 'title' in item && item.id === 'nav:state:todo')
       : null
 
     expect(workQueue && 'variant' in workQueue ? workQueue.variant : null).toBe('default')

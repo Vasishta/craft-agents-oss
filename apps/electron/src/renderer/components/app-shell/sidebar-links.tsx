@@ -404,17 +404,17 @@ export function buildAppSidebarLinks(params: SidebarLinksParams): SidebarItem[] 
           variant: isWorkQueueNavigation(navState) ? 'default' : 'ghost',
           onClick: onWorkQueueClick,
         },
-        { id: 'separator:queue-legacy', type: 'separator' as const },
+        { id: 'separator:queue-session-views', type: 'separator' as const },
         {
-          id: 'nav:legacySessions',
+          id: 'nav:sessionViews',
           title: t('sidebar.legacySessions', 'Session Views'),
           label: String(workspaceSessionCount),
           icon: Inbox,
           variant: isSessionsNavigation(navState) ? 'default' : 'ghost',
           onClick: onAllSessionsClick,
           expandable: true,
-          expanded: isExpanded('nav:legacySessions'),
-          onToggle: () => toggleExpanded('nav:legacySessions'),
+          expanded: isExpanded('nav:sessionViews'),
+          onToggle: () => toggleExpanded('nav:sessionViews'),
           items: [
             {
               id: 'nav:allSessions',
