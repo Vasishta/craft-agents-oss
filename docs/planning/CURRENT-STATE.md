@@ -4,9 +4,15 @@ Status: Snapshot as of 2026-05-16
 Live tracker: GitHub Issues on `Vasishta/craft-agents-oss`  
 Related epic: `#9 EPIC-001: Durable Knowledge Workspace`
 
+Related docs:
+
+- `docs/planning/EPIC-001-durable-knowledge-workspace.md`
+- `docs/PRD-001-craft-agents-local-first-ai-workspace.md`
+- `docs/ARB-001-navigation-and-migration-roadmap.md`
+
 ## Why This Exists
 
-The durable markdown docs capture product direction and architecture reasoning. GitHub Issues are now the live task tracker. This file reconciles the two so future agents do not mistake older "recommended next" prose for the current queue.
+The durable markdown docs capture product direction and architecture reasoning. GitHub Issues are the live task tracker. This file reconciles the two so future agents do not mistake older "recommended next" prose for the current queue.
 
 ## Product Posture
 

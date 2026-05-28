@@ -433,6 +433,79 @@ const TIPTAP_BUBBLE_MENU_BASE_OPTIONS = {
   zIndex: TIPTAP_BUBBLE_MENU_Z_INDEX,
 }
 
+export interface TableBubbleAction {
+  id: string
+  label: string
+  title: string
+  isActive?: boolean
+  run: () => void
+}
+
+export function shouldShowTableBubbleMenu(editor: Editor): boolean {
+  if (editor.isActive('codeBlock')) return false
+  return editor.isActive('table')
+}
+
+export function createTableBubbleActions(editor: Editor): TableBubbleAction[] {
+  return [
+    {
+      id: 'add-row',
+      label: '+ Row',
+      title: 'Add row',
+      run: () => {
+        editor.chain().focus().addRowAfter().run()
+      },
+    },
+    {
+      id: 'add-column',
+      label: '+ Col',
+      title: 'Add column',
+      run: () => {
+        editor.chain().focus().addColumnAfter().run()
+      },
+    },
+    {
+      id: 'toggle-header-row',
+      label: 'Header',
+      title: 'Toggle header row',
+      isActive: editor.isActive('tableHeader'),
+      run: () => {
+        editor.chain().focus().toggleHeaderRow().run()
+      },
+    },
+    {
+      id: 'delete-table',
+      label: 'Delete',
+      title: 'Delete table',
+      run: () => {
+        editor.chain().focus().deleteTable().run()
+      },
+    },
+  ]
+}
+
+function TableMenu({ editor }: { editor: Editor }) {
+  const { t } = useTranslation()
+  const actions = createTableBubbleActions(editor)
+
+  return (
+    <div className="tiptap-bubble-menu tiptap-bubble-menu--table">
+      <span className="tiptap-bubble-label">{t('table.tableControls')}</span>
+      {actions.map((action) => (
+        <button
+          key={action.id}
+          type="button"
+          title={action.title}
+          onClick={action.run}
+          className={cn('tiptap-bubble-btn tiptap-bubble-btn--text', action.isActive && 'is-active')}
+        >
+          {action.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function TiptapBubbleMenus({ editor }: { editor: Editor }) {
   const getRichBlockEditAnchor = React.useCallback(() => {
     const { selection } = editor.state
@@ -481,11 +554,22 @@ export function TiptapBubbleMenus({ editor }: { editor: Editor }) {
           if (selection.from === selection.to) return false
           if (selection instanceof NodeSelection) return false
           if (e.isActive('codeBlock')) return false
+          if (e.isActive('table')) return false
           return true
         }}
         options={{ ...TIPTAP_BUBBLE_MENU_BASE_OPTIONS, placement: 'top', offset: 8 }}
       >
         <TextFormattingMenu editor={editor} />
+      </BubbleMenu>
+
+      <BubbleMenu
+        editor={editor}
+        pluginKey="tableControls"
+        updateDelay={0}
+        shouldShow={({ editor: e }) => shouldShowTableBubbleMenu(e)}
+        options={{ ...TIPTAP_BUBBLE_MENU_BASE_OPTIONS, placement: 'top', offset: 8 }}
+      >
+        <TableMenu editor={editor} />
       </BubbleMenu>
 
       {/* Rich block edit — shows for selected Mermaid/LaTeX rich blocks (and legacy codeBlock fallback). */}

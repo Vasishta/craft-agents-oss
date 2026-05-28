@@ -6,9 +6,15 @@ Related ARB: `docs/ARB-001-navigation-and-migration-roadmap.md`
 
 ## 1. Purpose
 
-This document captures rough markdown wireframes for the Craft Agents product direction.
+This document captures rough markdown wireframes for the Craft Agents product direction and keeps the UI vocabulary consistent with the rest of the docs.
 
 It is intentionally not a visual design spec. It should guide layout, hierarchy, and product vocabulary while the UI evolves from a session-first app into a local-first AI workspace.
+
+Related docs:
+
+- `docs/PRD-001-craft-agents-local-first-ai-workspace.md`
+- `docs/ARB-001-navigation-and-migration-roadmap.md`
+- `docs/planning/EPIC-001-durable-knowledge-workspace.md`
 
 Use this document to answer:
 

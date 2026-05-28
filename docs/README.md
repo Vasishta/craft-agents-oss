@@ -1,12 +1,12 @@
 # Craft Agents Documentation Map
 
-This folder captures product direction, architecture decisions, wireframes, and work planning for the Craft Agents local-first AI workspace.
+This folder captures the durable product reasoning for Craft Agents: product direction, architecture decisions, wireframes, and planning.
 
-The intent is to preserve the reasoning that would otherwise be trapped in chat windows, while keeping implementation PRs small and incremental.
+It keeps the context that would otherwise live in chat while still supporting small, incremental implementation PRs.
 
 ## Current direction
 
-Craft Agents is evolving from a session-first local agent shell into a local-first AI workspace where conversations, docs, files, context, generated outputs, tasks, and eventually project memory can reinforce each other.
+Craft Agents is evolving from a session-first local agent shell into a local-first AI workspace where conversations, docs, files, context, outputs, tasks, and project memory reinforce each other.
 
 The important mental model is:
 
@@ -32,6 +32,8 @@ TASK-*        Concrete implementation task with definition of done
 ```
 
 ## Existing documents
+
+Primary references:
 
 ```text
 docs/PRD-001-craft-agents-local-first-ai-workspace.md

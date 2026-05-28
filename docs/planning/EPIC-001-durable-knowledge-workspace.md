@@ -7,9 +7,9 @@ Related wireframes: `docs/WIREFRAMES-001-craft-agents-workspace-surfaces.md`
 
 ## 1. Product outcome
 
-Craft Agents should let useful work escape the chat transcript.
+Craft Agents should let useful work escape the chat transcript and become durable workspace material.
 
-When the assistant produces a plan, analysis, code review, research summary, implementation checklist, or design decision, the user should be able to save it as a durable object, find it later, promote it into a doc, attach it to context, and eventually connect it to tasks, projects, notebooks, and decisions.
+When the assistant produces a plan, analysis, code review, research summary, implementation checklist, or design decision, the user should be able to save it, find it later, promote it into a doc, attach it to context, and eventually connect it to tasks, projects, notebooks, and decisions.
 
 This epic moves the app from:
 
@@ -49,9 +49,15 @@ The bridge between those modes is durable knowledge capture.
 
 If every answer remains only in chat, the product becomes another chat app. If every answer automatically becomes a doc, the product becomes noisy and cluttered. The middle ground is `Output`: a reviewable, promotable staging object.
 
+Related docs:
+
+- `docs/PRD-001-craft-agents-local-first-ai-workspace.md`
+- `docs/ARB-001-navigation-and-migration-roadmap.md`
+- `docs/WIREFRAMES-001-craft-agents-workspace-surfaces.md`
+
 ## 3. Current repo reality
 
-The app is still mostly session/workspace-centric.
+The app is still mostly session/workspace-centric, so this epic should respect that reality.
 
 ```text
 Workspace = local operating boundary
@@ -61,7 +67,7 @@ Outputs   = newly introduced staging object
 Search    = early retrieval surface across workspace objects
 ```
 
-This epic should respect that reality. Do not jump straight to a project-first rewrite.
+Do not jump straight to a project-first rewrite.
 
 ## 4. Scope
 
