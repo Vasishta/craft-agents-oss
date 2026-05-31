@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { BubbleMenu } from '@tiptap/react/menus'
 import type { Editor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
-import { Bold, Italic, Strikethrough, Code, Sigma } from 'lucide-react'
+import { Bold, Italic, Strikethrough, Code, Sigma, ChevronDown } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { SimpleDropdown, SimpleDropdownItem } from '../ui/SimpleDropdown'
 import { RICH_BLOCK_EDIT_EVENT } from './rich-block-events'
 
 // Custom event name used to signal "open inline math editor"
@@ -438,6 +439,7 @@ export interface TableBubbleAction {
   label: string
   title: string
   isActive?: boolean
+  isDisabled?: boolean
   run: () => void
 }
 
@@ -447,26 +449,64 @@ export function shouldShowTableBubbleMenu(editor: Editor): boolean {
 }
 
 export function createTableBubbleActions(editor: Editor): TableBubbleAction[] {
+  const tableCommands = typeof editor.can === 'function'
+    ? editor.can() as unknown as { mergeCells?: () => boolean; splitCell?: () => boolean }
+    : null
+  const canMergeCells = tableCommands?.mergeCells?.() ?? true
+  const canSplitCell = tableCommands?.splitCell?.() ?? false
+
   return [
     {
-      id: 'add-row',
-      label: '+ Row',
-      title: 'Add row',
+      id: 'add-row-before',
+      label: 'Add row above',
+      title: 'Add row above',
+      run: () => {
+        editor.chain().focus().addRowBefore().run()
+      },
+    },
+    {
+      id: 'add-row-after',
+      label: 'Add row below',
+      title: 'Add row below',
       run: () => {
         editor.chain().focus().addRowAfter().run()
       },
     },
     {
-      id: 'add-column',
-      label: '+ Col',
-      title: 'Add column',
+      id: 'delete-row',
+      label: 'Delete row',
+      title: 'Delete row',
+      run: () => {
+        editor.chain().focus().deleteRow().run()
+      },
+    },
+    {
+      id: 'add-column-before',
+      label: 'Add column left',
+      title: 'Add column left',
+      run: () => {
+        editor.chain().focus().addColumnBefore().run()
+      },
+    },
+    {
+      id: 'add-column-after',
+      label: 'Add column right',
+      title: 'Add column right',
       run: () => {
         editor.chain().focus().addColumnAfter().run()
       },
     },
     {
+      id: 'delete-column',
+      label: 'Delete column',
+      title: 'Delete column',
+      run: () => {
+        editor.chain().focus().deleteColumn().run()
+      },
+    },
+    {
       id: 'toggle-header-row',
-      label: 'Header',
+      label: 'Header row',
       title: 'Toggle header row',
       isActive: editor.isActive('tableHeader'),
       run: () => {
@@ -474,8 +514,31 @@ export function createTableBubbleActions(editor: Editor): TableBubbleAction[] {
       },
     },
     {
+      id: 'toggle-header-column',
+      label: 'Header column',
+      title: 'Toggle header column',
+      isActive: editor.isActive('tableHeader'),
+      run: () => {
+        editor.chain().focus().toggleHeaderColumn().run()
+      },
+    },
+    {
+      id: 'merge-or-split',
+      label: canSplitCell ? 'Split cell' : 'Merge cells',
+      title: canSplitCell ? 'Split selected cell' : 'Merge selected cells',
+      isDisabled: !canSplitCell && !canMergeCells,
+      run: () => {
+        const chain = editor.chain().focus()
+        if (canSplitCell) {
+          chain.splitCell().run()
+          return
+        }
+        chain.mergeCells().run()
+      },
+    },
+    {
       id: 'delete-table',
-      label: 'Delete',
+      label: 'Clear',
       title: 'Delete table',
       run: () => {
         editor.chain().focus().deleteTable().run()
@@ -484,24 +547,81 @@ export function createTableBubbleActions(editor: Editor): TableBubbleAction[] {
   ]
 }
 
+function TableBubbleDropdown({
+  label,
+  actions,
+}: {
+  label: string
+  actions: TableBubbleAction[]
+}) {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <SimpleDropdown
+      align="start"
+      className="min-w-[190px]"
+      onOpenChange={setOpen}
+      trigger={(
+        <button
+          type="button"
+          title={label}
+          className={cn('tiptap-bubble-btn tiptap-bubble-btn--text tiptap-bubble-btn--dropdown', open && 'is-active')}
+        >
+          <span>{label}</span>
+          <ChevronDown className="w-3 h-3" />
+        </button>
+      )}
+    >
+      {actions.map((action) => (
+        <SimpleDropdownItem
+          key={action.id}
+          onClick={action.run}
+          className={cn(action.isActive && 'text-accent')}
+        >
+          <span className="flex w-full items-center justify-between gap-3">
+            <span>{action.label}</span>
+            {action.isActive ? <span className="text-[10px] uppercase tracking-[0.12em] text-foreground/50">On</span> : null}
+          </span>
+        </SimpleDropdownItem>
+      ))}
+    </SimpleDropdown>
+  )
+}
+
 function TableMenu({ editor }: { editor: Editor }) {
   const { t } = useTranslation()
   const actions = createTableBubbleActions(editor)
+  const rowActions = actions.filter((action) => ['add-row-before', 'add-row-after', 'delete-row', 'toggle-header-row'].includes(action.id))
+  const columnActions = actions.filter((action) => ['add-column-before', 'add-column-after', 'delete-column', 'toggle-header-column'].includes(action.id))
+  const mergeAction = actions.find((action) => action.id === 'merge-or-split')
+  const deleteAction = actions.find((action) => action.id === 'delete-table')
 
   return (
     <div className="tiptap-bubble-menu tiptap-bubble-menu--table">
       <span className="tiptap-bubble-label">{t('table.tableControls')}</span>
-      {actions.map((action) => (
+      <TableBubbleDropdown label="Rows" actions={rowActions} />
+      <TableBubbleDropdown label="Columns" actions={columnActions} />
+      {mergeAction ? (
         <button
-          key={action.id}
           type="button"
-          title={action.title}
-          onClick={action.run}
-          className={cn('tiptap-bubble-btn tiptap-bubble-btn--text', action.isActive && 'is-active')}
+          title={mergeAction.title}
+          onClick={mergeAction.run}
+          disabled={mergeAction.isDisabled}
+          className={cn('tiptap-bubble-btn tiptap-bubble-btn--text', mergeAction.isActive && 'is-active')}
         >
-          {action.label}
+          {mergeAction.label}
         </button>
-      ))}
+      ) : null}
+      {deleteAction ? (
+        <button
+          type="button"
+          title={deleteAction.title}
+          onClick={deleteAction.run}
+          className="tiptap-bubble-btn tiptap-bubble-btn--text tiptap-bubble-btn--danger"
+        >
+          {deleteAction.label}
+        </button>
+      ) : null}
     </div>
   )
 }

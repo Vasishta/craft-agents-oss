@@ -296,6 +296,11 @@ export function TiptapMarkdownEditor({
         TableKit.configure({
           table: {
             renderWrapper: true,
+            resizable: true,
+            lastColumnResizable: false,
+            allowTableNodeSelection: true,
+            handleWidth: 4,
+            cellMinWidth: 120,
           },
         }),
         Mathematics.configure({

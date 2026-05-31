@@ -4,14 +4,18 @@ import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from '@tiptap
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import CodeBlockShiki from 'tiptap-extension-code-block-shiki'
 import { bundledLanguages } from 'shiki'
-import { Check, ChevronDown, Copy } from 'lucide-react'
+import type { Editor } from '@tiptap/core'
+import { Check, ChevronDown, Copy, Trash2 } from 'lucide-react'
 import { SimpleDropdown, SimpleDropdownItem } from '../ui/SimpleDropdown'
 import { TiptapHoverActions, TiptapHoverActionButton } from './TiptapHoverActions'
 import { cn } from '../../lib/utils'
 
 interface TiptapCodeBlockViewProps {
   node: ProseMirrorNode
+  editor: Editor
+  getPos: () => number | undefined
   updateAttributes: (attrs: Record<string, unknown>) => void
+  deleteNode?: () => void
 }
 
 type CodeLanguageOption = {
@@ -93,6 +97,32 @@ function getLanguageLabel(language: string | null | undefined): string {
   return normalized ?? 'Plain text'
 }
 
+export function normalizeCodeBlockWrap(value: unknown): boolean {
+  return value === true || value === 'true'
+}
+
+export function getCodeBlockEmptyPlaceholder(language: string | null | undefined): string {
+  const label = getLanguageLabel(language)
+  if (label === 'Plain text') return 'Paste a snippet or start typing.'
+  return `Start typing ${label} or change the language.`
+}
+
+export function buildDuplicateCodeBlockPayload(node: Pick<ProseMirrorNode, 'attrs' | 'textContent'>) {
+  return {
+    type: 'codeBlock',
+    attrs: {
+      language: normalizeLanguage((node.attrs.language as string | null | undefined) ?? null) ?? 'plaintext',
+      wrap: normalizeCodeBlockWrap(node.attrs.wrap),
+    },
+    content: [
+      {
+        type: 'text',
+        text: node.textContent.length > 0 ? node.textContent : ' ',
+      },
+    ],
+  }
+}
+
 /**
  * React NodeView for regular code blocks only.
  *
@@ -100,9 +130,10 @@ function getLanguageLabel(language: string | null | undefined): string {
  * - mermaidBlock
  * - latexBlock
  */
-function TiptapCodeBlockView({ node, updateAttributes }: TiptapCodeBlockViewProps) {
+function TiptapCodeBlockView({ node, editor, getPos, updateAttributes, deleteNode }: TiptapCodeBlockViewProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = React.useState(false)
+  const [blockMenuOpen, setBlockMenuOpen] = React.useState(false)
   const [languageFilter, setLanguageFilter] = React.useState('')
   const [languageDropdownOpen, setLanguageDropdownOpen] = React.useState(false)
   const [highlightedLanguageIndex, setHighlightedLanguageIndex] = React.useState(0)
@@ -112,6 +143,9 @@ function TiptapCodeBlockView({ node, updateAttributes }: TiptapCodeBlockViewProp
 
   const currentLanguage = normalizeLanguage((node.attrs.language as string | undefined) ?? null)
   const languageLabel = getLanguageLabel(currentLanguage)
+  const [wrapLines, setWrapLines] = React.useState(() => normalizeCodeBlockWrap(node.attrs.wrap))
+  const isEmpty = node.textContent.trim().length === 0
+  const emptyPlaceholder = getCodeBlockEmptyPlaceholder(currentLanguage)
 
   const filteredLanguageOptions = React.useMemo(() => {
     const query = languageFilter.trim().toLowerCase()
@@ -127,9 +161,38 @@ function TiptapCodeBlockView({ node, updateAttributes }: TiptapCodeBlockViewProp
     updateAttributes({ language })
   }, [updateAttributes])
 
+  const handleWrapToggle = React.useCallback(() => {
+    setWrapLines((prev) => {
+      const nextValue = !prev
+      updateAttributes({ wrap: nextValue })
+      return nextValue
+    })
+  }, [updateAttributes])
+
+  const handleDuplicate = React.useCallback(() => {
+    const pos = getPos()
+    if (typeof pos !== 'number') return
+
+    const duplicatePos = pos + node.nodeSize
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(duplicatePos, buildDuplicateCodeBlockPayload(node))
+      .setTextSelection({ from: duplicatePos + 1, to: duplicatePos + 1 })
+      .run()
+  }, [editor, getPos, node])
+
+  const handleDelete = React.useCallback(() => {
+    deleteNode?.()
+  }, [deleteNode])
+
   React.useEffect(() => {
     languageOptionRefs.current = []
   }, [filteredLanguageOptions])
+
+  React.useEffect(() => {
+    setWrapLines(normalizeCodeBlockWrap(node.attrs.wrap))
+  }, [node.attrs.wrap])
 
   React.useEffect(() => {
     if (!languageDropdownOpen) return
@@ -204,77 +267,124 @@ function TiptapCodeBlockView({ node, updateAttributes }: TiptapCodeBlockViewProp
   }, [languageDropdownOpen])
 
   return (
-    <NodeViewWrapper className="tiptap-code-block-node tiptap-hover-actions-host" data-actions-open={languageDropdownOpen ? 'true' : 'false'}>
-      <TiptapHoverActions>
-        <SimpleDropdown
-          align="end"
-          className="min-w-[220px] max-w-[320px]"
-          keyboardNavigation={false}
-          onOpenChange={setLanguageDropdownOpen}
-          trigger={(
-            <TiptapHoverActionButton
-              active={languageDropdownOpen}
-              title={t('editor.codeLanguage')}
-              aria-label="Select code language"
-              className="tiptap-code-block-language-trigger"
-            >
-              <span className="tiptap-code-block-language-label">{languageLabel}</span>
-              <ChevronDown className="w-3 h-3" />
-            </TiptapHoverActionButton>
-          )}
-        >
-          <div className="px-3 pt-1.5 pb-1">
-            <input
-              ref={languageFilterInputRef}
-              value={languageFilter}
-              onChange={(event) => setLanguageFilter(event.target.value)}
-              onKeyDown={handleLanguageFilterKeyDown}
-              placeholder={t('editor.searchLanguages')}
-              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground placeholder:select-none"
-            />
-          </div>
-          <div className="h-px bg-foreground/5 -mx-1" />
+    <NodeViewWrapper
+      className="tiptap-code-block-node tiptap-hover-actions-host"
+      data-actions-open={languageDropdownOpen || blockMenuOpen ? 'true' : 'false'}
+      data-wrap-lines={wrapLines ? 'true' : 'false'}
+    >
+      <div className="tiptap-code-block-surface">
+        <div className="tiptap-code-block-meta" contentEditable={false}>
+          <span className="tiptap-code-block-meta-label">{languageLabel}</span>
+          <span className="tiptap-code-block-meta-hint">
+            {wrapLines ? 'Soft wrap on' : 'Scroll for long lines'}
+          </span>
+        </div>
 
-          <div className="max-h-[240px] overflow-y-auto p-1">
-            {filteredLanguageOptions.length === 0 ? (
-              <div className="px-2.5 py-2 text-xs text-foreground/50 select-none">No languages found</div>
-            ) : (
-              filteredLanguageOptions.map((option, index) => {
-                const isActive = option.value === currentLanguage
-                const isHighlighted = index === highlightedLanguageIndex
-                return (
-                  <SimpleDropdownItem
-                    key={option.value ?? 'plain-text'}
-                    onClick={() => handleLanguageSelect(option.value)}
-                    buttonRef={(el) => {
-                      languageOptionRefs.current[index] = el
-                    }}
-                    onMouseEnter={() => setHighlightedLanguageIndex(index)}
-                    className={cn('pl-2.5', isActive && 'text-accent', isHighlighted && 'bg-foreground/[0.05]')}
-                  >
-                    <span className="flex w-full items-center justify-between gap-2">
-                      <span>{option.label}</span>
-                      {isActive ? <Check className="w-3.5 h-3.5 shrink-0" /> : <span className="w-3.5 h-3.5 shrink-0" />}
-                    </span>
-                  </SimpleDropdownItem>
-                )
-              })
+        <TiptapHoverActions>
+          <SimpleDropdown
+            align="end"
+            className="min-w-[220px] max-w-[320px]"
+            keyboardNavigation={false}
+            onOpenChange={setLanguageDropdownOpen}
+            trigger={(
+              <TiptapHoverActionButton
+                active={languageDropdownOpen}
+                title={t('editor.codeLanguage')}
+                aria-label="Select code language"
+                className="tiptap-code-block-language-trigger"
+              >
+                <span className="tiptap-code-block-language-label">{languageLabel}</span>
+                <ChevronDown className="w-3 h-3" />
+              </TiptapHoverActionButton>
             )}
-          </div>
-        </SimpleDropdown>
+          >
+            <div className="px-3 pt-1.5 pb-1">
+              <input
+                ref={languageFilterInputRef}
+                value={languageFilter}
+                onChange={(event) => setLanguageFilter(event.target.value)}
+                onKeyDown={handleLanguageFilterKeyDown}
+                placeholder={t('editor.searchLanguages')}
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground placeholder:select-none"
+              />
+            </div>
+            <div className="h-px bg-foreground/5 -mx-1" />
 
-        <TiptapHoverActionButton
-          title={t("common.copyCode")}
-          aria-label={t("common.copyCode")}
-          onClick={handleCopy}
-        >
-          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-        </TiptapHoverActionButton>
-      </TiptapHoverActions>
+            <div className="max-h-[240px] overflow-y-auto p-1">
+              {filteredLanguageOptions.length === 0 ? (
+                <div className="px-2.5 py-2 text-xs text-foreground/50 select-none">No languages found</div>
+              ) : (
+                filteredLanguageOptions.map((option, index) => {
+                  const isActive = option.value === currentLanguage
+                  const isHighlighted = index === highlightedLanguageIndex
+                  return (
+                    <SimpleDropdownItem
+                      key={option.value ?? 'plain-text'}
+                      onClick={() => handleLanguageSelect(option.value)}
+                      buttonRef={(el) => {
+                        languageOptionRefs.current[index] = el
+                      }}
+                      onMouseEnter={() => setHighlightedLanguageIndex(index)}
+                      className={cn('pl-2.5', isActive && 'text-accent', isHighlighted && 'bg-foreground/[0.05]')}
+                    >
+                      <span className="flex w-full items-center justify-between gap-2">
+                        <span>{option.label}</span>
+                        {isActive ? <Check className="w-3.5 h-3.5 shrink-0" /> : <span className="w-3.5 h-3.5 shrink-0" />}
+                      </span>
+                    </SimpleDropdownItem>
+                  )
+                })
+              )}
+            </div>
+          </SimpleDropdown>
 
-      <pre>
-        <NodeViewContent<'code'> as="code" />
-      </pre>
+          <TiptapHoverActionButton
+            active={wrapLines}
+            title="Toggle soft wrap"
+            aria-label="Toggle soft wrap"
+            onClick={handleWrapToggle}
+            className="tiptap-code-block-utility-trigger"
+          >
+            <span className="tiptap-code-block-utility-label">Wrap</span>
+          </TiptapHoverActionButton>
+
+          <TiptapHoverActionButton
+            title={t('common.copyCode')}
+            aria-label={t('common.copyCode')}
+            onClick={handleCopy}
+          >
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          </TiptapHoverActionButton>
+
+          <SimpleDropdown
+            align="end"
+            className="min-w-[180px]"
+            onOpenChange={setBlockMenuOpen}
+            trigger={(
+              <TiptapHoverActionButton
+                active={blockMenuOpen}
+                title="Block actions"
+                aria-label="Open code block actions"
+                className="tiptap-code-block-utility-trigger"
+              >
+                <span className="tiptap-code-block-utility-label">Block</span>
+                <ChevronDown className="w-3 h-3" />
+              </TiptapHoverActionButton>
+            )}
+          >
+            <SimpleDropdownItem onClick={handleDuplicate}>
+              Duplicate block
+            </SimpleDropdownItem>
+            <SimpleDropdownItem onClick={handleDelete} variant="destructive" icon={<Trash2 className="w-3.5 h-3.5" />}>
+              Remove block
+            </SimpleDropdownItem>
+          </SimpleDropdown>
+        </TiptapHoverActions>
+
+        <pre data-empty={isEmpty ? 'true' : 'false'} data-placeholder={emptyPlaceholder}>
+          <NodeViewContent<'code'> as="code" />
+        </pre>
+      </div>
     </NodeViewWrapper>
   )
 }
@@ -285,6 +395,19 @@ function TiptapCodeBlockView({ node, updateAttributes }: TiptapCodeBlockViewProp
 export const tiptapCodeBlock = CodeBlockShiki.extend({
   // Official @tiptap/markdown integration for fenced code blocks.
   markdownTokenName: 'code',
+
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      wrap: {
+        default: false,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-wrap') === 'true',
+        renderHTML: (attributes: { wrap?: boolean }) => (
+          normalizeCodeBlockWrap(attributes.wrap) ? { 'data-wrap': 'true' } : {}
+        ),
+      },
+    }
+  },
 
   parseMarkdown: (token: any, helpers: any) => {
     const lang = (token.lang ?? '').toLowerCase()

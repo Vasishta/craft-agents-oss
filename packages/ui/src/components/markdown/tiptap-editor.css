@@ -206,6 +206,11 @@
   background: color-mix(in oklch, var(--foreground) 4%, transparent);
 }
 
+.tiptap-hover-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .tiptap-hover-action-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 1px var(--ring);
@@ -215,11 +220,61 @@
   margin: 0.5rem 0;
 }
 
-.tiptap-editor .tiptap-code-block-node pre {
-  margin: 0;
+.tiptap-code-block-surface {
+  position: relative;
+  border-radius: 0.875rem;
+  border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
+  background: color-mix(in oklch, var(--foreground) 2.5%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--foreground) 4%, transparent);
 }
 
-.tiptap-hover-action-btn.tiptap-code-block-language-trigger {
+.tiptap-code-block-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem 0;
+  user-select: none;
+}
+
+.tiptap-code-block-meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: color-mix(in oklch, var(--foreground) 70%, transparent);
+}
+
+.tiptap-code-block-meta-hint {
+  font-size: 11px;
+  color: color-mix(in oklch, var(--foreground) 50%, transparent);
+}
+
+.tiptap-editor .tiptap-code-block-node pre {
+  margin: 0;
+  min-height: 4rem;
+  border-radius: inherit;
+  background: transparent !important;
+  padding: 0.5rem 0.875rem 0.875rem;
+  position: relative;
+}
+
+.tiptap-editor .tiptap-code-block-node pre[data-empty='true']::after {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 0.875rem;
+  top: 0.5rem;
+  pointer-events: none;
+  color: color-mix(in oklch, var(--foreground) 42%, transparent);
+  font-size: 13px;
+}
+
+.tiptap-editor .tiptap-code-block-node[data-wrap-lines='true'] pre code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tiptap-hover-action-btn.tiptap-code-block-language-trigger,
+.tiptap-hover-action-btn.tiptap-code-block-utility-trigger {
   padding-left: 0.5rem;
   gap: 3px;
 }
@@ -229,6 +284,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tiptap-code-block-utility-label {
   font-size: 11px;
   font-weight: 500;
 }
@@ -260,25 +320,33 @@
 .tiptap-editor .tiptap-prose .tableWrapper {
   width: 100%;
   overflow-x: auto;
+  border-radius: 0.875rem;
+  background: color-mix(in oklch, var(--foreground) 2.5%, transparent);
 }
 
 .tiptap-editor .tiptap-prose table {
   width: 100%;
+  min-width: 420px;
   border-collapse: separate;
   border-spacing: 0;
   margin: 0.875rem 0;
   overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
-  border-radius: 0.5rem;
+  border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
+  border-radius: 0.875rem;
   font-size: 13px;
+  background: var(--background);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--foreground) 4%, transparent);
 }
 
 .tiptap-editor .tiptap-prose th,
 .tiptap-editor .tiptap-prose td {
   border-right: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
   border-bottom: 1px solid color-mix(in oklch, var(--foreground) 8%, transparent);
-  padding: 0.5rem 0.625rem;
+  min-width: 120px;
+  padding: 0.625rem 0.75rem;
   vertical-align: top;
+  position: relative;
+  background: var(--background);
 }
 
 .tiptap-editor .tiptap-prose th:last-child,
@@ -297,8 +365,33 @@
   text-align: left;
 }
 
+.tiptap-editor .tiptap-prose tr:hover td {
+  background: color-mix(in oklch, var(--foreground) 1.5%, transparent);
+}
+
 .tiptap-editor .tiptap-prose .selectedCell {
-  background: color-mix(in oklch, var(--accent) 8%, transparent);
+  background: color-mix(in oklch, var(--accent) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 35%, transparent);
+}
+
+.tiptap-editor .tiptap-prose .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -1px;
+  width: 4px;
+  background: color-mix(in oklch, var(--accent) 45%, transparent);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tiptap-editor .tiptap-prose table:hover .column-resize-handle,
+.tiptap-editor .tiptap-prose .selectedCell .column-resize-handle {
+  opacity: 1;
+}
+
+.tiptap-editor .tiptap-prose .resize-cursor {
+  cursor: col-resize;
 }
 
 /* Official TipTap image loading placeholder (no custom node-view) */
@@ -422,6 +515,11 @@
   color: var(--foreground);
 }
 
+.tiptap-bubble-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .tiptap-bubble-label {
   font-size: 12px;
   font-weight: 500;
@@ -508,6 +606,18 @@
   padding: 0 8px;
   font-size: 11px;
   font-weight: 500;
+}
+
+.tiptap-bubble-btn--dropdown {
+  gap: 4px;
+}
+
+.tiptap-bubble-btn--danger {
+  color: color-mix(in oklch, var(--foreground) 78%, transparent);
+}
+
+.tiptap-bubble-btn--danger:hover {
+  color: var(--foreground);
 }
 
 .tiptap-bubble-math-input {
